@@ -1,1 +1,3 @@
 .vscode/
+ray_tracer.js
+*.wasm
