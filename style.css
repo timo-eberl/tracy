@@ -11,8 +11,8 @@ canvas {
 	margin: auto;
 	/* if the canvas is too wide to fit on the page, scale it down */
 	max-width: 100%;
-	width: 1000px;
-	height: 1000px;
+	width: 600px;
+	height: 400px;
 }
 
 #error {

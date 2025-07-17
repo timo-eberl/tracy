@@ -25,28 +25,24 @@ setupCameraControls();
 // Emscripten's Module object becomes available after the script loads
 Module.onRuntimeInitialized = () => {
 	// Get access to the exported C functions
-	const render = Module.cwrap('render', null,
-		['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']
+	const render = Module.cwrap(
+		'render', // function name
+		'number', // return type
+		['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // parameters
 	);
-	const getImageBuffer = Module.cwrap('get_image_buffer', 'number',
-		['number', 'number']
-	);
-	update(render, getImageBuffer);
+	update(render);
 };
 
-function update(render, getImageBuffer) {
+function update(render) {
 	const startTime = performance.now();
 
-	render(
+	const bufferPtr = render(
 		width, height, degToRad(cameraRotation.x), degToRad(cameraRotation.y),
 		cameraDistance, cameraFocusPoint.x, cameraFocusPoint.y, cameraFocusPoint.z
 	);
 
 	const endTime = performance.now();
 	console.log(`Done! Rendering took ${(endTime - startTime).toFixed(2)} ms.`);
-
-	// Get the memory address of the image buffer
-	const bufferPtr = getImageBuffer(width, height);
 
 	// Create a view into the WebAssembly memory
 	// HEAPU8.buffer is "all of memory", bufferPtr is an offset on it
@@ -58,7 +54,7 @@ function update(render, getImageBuffer) {
 	// Draw the ImageData onto the canvas
 	ctx.putImageData(imageData, 0, 0);
 
-	requestAnimationFrame(() => update(render, getImageBuffer))
+	requestAnimationFrame(() => update(render))
 };
 
 function degToRad(degree) { return degree / 360 * 2 * Math.PI; }
@@ -71,7 +67,7 @@ function setupCameraControls() {
 	document.onmousemove = function(event) {
 		if (isMouseDown) {
 			cameraRotation.x += event.movementY * 0.4;
-			cameraRotation.y += event.movementX * 0.4;
+			cameraRotation.y -= event.movementX * 0.4;
 		}
 	};
 	// zoom with mouse wheel

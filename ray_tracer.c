@@ -47,7 +47,6 @@ double intersect(Ray r, Sphere s) {
 	}
 }
 
-EMSCRIPTEN_KEEPALIVE
 unsigned char* get_image_buffer(int width, int height) {
 	// Re-allocate buffer only if dimensions change
 	if (image_buffer == NULL || width != buffer_width || height != buffer_height) {
@@ -62,7 +61,7 @@ unsigned char* get_image_buffer(int width, int height) {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void render(
+unsigned char* render(
 	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
 	double focus_x, double focus_y, double focus_z
 ) {
@@ -71,12 +70,12 @@ void render(
 	Vec focus_point = {focus_x, focus_y, focus_z};
 
 	// Calculate Camera Position using spherical coordinates around the focus point
-	double cam_x = focus_point.x + cam_dist * sin(-cam_angle_y) * cos(cam_angle_x);
+	double cam_x = focus_point.x + cam_dist * sin(cam_angle_y) * cos(cam_angle_x);
 	double cam_y = focus_point.y + cam_dist * sin(cam_angle_x);
-	double cam_z = focus_point.z + cam_dist * cos(-cam_angle_y) * cos(cam_angle_x);
+	double cam_z = focus_point.z + cam_dist * cos(cam_angle_y) * cos(cam_angle_x);
 	Vec camera_origin = {cam_x, cam_y, cam_z};
 
-	// Create the camera's coordinate system (basis vectors)
+	// Create the cameras coordinate system (basis vectors)
 	Vec forward = vec_normalize(vec_sub(focus_point, camera_origin));
 	Vec world_up = {0, 1, 0};
 	Vec right = vec_normalize(vec_cross(forward, world_up));
@@ -95,7 +94,7 @@ void render(
 			Vec up_comp = vec_scale(up, world_y);
 			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
-            Ray r = {camera_origin, dir};
+			Ray r = {camera_origin, dir};
 
 			double min_t = INFINITY;
 			Sphere* hit_sphere = NULL;
@@ -122,4 +121,6 @@ void render(
 			}
 		}
 	}
+
+	return buffer;
 }
