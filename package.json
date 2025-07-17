@@ -1,0 +1,27 @@
+{
+  "name": "tracy",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "build": "./build.sh",
+    "watch:c": "nodemon --watch . --ext c --exec \"npm run build\"",
+    "serve": "live-server --port=8000 --host=localhost",
+    "dev": "concurrently \"npm:watch:c\" \"npm:serve\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timo-eberl/tracy.git"
+  },
+  "author": "Timo Eberl",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/timo-eberl/tracy/issues"
+  },
+  "homepage": "https://github.com/timo-eberl/tracy#readme",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "live-server": "^1.2.0",
+    "nodemon": "^3.1.10"
+  }
+}
