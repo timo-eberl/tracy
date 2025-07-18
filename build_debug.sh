@@ -2,6 +2,7 @@
 
 emcc ray_tracer.c \
 	-o ray_tracer.js \
-	-O1 \
-	-sEXPORTED_FUNCTIONS=_render \
+	-g \
+	-gsource-map \
+	-sEXPORTED_FUNCTIONS=_render,_malloc,_free \
 	-sEXPORTED_RUNTIME_METHODS=cwrap,HEAPU8

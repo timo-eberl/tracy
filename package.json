@@ -4,9 +4,12 @@
   "main": "main.js",
   "scripts": {
     "build": "./build.sh",
+    "build:debug": "./build_debug.sh",
     "watch:c": "nodemon --watch . --ext c --exec \"npm run build\"",
+    "watch:c:debug": "nodemon --watch . --ext c --exec \"npm run build:debug\"",
     "serve": "live-server --port=8000 --host=localhost",
-    "dev": "concurrently \"npm:watch:c\" \"npm:serve\""
+    "dev": "concurrently \"npm:watch:c\" \"npm:serve\"",
+    "dev:debug": "concurrently \"npm:watch:c:debug\" \"npm:serve\""
   },
   "repository": {
     "type": "git",

@@ -20,3 +20,13 @@ Perform C-to-WASM compilation, start a local web server, and watch for file chan
 ```bash
 npm run dev
 ```
+
+## Debugging
+
+You can debug your C code with Chrome and the [C/C++ DevTools Support (DWARF)](https://chromewebstore.google.com/detail/cc++-devtools-support-dwa/pdcpmagijalfljmkmjngeonclgbbannb) extension. Firefox's debugger doesn't work properly.
+
+```bash
+npm run dev:debug
+```
+
+Open the developer tools and navigate to `Sources`. You should see the c files and be able to debug them.

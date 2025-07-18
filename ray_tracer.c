@@ -85,7 +85,8 @@ unsigned char* render(
 
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
-			// Map pixel coordinates to the view plane (-1 to 1)
+			// Map pixel coordinates to the view plane
+			// (-aspect_ratio, -1) to (aspect_ratio, 1)
 			double world_x = (2.0 * (x + 0.5) / width - 1.0) * aspect_ratio;
 			double world_y = 1.0 - 2.0 * (y + 0.5) / height;
 

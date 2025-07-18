@@ -4,6 +4,7 @@
 # Emscripten
 ray_tracer.js
 *.wasm
+*.wasm.map
 
 # npm
 node_modules/
