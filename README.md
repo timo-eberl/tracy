@@ -40,7 +40,6 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
 - [ ] Pinhole camera (5)
 - [ ] Ray geometry intersection (6.2)
   - [x] Sphere (6.2.4)
-  - [ ] Plane (6.2.1)
   - [ ] Triangle (6.2.3)
 - [ ] Tone mapping (4)
 - [ ] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)

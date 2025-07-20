@@ -14,10 +14,10 @@ window.onresize = function() {
 }
 
 const cameraDistanceBounds = { min: 1.1, max: 40 };
-const cameraRotationXBounds = { min: 0, max: 90 };
-const cameraFocusPoint = { x: 0, y: 0.0, z: 0 };
-let cameraRotation = { x: 15, y: 0 };
-let cameraDistance = 5.0;
+const cameraRotationXBounds = { min: -89.9, max: 89.9 };
+const cameraFocusPoint = { x: 50, y: 52, z: 295.6 };
+let cameraRotation = { x: 2.44, y: 0 };
+let cameraDistance = 0.0;
 let isMouseDown = false;
 
 setupCameraControls();
@@ -61,12 +61,15 @@ function degToRad(degree) { return degree / 360 * 2 * Math.PI; }
 function clamp(v, min, max) { return Math.min( Math.max(v, min), max ); }
 
 function setupCameraControls() {
-	// rotate with mouse
-	document.onmousedown = function(event) { isMouseDown = true };
-	document.onmouseup = function(event) { isMouseDown = false };
+	// rotate with mouse (left mouse button)
+	document.onmousedown = function(event) { if (event.button === 0) isMouseDown = true };
+	document.onmouseup = function(event) { if (event.button === 0) isMouseDown = false };
 	document.onmousemove = function(event) {
 		if (isMouseDown) {
-			cameraRotation.x += event.movementY * 0.4;
+			cameraRotation.x = clamp(
+				cameraRotation.x + event.movementY * 0.4,
+				cameraRotationXBounds.min, cameraRotationXBounds.max
+			);
 			cameraRotation.y -= event.movementX * 0.4;
 		}
 	};
@@ -80,5 +83,4 @@ function setupCameraControls() {
 	// camera restrictions
 	cameraDistance = Math.max(cameraDistanceBounds.min, cameraDistance);
 	cameraDistance = Math.min(cameraDistanceBounds.max, cameraDistance);
-	cameraRotation.x = clamp(cameraRotation.x, cameraRotationXBounds.min, cameraRotationXBounds.max);
 };
