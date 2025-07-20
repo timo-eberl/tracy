@@ -2,6 +2,8 @@
 
 This project is a simple, interactive 3D ray tracer built with C, compiled to WebAssembly, and rendered in a web browser.
 
+It is a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung".
+
 ## Dependencies
 
 - [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html): The compiler toolchain for compiling C to WebAssembly
@@ -30,3 +32,30 @@ npm run dev:debug
 ```
 
 Open the developer tools and navigate to `Sources`. You should see the c files and be able to debug them.
+
+## To-Do
+
+> Concepts from the lecture "Moderne Techniken der Bildberechnung". Numbers in brackets indicate the chapter.
+
+- [ ] Pinhole camera (5)
+- [ ] Ray geometry intersection (6.2)
+  - [x] Sphere (6.2.4)
+  - [ ] Plane (6.2.1)
+  - [ ] Triangle (6.2.3)
+- [ ] Tone mapping (4)
+- [ ] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)
+- [ ] Rendering algorithms
+  - [ ] Ray casting (5.2.1, 6.1.1, 10.2.2)
+  - [ ] Whitted ray tracing (12.1)
+  - [ ] Path tracing (13.5)
+- [ ] Light sources (10.1)
+  - [ ] Point light source (10.1.5)
+  - [ ] Area light source (10.1.7)
+- [ ] Material models (11)
+  - [ ] Lambertian BRDF (11.2.2)
+  - [ ] Blinn-Phong BRDF (11.2.6)
+  - [ ] Cook-Torrance (11.3.2)
+- [ ] Thin lenses (7.3)
+- [ ] Optimizations
+  - [ ] Spatial data structures (12.3)
+  - [ ] Importance Sampling (14.2)
