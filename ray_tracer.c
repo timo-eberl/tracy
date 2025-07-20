@@ -34,16 +34,29 @@ Sphere scene[] = {
 	{{2, 0, 2}, 1, {0, 0, 255}}
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
+// ray-sphere intersection (6.2.4)
 double intersect(Ray r, Sphere s) {
 	Vec oc = vec_sub(r.origin, s.center);
 	double a = vec_dot(r.dir, r.dir);
 	double b = 2.0 * vec_dot(oc, r.dir);
 	double c = vec_dot(oc, oc) - s.radius * s.radius;
+	// quadratic formula
 	double discriminant = b * b - 4 * a * c;
 	if (discriminant < 0) {
+		// cant take the square root of negative number
+		// the quadratic formula has no solution -> no intersection
 		return -1.0;
 	} else {
-		return (-b - sqrt(discriminant)) / (2.0 * a);
+		double sqrtDiscriminant = sqrt(discriminant);
+		// we may have either one solution (t0==t1) or two solutions (t0 < t1)
+		double t0 = (-b - sqrtDiscriminant) / (2.0 * a);
+		double t1 = (-b + sqrtDiscriminant) / (2.0 * a);
+		// we want to know about the closest intersection in front of the camera
+		// -> smallest t value
+		// however a negative t value would mean an intersection behind the camera
+		// -> ignore negative t value
+		// therefore we return the smallest positive t value
+		return (t0 > 0.0) ? t0 : t1;
 	}
 }
 
