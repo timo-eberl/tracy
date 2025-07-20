@@ -11,8 +11,8 @@ canvas {
 	margin: auto;
 	/* if the canvas is too wide to fit on the page, scale it down */
 	max-width: 100%;
-	width: 600px;
-	height: 400px;
+	width: 640px;
+	height: 480px;
 }
 
 /* default color scheme */

@@ -103,10 +103,14 @@ unsigned char* render(
 
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
-			// Map pixel coordinates to the view plane
-			// (-aspect_ratio, -1) to (aspect_ratio, 1)
-			double world_x = (2.0 * (x + 0.5) / width - 1.0) * aspect_ratio;
+			// Map pixel coordinates to the view plane (-1;1)
+			double world_x = (2.0 * (x + 0.5) / width - 1.0);
 			double world_y = 1.0 - 2.0 * (y + 0.5) / height;
+			// scale to account for fov and aspect ratio
+			double fov_y = 30 * 3.141 / 180.0;
+			double fov_scale = tan(fov_y / 2.0); // 5.1.4
+			world_x *= aspect_ratio * fov_scale;
+			world_y *= fov_scale;
 
 			// Calculate the direction for the ray for this pixel
 			Vec right_comp = vec_scale(right, world_x);
