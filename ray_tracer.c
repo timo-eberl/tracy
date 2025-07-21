@@ -2,8 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 
+typedef struct { double x, y, z; } Vec;
+typedef struct { Vec origin; Vec dir; } Ray;
+typedef struct { Vec center; double radius; Vec color; } Sphere;
+
 // The image buffer will be allocated on demand.
-unsigned char* image_buffer = NULL;
+unsigned char* image_buffer = NULL; // stores tone mapped gamma corrected colors
+Vec* radiance_buffer = NULL; // stores raw radiance
 int buffer_width = 0;
 int buffer_height = 0;
 
@@ -11,11 +16,9 @@ int buffer_height = 0;
 // The dimension of the grid within each pixel.
 // 3 means a 3x3 grid, for a total of 9 samples per pixel.
 #define SUPER_SAMPLE_GRID_DIM 3
-
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5
-
 // The range of the filter in units of sigma. A value of 3.0 means we sample
 // across +/- 3-sigma, capturing >99% of the curve's influence.
 // This will scale our sample offsets to cover a wider area.
@@ -24,8 +27,6 @@ int buffer_height = 0;
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-
-typedef struct { double x, y, z; } Vec;
 Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
 Vec vec_scale(Vec v, double s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
@@ -44,18 +45,16 @@ Vec vec_cross(Vec a, Vec b) {
 	};
 }
 
-typedef struct { Vec origin; Vec dir; } Ray;
-typedef struct { Vec center; double radius; Vec color; } Sphere;
 Sphere scene[] = {
-	{{ 1e5+1,40.8,81.6},  1.0e5, {.75, .25, .25}},//Left
-	{{-1e5+99,40.8,81.6}, 1.0e5, {.25, .25, .75}},//Rght
-	{{50,40.8, 1e5},      1.0e5, {.75, .75, .75}},//Back
-	// {{50,40.8,-1e5+170},  1.0e5, {.0, .0, .0}},//Frnt
-	{{50, 1e5, 81.6},     1.0e5, {.75, .75, .75}},//Botm
-	{{50,-1e5+81.6,81.6}, 1.0e5, {.75, .75, .75}},//Top
-	{{27,16.5,47},         16.5, {.50, .50, .50}},//Mirr
-	{{73,16.5,78},         16.5, {.999, .999, .999}},//Glas
-	{{50,681.6-.27,81.6}, 600.0, {.999, .999, .999}}//Lite
+	{{ 1e5+1,40.8,81.6},  1.0e5, {0.75, 0.25, 0.25}},//Left
+	{{-1e5+99,40.8,81.6}, 1.0e5, {0.25, 0.25, 0.75}},//Rght
+	{{50,40.8, 1e5},      1.0e5, {0.75, 0.75, 0.75}},//Back
+	// {{50,40.8,-1e5+170},  1.0e5, {0.00, 0.00, 0.00}},//Frnt
+	{{50, 1e5, 81.6},     1.0e5, {0.75, 0.75, 0.75}},//Botm
+	{{50,-1e5+81.6,81.6}, 1.0e5, {0.75, 0.75, 0.75}},//Top
+	{{27,16.5,47},         16.5, {0.25, 0.25, 0.25}},//Mirr
+	{{73,16.5,78},         16.5, {1.00, 1.00, 1.00}},//Glas
+	{{50,681.6-.27,81.6}, 600.0, {15.0, 15.0, 15.0}}//Lite
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 // ray-sphere intersection (6.2.4)
@@ -84,21 +83,40 @@ double intersect(Ray r, Sphere s) {
 	}
 }
 
+// srgb response curve (4.1.9)
 double linear_to_srgb(double v) {
 	return (v <= 0.0031308) ? (12.92 * v) : (1.055 * pow(v, 0.416666667) - 0.055);
 }
 
-unsigned char* get_image_buffer(int width, int height) {
-	// Re-allocate buffer only if dimensions change
-	if (image_buffer == NULL || width != buffer_width || height != buffer_height) {
+// for tone mapping we convert our color values to a single luminance value to combat
+// the problem of washing out our image described in 4.2.5
+double luminance(Vec rgb) {
+	return 0.2126*rgb.x + 0.7152*rgb.y + 0.0722*rgb.z;
+}
+// simple reinhard tone mapping operator based on luminance
+Vec reinhard_luminance(Vec rgb_hdr) {
+	double l_hdr = luminance(rgb_hdr);
+	double l_ldr = l_hdr / (1.0 + l_hdr);
+	return vec_scale(rgb_hdr, l_ldr/l_hdr);
+}
+
+void set_buffer_size(int width, int height) {
+	// (Re)allocate buffer if dimensions change or not allocated yet
+	if (
+		image_buffer == NULL || radiance_buffer == NULL
+		|| width != buffer_width || height != buffer_height)
+	{
 		if (image_buffer != NULL) {
 			free(image_buffer);
 		}
+		if (radiance_buffer != NULL) {
+			free(radiance_buffer);
+		}
+		radiance_buffer = malloc(width * height * sizeof(Vec));
 		image_buffer = malloc(width * height * 4 * sizeof(unsigned char));
 		buffer_width = width;
 		buffer_height = height;
 	}
-	return image_buffer;
 }
 
 // Calculates a weight based on the 2D Gaussian PDF.
@@ -133,8 +151,8 @@ unsigned char* render(
 	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
 	double focus_x, double focus_y, double focus_z
 ) {
-	unsigned char* buffer = get_image_buffer(width, height);
-	
+	set_buffer_size(width, height);
+
 	Vec focus_point = {focus_x, focus_y, focus_z};
 
 	// Calculate Camera Position using spherical coordinates around the focus point
@@ -154,11 +172,10 @@ unsigned char* render(
 	double fov_y = 30 * 3.141 / 180.0;
 	double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
-	// loop over image pixels
+	// loop over pixels, calculate radiance
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
-
-		Vec weighted_color_sum = {0, 0, 0};
+		Vec weighted_radiance_sum = {0, 0, 0};
 		double total_weight_sum = 0.0;
 
 		// This factor scales our sample offsets to cover the desired range of the filter.
@@ -188,10 +205,10 @@ unsigned char* render(
 			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 			Ray r = {camera_origin, dir};
-			Vec sample_color = radiance(r);
+			Vec radiance_sample = radiance(r);
 
 			double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
-			weighted_color_sum = vec_add(weighted_color_sum, vec_scale(sample_color, weight));
+			weighted_radiance_sum = vec_add(weighted_radiance_sum, vec_scale(radiance_sample, weight));
 			total_weight_sum += weight;
 		}
 
@@ -199,14 +216,22 @@ unsigned char* render(
 		// If this were a continuous integral, the sum of weights would be 1.0 and this
 		// step unnecessary. But since we are doing a discrete sum, our total weight
 		// will not be exactly 1.0, so we manually keep track of it.
-		Vec final_color = vec_scale(weighted_color_sum, 1.0 / total_weight_sum);
+		Vec weighted_radiance = vec_scale(weighted_radiance_sum, 1.0 / total_weight_sum);
 
-		int index = (y * width + x) * 4;
-		buffer[index + 0] = linear_to_srgb(final_color.x) * 255;
-		buffer[index + 1] = linear_to_srgb(final_color.y) * 255;
-		buffer[index + 2] = linear_to_srgb(final_color.z) * 255;
-		buffer[index + 3] = 255;
+		radiance_buffer[y * width + x] = weighted_radiance;
 	}
 
-	return buffer;
+	// loop over pixels, do tone mapping and gamma correction
+	for (int y = 0; y < height; ++y)
+	for (int x = 0; x < width; ++x) {
+		Vec ldr_color = reinhard_luminance(radiance_buffer[y * width + x]);
+
+		int index = (y * width + x) * 4;
+		image_buffer[index + 0] = linear_to_srgb(ldr_color.x) * 255;
+		image_buffer[index + 1] = linear_to_srgb(ldr_color.y) * 255;
+		image_buffer[index + 2] = linear_to_srgb(ldr_color.z) * 255;
+		image_buffer[index + 3] = 255;
+	}
+
+	return image_buffer;
 }

@@ -43,7 +43,7 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
   - [ ] Triangle (6.2.3)
 - [ ] Tone mapping (4)
   - [x] Gamma correction with sRGB response curve (4.1.9)
-  - [ ] HDR to LDR tonemapping
+  - [x] Global HDR to LDR tonemapping (4.2) using Reinhard
 - [x] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)
 - [ ] Rendering algorithms
   - [ ] Ray casting (5.2.1, 6.1.1, 10.2.2)
