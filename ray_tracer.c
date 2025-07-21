@@ -12,6 +12,19 @@ int buffer_height = 0;
 // 3 means a 3x3 grid, for a total of 9 samples per pixel.
 #define SUPER_SAMPLE_GRID_DIM 3
 
+// The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
+// means the filter will be wider than a single pixel.
+#define GAUSS_SIGMA 0.5
+
+// The range of the filter in units of sigma. A value of 3.0 means we sample
+// across +/- 3-sigma, capturing >99% of the curve's influence.
+// This will scale our sample offsets to cover a wider area.
+#define GAUSS_FILTER_RADIUS_IN_SIGMA 2.0
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 typedef struct { double x, y, z; } Vec;
 Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
@@ -84,6 +97,18 @@ unsigned char* get_image_buffer(int width, int height) {
 	return image_buffer;
 }
 
+// Calculates a weight based on the 2D Gaussian PDF.
+// This implements the formula: (1 / (2πσ²)) e^(-(x² + y²) / (2σ²))
+// We are doing a normalization in the render loop, so the normalization
+// constant could be omitted.
+double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
+	double two_sigma_squared = 2.0 * sigma * sigma;
+	// normalization constant: (1 / (2πσ²))
+	double norm_const = 1.0 / (M_PI * two_sigma_squared);
+	double r_squared = offset_x * offset_x + offset_y * offset_y;
+	return norm_const * exp(-r_squared / two_sigma_squared);
+}
+
 Vec radiance(Ray r) {
 	double min_t = INFINITY;
 	Sphere* hit_sphere = NULL;
@@ -129,8 +154,12 @@ unsigned char* render(
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
 
-		Vec accumulated_color = {0, 0, 0};
+		Vec weighted_color_sum = {0, 0, 0};
+		double total_weight_sum = 0.0;
 
+		// This factor scales our sample offsets to cover the desired range of the filter.
+		// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
+		const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
 		// loop over super-sampling grid
 		// super-sampling uses a finite grid like described in 2.6.2
 		for (int sy = 0; sy < SUPER_SAMPLE_GRID_DIM; ++sy)
@@ -138,6 +167,9 @@ unsigned char* render(
 			// evenly spaced sample offsets from the pixel center with range (-0.5;0.5)
 			double sample_offset_x = (double)(sx + 0.5) / (double)SUPER_SAMPLE_GRID_DIM - 0.5;
 			double sample_offset_y = (double)(sy + 0.5) / (double)SUPER_SAMPLE_GRID_DIM - 0.5;
+			// scale to match the filters radius
+			sample_offset_x *= sample_range_scale;
+			sample_offset_y *= sample_range_scale;
 
 			// Map pixel coordinates to the view plane (-1;1)
 			double world_x = (2.0 * (x + 0.5 + sample_offset_x) / width - 1.0);
@@ -152,12 +184,18 @@ unsigned char* render(
 			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 			Ray r = {camera_origin, dir};
+			Vec sample_color = radiance(r);
 
-			accumulated_color = vec_add(accumulated_color, radiance(r));
+			double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
+			weighted_color_sum = vec_add(weighted_color_sum, vec_scale(sample_color, weight));
+			total_weight_sum += weight;
 		}
 
-		double total_samples = SUPER_SAMPLE_GRID_DIM * SUPER_SAMPLE_GRID_DIM;
-		Vec final_color = vec_scale(accumulated_color, 1.0 / total_samples);
+		// Normalize the final color by dividing by the total sum of weights.
+		// If this were a continuous integral, the sum of weights would be 1.0 and this
+		// step unnecessary. But since we are doing a discrete sum, our total weight
+		// will not be exactly 1.0, so we manually keep track of it.
+		Vec final_color = vec_scale(weighted_color_sum, 1.0 / total_weight_sum);
 
 		int index = (y * width + x) * 4;
 		buffer[index + 0] = final_color.x;
