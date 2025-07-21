@@ -161,7 +161,7 @@ unsigned char* render(
 	double cam_z = focus_point.z + cam_dist * cos(cam_angle_y) * cos(cam_angle_x);
 	Vec camera_origin = {cam_x, cam_y, cam_z};
 
-	// Create the cameras coordinate system (basis vectors)
+	// Create the cameras coordinate system (basis vectors) 5.1.6
 	Vec forward = vec_normalize(vec_sub(focus_point, camera_origin));
 	Vec world_up = {0, 1, 0};
 	Vec right = vec_normalize(vec_cross(forward, world_up));
@@ -192,23 +192,21 @@ unsigned char* render(
 			sample_offset_x *= sample_range_scale;
 			sample_offset_y *= sample_range_scale;
 
+			// 5.2.2
 			// Map pixel coordinates to the view plane (-1;1)
 			double world_x = (2.0 * (x + 0.5 + sample_offset_x) / width - 1.0);
 			double world_y = 1.0 - 2.0 * (y + 0.5 + sample_offset_y) / height;
-			// scale to account for fov and aspect ratio
-			world_x *= aspect_ratio * fov_scale;
-			world_y *= fov_scale;
 
 			// Calculate the direction for the ray for this pixel
-			Vec right_comp = vec_scale(right, world_x);
-			Vec up_comp = vec_scale(up, world_y);
+			Vec right_comp = vec_scale(right, world_x * fov_scale * aspect_ratio);
+			Vec up_comp = vec_scale(up, world_y * fov_scale);
 			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 			Ray r = {camera_origin, dir};
-			Vec radiance_sample = radiance(r);
+			Vec radiance_s = radiance(r);
 
 			double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
-			weighted_radiance_sum = vec_add(weighted_radiance_sum, vec_scale(radiance_sample, weight));
+			weighted_radiance_sum = vec_add(weighted_radiance_sum, vec_scale(radiance_s, weight));
 			total_weight_sum += weight;
 		}
 
