@@ -7,6 +7,11 @@ unsigned char* image_buffer = NULL;
 int buffer_width = 0;
 int buffer_height = 0;
 
+// Structured Super-Sampling Configuration
+// The dimension of the grid within each pixel.
+// 3 means a 3x3 grid, for a total of 9 samples per pixel.
+#define SUPER_SAMPLE_GRID_DIM 3
+
 typedef struct { double x, y, z; } Vec;
 Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
@@ -37,6 +42,7 @@ Sphere scene[] = {
 	{{50,-1e5+81.6,81.6}, 1.0e5, {255 * .75, 255 * .75, 255 * .75}},//Top
 	{{27,16.5,47},         16.5, {255 * .25, 255 * .25, 255 * .25}},//Mirr
 	{{73,16.5,78},         16.5, {255 * .999, 255 * .999, 255 * .999}},//Glas
+	{{50,681.6-.27,81.6}, 600.0, {255 * .999, 255 * .999, 255 * .999}}//Lite 
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 // ray-sphere intersection (6.2.4)
@@ -78,6 +84,21 @@ unsigned char* get_image_buffer(int width, int height) {
 	return image_buffer;
 }
 
+Vec radiance(Ray r) {
+	double min_t = INFINITY;
+	Sphere* hit_sphere = NULL;
+
+	for (int i = 0; i < num_spheres; ++i) {
+		double t = intersect(r, scene[i]);
+		if (t > 0 && t < min_t) {
+			min_t = t;
+			hit_sphere = &scene[i];
+		}
+	}
+
+	return hit_sphere ? hit_sphere->color : (Vec){0,0,0};
+}
+
 EMSCRIPTEN_KEEPALIVE
 unsigned char* render(
 	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
@@ -101,14 +122,27 @@ unsigned char* render(
 
 	double aspect_ratio = (double)width / height;
 
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
+	double fov_y = 30 * 3.141 / 180.0;
+	double fov_scale = tan(fov_y / 2.0); // 5.1.4
+
+	// loop over image pixels
+	for (int y = 0; y < height; ++y)
+	for (int x = 0; x < width; ++x) {
+
+		Vec accumulated_color = {0, 0, 0};
+
+		// loop over super-sampling grid
+		// super-sampling uses a finite grid like described in 2.6.2
+		for (int sy = 0; sy < SUPER_SAMPLE_GRID_DIM; ++sy)
+		for (int sx = 0; sx < SUPER_SAMPLE_GRID_DIM; ++sx) {
+			// evenly spaced sample offsets from the pixel center with range (-0.5;0.5)
+			double sample_offset_x = (double)(sx + 0.5) / (double)SUPER_SAMPLE_GRID_DIM - 0.5;
+			double sample_offset_y = (double)(sy + 0.5) / (double)SUPER_SAMPLE_GRID_DIM - 0.5;
+
 			// Map pixel coordinates to the view plane (-1;1)
-			double world_x = (2.0 * (x + 0.5) / width - 1.0);
-			double world_y = 1.0 - 2.0 * (y + 0.5) / height;
+			double world_x = (2.0 * (x + 0.5 + sample_offset_x) / width - 1.0);
+			double world_y = 1.0 - 2.0 * (y + 0.5 + sample_offset_y) / height;
 			// scale to account for fov and aspect ratio
-			double fov_y = 30 * 3.141 / 180.0;
-			double fov_scale = tan(fov_y / 2.0); // 5.1.4
 			world_x *= aspect_ratio * fov_scale;
 			world_y *= fov_scale;
 
@@ -119,30 +153,17 @@ unsigned char* render(
 
 			Ray r = {camera_origin, dir};
 
-			double min_t = INFINITY;
-			Sphere* hit_sphere = NULL;
-
-			for (int i = 0; i < num_spheres; ++i) {
-				double t = intersect(r, scene[i]);
-				if (t > 0 && t < min_t) {
-					min_t = t;
-					hit_sphere = &scene[i];
-				}
-			}
-
-			int index = (y * width + x) * 4;
-			if (hit_sphere) {
-				buffer[index + 0] = hit_sphere->color.x;
-				buffer[index + 1] = hit_sphere->color.y;
-				buffer[index + 2] = hit_sphere->color.z;
-				buffer[index + 3] = 255;
-			} else {
-				buffer[index + 0] = 173;
-				buffer[index + 1] = 216;
-				buffer[index + 2] = 230;
-				buffer[index + 3] = 255;
-			}
+			accumulated_color = vec_add(accumulated_color, radiance(r));
 		}
+
+		double total_samples = SUPER_SAMPLE_GRID_DIM * SUPER_SAMPLE_GRID_DIM;
+		Vec final_color = vec_scale(accumulated_color, 1.0 / total_samples);
+
+		int index = (y * width + x) * 4;
+		buffer[index + 0] = final_color.x;
+		buffer[index + 1] = final_color.y;
+		buffer[index + 2] = final_color.z;
+		buffer[index + 3] = 255;
 	}
 
 	return buffer;

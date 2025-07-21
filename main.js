@@ -67,10 +67,10 @@ function setupCameraControls() {
 	document.onmousemove = function(event) {
 		if (isMouseDown) {
 			cameraRotation.x = clamp(
-				cameraRotation.x + event.movementY * 0.4,
+				cameraRotation.x + event.movementY * 0.2,
 				cameraRotationXBounds.min, cameraRotationXBounds.max
 			);
-			cameraRotation.y -= event.movementX * 0.4;
+			cameraRotation.y -= event.movementX * 0.2;
 		}
 	};
 	// zoom with mouse wheel

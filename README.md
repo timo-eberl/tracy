@@ -37,7 +37,7 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
 
 > Concepts from the lecture "Moderne Techniken der Bildberechnung". Numbers in brackets indicate the chapter.
 
-- [ ] Pinhole camera (5)
+- [x] Pinhole camera (5)
 - [ ] Ray geometry intersection (6.2)
   - [x] Sphere (6.2.4)
   - [ ] Triangle (6.2.3)
