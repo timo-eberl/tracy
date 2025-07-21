@@ -19,7 +19,7 @@ int buffer_height = 0;
 // The range of the filter in units of sigma. A value of 3.0 means we sample
 // across +/- 3-sigma, capturing >99% of the curve's influence.
 // This will scale our sample offsets to cover a wider area.
-#define GAUSS_FILTER_RADIUS_IN_SIGMA 2.0
+#define GAUSS_FILTER_RADIUS_IN_SIGMA 1.5
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

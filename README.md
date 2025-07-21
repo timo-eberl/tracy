@@ -42,7 +42,7 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
   - [x] Sphere (6.2.4)
   - [ ] Triangle (6.2.3)
 - [ ] Tone mapping (4)
-- [ ] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)
+- [x] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)
 - [ ] Rendering algorithms
   - [ ] Ray casting (5.2.1, 6.1.1, 10.2.2)
   - [ ] Whitted ray tracing (12.1)
