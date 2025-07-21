@@ -47,15 +47,15 @@ Vec vec_cross(Vec a, Vec b) {
 typedef struct { Vec origin; Vec dir; } Ray;
 typedef struct { Vec center; double radius; Vec color; } Sphere;
 Sphere scene[] = {
-	{{ 1e5+1,40.8,81.6},  1.0e5, {255 * .75, 255 * .25, 255 * .25}},//Left
-	{{-1e5+99,40.8,81.6}, 1.0e5, {255 * .25, 255 * .25, 255 * .75}},//Rght
-	{{50,40.8, 1e5},      1.0e5, {255 * .75, 255 * .75, 255 * .75}},//Back
-	// {{50,40.8,-1e5+170},  1.0e5, {255 * .0, 255 * .0, 255 * .0}},//Frnt
-	{{50, 1e5, 81.6},     1.0e5, {255 * .75, 255 * .75, 255 * .75}},//Botm
-	{{50,-1e5+81.6,81.6}, 1.0e5, {255 * .75, 255 * .75, 255 * .75}},//Top
-	{{27,16.5,47},         16.5, {255 * .25, 255 * .25, 255 * .25}},//Mirr
-	{{73,16.5,78},         16.5, {255 * .999, 255 * .999, 255 * .999}},//Glas
-	{{50,681.6-.27,81.6}, 600.0, {255 * .999, 255 * .999, 255 * .999}}//Lite 
+	{{ 1e5+1,40.8,81.6},  1.0e5, {.75, .25, .25}},//Left
+	{{-1e5+99,40.8,81.6}, 1.0e5, {.25, .25, .75}},//Rght
+	{{50,40.8, 1e5},      1.0e5, {.75, .75, .75}},//Back
+	// {{50,40.8,-1e5+170},  1.0e5, {.0, .0, .0}},//Frnt
+	{{50, 1e5, 81.6},     1.0e5, {.75, .75, .75}},//Botm
+	{{50,-1e5+81.6,81.6}, 1.0e5, {.75, .75, .75}},//Top
+	{{27,16.5,47},         16.5, {.50, .50, .50}},//Mirr
+	{{73,16.5,78},         16.5, {.999, .999, .999}},//Glas
+	{{50,681.6-.27,81.6}, 600.0, {.999, .999, .999}}//Lite
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 // ray-sphere intersection (6.2.4)
@@ -82,6 +82,10 @@ double intersect(Ray r, Sphere s) {
 		// therefore we return the smallest positive t value
 		return (t0 > 0.0) ? t0 : t1;
 	}
+}
+
+double linear_to_srgb(double v) {
+	return (v <= 0.0031308) ? (12.92 * v) : (1.055 * pow(v, 0.416666667) - 0.055);
 }
 
 unsigned char* get_image_buffer(int width, int height) {
@@ -198,9 +202,9 @@ unsigned char* render(
 		Vec final_color = vec_scale(weighted_color_sum, 1.0 / total_weight_sum);
 
 		int index = (y * width + x) * 4;
-		buffer[index + 0] = final_color.x;
-		buffer[index + 1] = final_color.y;
-		buffer[index + 2] = final_color.z;
+		buffer[index + 0] = linear_to_srgb(final_color.x) * 255;
+		buffer[index + 1] = linear_to_srgb(final_color.y) * 255;
+		buffer[index + 2] = linear_to_srgb(final_color.z) * 255;
 		buffer[index + 3] = 255;
 	}
 
