@@ -1,11 +1,15 @@
 #include <emscripten.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;
 typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
 typedef enum { DIFFUSE, EMISSIVE } MaterialType;
+// color is treated differently depending on the material type
+// DIFFUSE: color=albedo
+// EMISSIVE: color=radiosity (W/m^2)
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
 typedef struct {
 	double t;   // Distance to hit
@@ -37,6 +41,7 @@ int buffer_height = 0;
 Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
 Vec vec_scale(Vec v, double s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
+Vec vec_hadamard_prod(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b.z}; }
 double vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 double vec_length(Vec v) { return sqrt(vec_dot(v, v)); }
 double vec_length_squared(Vec v) { return vec_dot(v, v); }
@@ -53,17 +58,34 @@ Vec vec_cross(Vec a, Vec b) {
 	};
 }
 
+// light radiant energy calculation:
+// typical kitchen: assume 4x3m (12m^2) floor, 2.4m height, target illuminance is ~200 lux
+// this means a total of 2400 lumen must reach the floor
+// assume the light is 2.4m centered above the floor, the solid angle to the floor is ~1.38 sr
+// -> the luminous intensity of the point light should be 3312 lm/sr
+// in reality we might have a fluorescent tube or multiple individual smaller LEDs for this, which
+// typically are not isotropic (10.1.5), instead their intensity is higher downwards
+// however, since we use an isotropic point light, our total luminous flux must be higher to
+// achieve the same luminance downwards. typical fluorescent tube has 21.5W.
+// luminous flux: (3312 lm/sr) * (4pi sr) = ~41612
+// convert to radiant flux (173W/lm for a fluorescent tube): ~240W
+
+// PointLight should be removed once indirect lighting is implemented.
+// Emissive light: probably around 1m^2, so 21.5W flux correspond to 21.5W/m^2 radiosity
+
+// room dimensions: (3,2.4,4)
+
 // position, radiant flux (W), color
-PointLight light = { {5.0,7.5,8.16 }, 1000, {1.0,1.0,1.0} };
+PointLight light = { {0,2.38,0 }, 100, {1,1,1} };
 Sphere scene[] = { // center, radius, color, type
-	{{ 1e4+0.1,4.08,8.16},    1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
-	{{-1e4+9.9,4.08,8.16},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
-	{{5.0,4.08, 1e4},       1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
-	{{5.0, 1e4, 8.16},      1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
-	{{5.0,-1e4+8.16,8.16},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
-	{{2.7,1.65,4.7},         1.65, {0.25, 0.25, 0.25}, DIFFUSE}, // Mirror Sphere
-	{{7.3,1.65,7.8},         1.65, {1.00, 1.00, 1.00}, DIFFUSE}, // Glass Sphere
-	{{5.0,68.16-.027,8.16},  60.0, {100, 100, 100}, EMISSIVE} // Light
+	{{ 1e4-1.5,     1.2,     0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
+	{{-1e4+1.5,     1.2,     0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
+	{{       0,     1.2, 1e4-2},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
+	{{       0,     1e4,     0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
+	{{       0,-1e4+2.4,     0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
+	{{    -0.7,     0.5,  -0.6},    0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Mirror Sphere
+	{{     0.7,     0.5,   0.6},    0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Glass Sphere
+	{{       0,  62.397,     0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 // ray-sphere intersection (6.2.4)
@@ -88,10 +110,13 @@ bool intersect(Ray r, Sphere s, HitInfo* hit) {
 		// however a negative t value would mean an intersection behind the camera
 		// -> ignore negative t value
 		// therefore we return the smallest positive t value
-		hit->t = t0 > 0.0 ? t0 : t1;
+		if (t1 <= 0) {
+			return false; // both intersections are behind ray
+		}
+		hit->t = t0 > 0 ? t0 : t1; // if the first intersection is behind ray, use the other
 		hit->p = vec_add(r.origin, vec_scale(r.dir, hit->t));
 		hit->n = vec_normalize(vec_sub(hit->p, s.center));
-		if (!(t0 > 0.0)) {
+		if (!(t0 > 0.0)) { // hit form inside -> flip normal
 			hit->n = vec_scale(hit->n, -1.0);
 		}
 		return true;
@@ -146,7 +171,7 @@ double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
 	return norm_const * exp(-r_squared / two_sigma_squared);
 }
 
-Vec radiance(Ray r) {
+Vec radiance_from_ray(Ray r) {
 	HitInfo closest_hit;
 	closest_hit.t = INFINITY;
 	Sphere* hit_sphere = NULL;
@@ -165,7 +190,9 @@ Vec radiance(Ray r) {
 		return (Vec){0,0,0};
 	}
 	else if (hit_sphere->type == EMISSIVE) {
-		return hit_sphere->color;
+		Vec radiosity = hit_sphere->color;
+		Vec radiance = vec_scale(radiosity, 1.0/(4.0*M_PI));
+		return radiance;
 	}
 	else if (hit_sphere->type == DIFFUSE) {
 		Vec light_direction = vec_normalize(vec_sub(light.position, closest_hit.p));
@@ -174,9 +201,11 @@ Vec radiance(Ray r) {
 
 		double dist_sq = vec_length_squared(vec_sub(light.position, closest_hit.p));
 		double irradiance = (cos_theta * light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
-		// lambertian brdf
-		return vec_scale(hit_sphere->color, irradiance / M_PI);
+		Vec v_irradiance = vec_scale(light.color, irradiance);
+		Vec lambertian_brdf = vec_scale(hit_sphere->color, 1.0/M_PI);
+		return vec_hadamard_prod(lambertian_brdf, v_irradiance);
 	}
+	return (Vec){0,0,0};
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -211,6 +240,11 @@ unsigned char* render(
 		Vec weighted_radiance_sum = {0, 0, 0};
 		double total_weight_sum = 0.0;
 
+		if (x == 560 && y == 90) {
+			// use for setting breakpoint
+			char* dummy = "dummy";
+		}
+
 		// This factor scales our sample offsets to cover the desired range of the filter.
 		// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
 		const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
@@ -236,7 +270,7 @@ unsigned char* render(
 			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 			Ray r = {camera_origin, dir};
-			Vec radiance_s = radiance(r);
+			Vec radiance_s = radiance_from_ray(r);
 
 			double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
 			weighted_radiance_sum = vec_add(weighted_radiance_sum, vec_scale(radiance_s, weight));

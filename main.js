@@ -13,11 +13,11 @@ window.onresize = function() {
 	canvas.height = height;
 }
 
-const cameraDistanceBounds = { min: 1.1, max: 40 };
+const cameraDistanceBounds = { min: 0.1, max: 40 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const cameraFocusPoint = { x: 5.0, y: 5.2, z: 29.56 };
+const cameraFocusPoint = { x: 0, y: 1.5, z: 5.5 };
 let cameraRotation = { x: 2.44, y: 0 };
-let cameraDistance = 0.0;
+let cameraDistance = cameraDistanceBounds.min;
 let isMouseDown = false;
 
 setupCameraControls();
@@ -79,8 +79,9 @@ function setupCameraControls() {
 		delta *= -0.08;
 		delta += 1.0; // [0.9 - 1.1]
 		cameraDistance *= delta;
+
+		// camera restrictions
+		cameraDistance = Math.max(cameraDistanceBounds.min, cameraDistance);
+		cameraDistance = Math.min(cameraDistanceBounds.max, cameraDistance);
 	}
-	// camera restrictions
-	cameraDistance = Math.max(cameraDistanceBounds.min, cameraDistance);
-	cameraDistance = Math.min(cameraDistanceBounds.max, cameraDistance);
 };
