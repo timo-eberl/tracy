@@ -1,15 +1,17 @@
+#include <assert.h>
 #include <emscripten.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;
 typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
-typedef enum { DIFFUSE, EMISSIVE } MaterialType;
+typedef enum { DIFFUSE, EMISSIVE, MIRROR } MaterialType;
 // color is treated differently depending on the material type
 // DIFFUSE: color=albedo
 // EMISSIVE: color=radiosity (W/m^2)
+// MIRROR: color is ignored
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
 typedef struct {
 	double t;   // Distance to hit
@@ -35,6 +37,7 @@ int buffer_height = 0;
 // This will scale our sample offsets to cover a wider area.
 #define GAUSS_FILTER_RADIUS_IN_SIGMA 1.5
 
+// offset used for shadow rays. may need to be adjusted depending on scene scale
 #define SELF_OCCLUSION_DELTA 0.00000001
 
 #ifndef M_PI
@@ -85,7 +88,7 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,	 1.2, 1e4-2},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
 	{{	   0,	 1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
-	{{	-0.7,	 0.5,  -0.6},	0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Mirror Sphere
+	{{	-0.7,	 0.5,  -0.6},	0.5, {0.75, 0.75, 0.75}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Glass Sphere
 	{{	   0,  62.397,	 0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
 };
@@ -190,6 +193,22 @@ double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
 	return norm_const * exp(-r_squared / two_sigma_squared);
 }
 
+bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
+	Vec light_direction = vec_normalize(vec_sub(light_pos, surf_pos));
+	Ray shadow_ray = {surf_pos, light_direction};
+	shadow_ray.origin = vec_add(shadow_ray.origin, vec_scale(surf_normal, SELF_OCCLUSION_DELTA));
+	HitInfo shadow_ray_hit;
+	bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Sphere*){NULL});
+	if (is_in_shadow) { // check if occluder is further away than light source
+		double hit_dist_sq = shadow_ray_hit.t * shadow_ray_hit.t;
+		double light_dist_sq = vec_length_squared(vec_sub(light.position,shadow_ray.origin));
+		if (hit_dist_sq > light_dist_sq) { // risk of self occlusion?
+			is_in_shadow = false;
+		}
+	}
+	return is_in_shadow;
+}
+
 Vec radiance_from_ray(Ray r) {
 	HitInfo hit;
 	Sphere* hit_sphere = NULL;
@@ -204,32 +223,17 @@ Vec radiance_from_ray(Ray r) {
 		return radiance;
 	}
 	else if (hit_sphere->type == DIFFUSE) {
+		if (is_in_shadow(hit.p, hit.n, light.position)) return (Vec){0,0,0};
+
 		Vec light_direction = vec_normalize(vec_sub(light.position, hit.p));
-
-		// check if in shadow
-		Ray shadow_ray = {hit.p, light_direction};
-		shadow_ray.origin = vec_add(shadow_ray.origin, vec_scale(hit.n, SELF_OCCLUSION_DELTA));
-		HitInfo shadow_ray_hit;
-		bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Sphere*){NULL});
-		if (is_in_shadow) { // check if occluder is further away than light source
-			double hit_dist_sq = vec_length_squared(vec_sub(shadow_ray_hit.p,shadow_ray.origin));
-			double light_dist_sq = vec_length_squared(vec_sub(light.position,shadow_ray.origin));
-			if (hit_dist_sq > light_dist_sq) {
-				is_in_shadow = false;
-			}
-		}
-		if (is_in_shadow) {
-			return (Vec){0,0,0};
-		}
-
 		double cos_theta = vec_dot(hit.n, light_direction);
 		if (cos_theta < 0.0) cos_theta = 0.0; // only upper hemisphere
 
 		double dist_sq = vec_length_squared(vec_sub(light.position, hit.p));
 		double irradiance = (cos_theta * light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
-		Vec v_irradiance = vec_scale(light.color, irradiance);
+		Vec colored_irradiance = vec_scale(light.color, irradiance);
 		Vec lambertian_brdf = vec_scale(hit_sphere->color, 1.0/M_PI);
-		return vec_hadamard_prod(lambertian_brdf, v_irradiance);
+		return vec_hadamard_prod(lambertian_brdf, colored_irradiance);
 	}
 	return (Vec){0,0,0};
 }
