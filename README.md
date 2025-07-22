@@ -46,14 +46,14 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
   - [x] Global HDR to LDR tonemapping (4.2) using Reinhard
 - [x] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)
 - [ ] Rendering algorithms
-  - [ ] Ray casting (5.2.1, 6.1.1, 10.2.2)
+  - [x] Ray casting (5.2.1, 6.1.1, 10.2.2) with local illumination (10.3.13)
   - [ ] Whitted ray tracing (12.1)
   - [ ] Path tracing (13.5)
 - [ ] Light sources (10.1)
-  - [ ] Point light source (10.1.5)
+  - [x] Point light source (10.1.5)
   - [ ] Area light source (10.1.7)
 - [ ] Material models (11)
-  - [ ] Lambertian BRDF (11.2.2)
+  - [x] Lambertian BRDF (11.2.2)
   - [ ] Blinn-Phong BRDF (11.2.6)
   - [ ] Cook-Torrance (11.3.2)
 - [ ] Thin lenses (7.3)

@@ -15,7 +15,7 @@ window.onresize = function() {
 
 const cameraDistanceBounds = { min: 1.1, max: 40 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const cameraFocusPoint = { x: 50, y: 52, z: 295.6 };
+const cameraFocusPoint = { x: 5.0, y: 5.2, z: 29.56 };
 let cameraRotation = { x: 2.44, y: 0 };
 let cameraDistance = 0.0;
 let isMouseDown = false;
