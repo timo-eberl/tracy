@@ -13,8 +13,8 @@ typedef enum { DIFFUSE, EMISSIVE } MaterialType;
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
 typedef struct {
 	double t;   // Distance to hit
-	Vec p;      // Hit point in world space
-	Vec n;      // Normal vector at the hit point
+	Vec p;	  // Hit point in world space
+	Vec n;	  // Normal vector at the hit point
 } HitInfo;
 
 // The image buffer will be allocated on demand.
@@ -26,7 +26,7 @@ int buffer_height = 0;
 // Structured Super-Sampling Configuration
 // The dimension of the grid within each pixel.
 // 3 means a 3x3 grid, for a total of 9 samples per pixel.
-#define SUPER_SAMPLE_GRID_DIM 3
+#define SUPER_SAMPLE_GRID_DIM 1
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5
@@ -34,6 +34,8 @@ int buffer_height = 0;
 // across +/- 3-sigma, capturing >99% of the curve's influence.
 // This will scale our sample offsets to cover a wider area.
 #define GAUSS_FILTER_RADIUS_IN_SIGMA 1.5
+
+#define SELF_OCCLUSION_DELTA 0.00000001
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -78,18 +80,18 @@ Vec vec_cross(Vec a, Vec b) {
 // position, radiant flux (W), color
 PointLight light = { {0,2.38,0 }, 100, {1,1,1} };
 Sphere scene[] = { // center, radius, color, type
-	{{ 1e4-1.5,     1.2,     0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
-	{{-1e4+1.5,     1.2,     0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
-	{{       0,     1.2, 1e4-2},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
-	{{       0,     1e4,     0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
-	{{       0,-1e4+2.4,     0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
-	{{    -0.7,     0.5,  -0.6},    0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Mirror Sphere
-	{{     0.7,     0.5,   0.6},    0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Glass Sphere
-	{{       0,  62.397,     0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
+	{{ 1e4-1.5,	 1.2,	 0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
+	{{-1e4+1.5,	 1.2,	 0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
+	{{	   0,	 1.2, 1e4-2},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
+	{{	   0,	 1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
+	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
+	{{	-0.7,	 0.5,  -0.6},	0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Mirror Sphere
+	{{	 0.7,	 0.5,   0.6},	0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Glass Sphere
+	{{	   0,  62.397,	 0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 // ray-sphere intersection (6.2.4)
-bool intersect(Ray r, Sphere s, HitInfo* hit) {
+bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
 	Vec oc = vec_sub(r.origin, s.center);
 	double a = vec_dot(r.dir, r.dir);
 	double b = 2.0 * vec_dot(oc, r.dir);
@@ -121,6 +123,23 @@ bool intersect(Ray r, Sphere s, HitInfo* hit) {
 		}
 		return true;
 	}
+}
+
+bool intersect_scene(Ray r, HitInfo* closest_hit, Sphere** hit_sphere) {
+	closest_hit->t = INFINITY;
+	*hit_sphere = NULL;
+
+	for (int i = 0; i < num_spheres; ++i) {
+		HitInfo current_hit;
+		if (intersect_sphere(r, scene[i], &current_hit)) {
+			if (current_hit.t < closest_hit->t) {
+				*closest_hit = current_hit;
+				*hit_sphere = &scene[i];
+			}
+		}
+	}
+
+	return (*hit_sphere);
 }
 
 // srgb response curve (4.1.9)
@@ -172,21 +191,11 @@ double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
 }
 
 Vec radiance_from_ray(Ray r) {
-	HitInfo closest_hit;
-	closest_hit.t = INFINITY;
+	HitInfo hit;
 	Sphere* hit_sphere = NULL;
+	bool did_hit = intersect_scene(r, &hit, &hit_sphere);
 
-	for (int i = 0; i < num_spheres; ++i) {
-		HitInfo current_hit;
-		if (intersect(r, scene[i], &current_hit)) {
-			if (current_hit.t < closest_hit.t) {
-				closest_hit = current_hit;
-				hit_sphere = &scene[i];
-			}
-		}
-	}
-
-	if (!hit_sphere) {
+	if (!did_hit) {
 		return (Vec){0,0,0};
 	}
 	else if (hit_sphere->type == EMISSIVE) {
@@ -195,11 +204,28 @@ Vec radiance_from_ray(Ray r) {
 		return radiance;
 	}
 	else if (hit_sphere->type == DIFFUSE) {
-		Vec light_direction = vec_normalize(vec_sub(light.position, closest_hit.p));
-		double cos_theta = vec_dot(closest_hit.n, light_direction);
+		Vec light_direction = vec_normalize(vec_sub(light.position, hit.p));
+
+		// check if in shadow
+		Ray shadow_ray = {hit.p, light_direction};
+		shadow_ray.origin = vec_add(shadow_ray.origin, vec_scale(hit.n, SELF_OCCLUSION_DELTA));
+		HitInfo shadow_ray_hit;
+		bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Sphere*){NULL});
+		if (is_in_shadow) { // check if occluder is further away than light source
+			double hit_dist_sq = vec_length_squared(vec_sub(shadow_ray_hit.p,shadow_ray.origin));
+			double light_dist_sq = vec_length_squared(vec_sub(light.position,shadow_ray.origin));
+			if (hit_dist_sq > light_dist_sq) {
+				is_in_shadow = false;
+			}
+		}
+		if (is_in_shadow) {
+			return (Vec){0,0,0};
+		}
+
+		double cos_theta = vec_dot(hit.n, light_direction);
 		if (cos_theta < 0.0) cos_theta = 0.0; // only upper hemisphere
 
-		double dist_sq = vec_length_squared(vec_sub(light.position, closest_hit.p));
+		double dist_sq = vec_length_squared(vec_sub(light.position, hit.p));
 		double irradiance = (cos_theta * light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
 		Vec v_irradiance = vec_scale(light.color, irradiance);
 		Vec lambertian_brdf = vec_scale(hit_sphere->color, 1.0/M_PI);

@@ -13,11 +13,11 @@ window.onresize = function() {
 	canvas.height = height;
 }
 
-const cameraDistanceBounds = { min: 0.1, max: 40 };
+const cameraDistanceBounds = { min: 0.01, max: 5000 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const cameraFocusPoint = { x: 0, y: 1.5, z: 5.5 };
+const cameraFocusPoint = { x: 0, y: 1.25, z: 0 };
 let cameraRotation = { x: 2.44, y: 0 };
-let cameraDistance = cameraDistanceBounds.min;
+let cameraDistance = 5.5;
 let isMouseDown = false;
 
 setupCameraControls();
