@@ -9,9 +9,9 @@ typedef struct { Vec origin; Vec dir; } Ray;
 typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
 typedef enum { DIFFUSE, EMISSIVE, MIRROR } MaterialType;
 // color is treated differently depending on the material type
-// DIFFUSE: color=albedo
-// EMISSIVE: color=radiosity (W/m^2)
-// MIRROR: color is ignored
+// DIFFUSE: perfect lambertian diffuse, color=albedo
+// EMISSIVE: only emission, color=radiosity (W/m^2)
+// MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
 typedef struct {
 	double t;   // Distance to hit
@@ -63,6 +63,11 @@ Vec vec_cross(Vec a, Vec b) {
 	};
 }
 
+// 10.3.16
+Vec reflect(Vec incident, Vec normal) {
+	return vec_sub(incident, vec_scale(normal, 2.0 * vec_dot(normal, incident)));
+}
+
 // light radiant energy calculation:
 // typical kitchen: assume 4x3m (12m^2) floor, 2.4m height, target illuminance is ~200 lux
 // this means a total of 2400 lumen must reach the floor
@@ -88,8 +93,8 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,	 1.2, 1e4-2},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
 	{{	   0,	 1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
-	{{	-0.7,	 0.5,  -0.6},	0.5, {0.75, 0.75, 0.75}, MIRROR}, // Mirror Sphere
-	{{	 0.7,	 0.5,   0.6},	0.5, {0.75, 0.75, 0.75}, DIFFUSE}, // Glass Sphere
+	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
+	{{	 0.7,	 0.5,   0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Glass Sphere
 	{{	   0,  62.397,	 0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
@@ -209,33 +214,48 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 	return is_in_shadow;
 }
 
-Vec radiance_from_ray(Ray r) {
+Vec radiance_from_ray(Ray r, int depth); // forward declaration for recursion
+Vec radiance_from_ray(Ray r, int depth) {
+	if (depth > 5) { return (Vec){0, 0, 0}; }
+
 	HitInfo hit;
 	Sphere* hit_sphere = NULL;
 	bool did_hit = intersect_scene(r, &hit, &hit_sphere);
 
-	if (!did_hit) {
-		return (Vec){0,0,0};
-	}
-	else if (hit_sphere->type == EMISSIVE) {
+	if (!did_hit) { return (Vec){0,0,0}; }
+
+	switch (hit_sphere->type) {
+	case EMISSIVE: {
 		Vec radiosity = hit_sphere->color;
 		Vec radiance = vec_scale(radiosity, 1.0/(4.0*M_PI));
 		return radiance;
 	}
-	else if (hit_sphere->type == DIFFUSE) {
+	case DIFFUSE: {
 		if (is_in_shadow(hit.p, hit.n, light.position)) return (Vec){0,0,0};
 
 		Vec light_direction = vec_normalize(vec_sub(light.position, hit.p));
 		double cos_theta = vec_dot(hit.n, light_direction);
-		if (cos_theta < 0.0) cos_theta = 0.0; // only upper hemisphere
+		if (cos_theta < 0.0) { cos_theta = 0.0; } // only upper hemisphere
 
 		double dist_sq = vec_length_squared(vec_sub(light.position, hit.p));
 		double irradiance = (cos_theta * light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
 		Vec colored_irradiance = vec_scale(light.color, irradiance);
+		// divide by pi for energy conservation 10.3.6
+		// pi is the projected solid angle over hemisphere 3.1.9
 		Vec lambertian_brdf = vec_scale(hit_sphere->color, 1.0/M_PI);
-		return vec_hadamard_prod(lambertian_brdf, colored_irradiance);
+		Vec radiance =  vec_hadamard_prod(lambertian_brdf, colored_irradiance);
+		return radiance;
 	}
-	return (Vec){0,0,0};
+	case MIRROR: {
+		// we don't implement a perfect mirror as a brdf
+		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
+		Ray refl_ray = {hit.p, reflect(r.dir, hit.n)};
+		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(hit.n, SELF_OCCLUSION_DELTA));
+		Vec radiance = vec_hadamard_prod(radiance_from_ray(refl_ray,depth), hit_sphere->color);
+		return radiance;
+	}
+	default: assert(false); // material type not implemented
+	}
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -300,7 +320,7 @@ unsigned char* render(
 			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 			Ray r = {camera_origin, dir};
-			Vec radiance_s = radiance_from_ray(r);
+			Vec radiance_s = radiance_from_ray(r,0);
 
 			double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
 			weighted_radiance_sum = vec_add(weighted_radiance_sum, vec_scale(radiance_s, weight));
