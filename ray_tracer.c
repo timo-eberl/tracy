@@ -7,16 +7,18 @@
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;
 typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
-typedef enum { DIFFUSE, EMISSIVE, MIRROR } MaterialType;
+typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // color is treated differently depending on the material type
 // DIFFUSE: perfect lambertian diffuse, color=albedo
 // EMISSIVE: only emission, color=radiosity (W/m^2)
 // MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
+// REFRACTIVE: reflection and refraction, color.x=ior
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
 typedef struct {
 	double t;   // Distance to hit
-	Vec p;	  // Hit point in world space
-	Vec n;	  // Normal vector at the hit point
+	Vec p;	    // Hit point in world space
+	Vec n;	    // Normal vector at the hit point
+	bool inside;
 } HitInfo;
 
 // The image buffer will be allocated on demand.
@@ -94,7 +96,7 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,	 1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
-	{{	 0.7,	 0.5,   0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Glass Sphere
+	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
 	{{	   0,  62.397,	 0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
@@ -126,9 +128,7 @@ bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
 		hit->t = t0 > 0 ? t0 : t1; // if the first intersection is behind ray, use the other
 		hit->p = vec_add(r.origin, vec_scale(r.dir, hit->t));
 		hit->n = vec_normalize(vec_sub(hit->p, s.center));
-		if (!(t0 > 0.0)) { // hit form inside -> flip normal
-			hit->n = vec_scale(hit->n, -1.0);
-		}
+		hit->inside = !(t0 > 0.0);
 		return true;
 	}
 }
@@ -198,6 +198,17 @@ double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
 	return norm_const * exp(-r_squared / two_sigma_squared);
 }
 
+// Calculates the Fresnel reflectance amount using Schlick's approximation.
+// Determines how much light reflects vs. refracts.
+double fresnel(Vec incident, Vec normal, bool is_inside, double ior) {
+	double R0 = ((1.0 - ior) / (1.0 + ior)) * ((1.0 - ior) / (1.0 + ior));
+	double cos_i = -vec_dot(incident, normal);
+	// If we're inside the medium, use the correct IOR for the calculation
+	if (is_inside) cos_i = -cos_i; // This can happen if ray is inside the sphere
+
+	return R0 + (1 - R0) * pow(1 - cos_i, 5);
+}
+
 bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 	Vec light_direction = vec_normalize(vec_sub(light_pos, surf_pos));
 	Ray shadow_ray = {surf_pos, light_direction};
@@ -212,6 +223,25 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 		}
 	}
 	return is_in_shadow;
+}
+
+// Calculates the refraction direction using Snell's Law from 11.2.9
+// Also handles Total Internal Reflection.
+Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
+	double cos_i = vec_dot(incident, normal);
+	if (cos_i > 0.0) {
+		printf("cos_i: %f\n", cos_i);
+	}
+
+	double k = 1 - eta * eta * (1 - cos_i * cos_i);
+	*total_int_refl = k < 0;
+	if (*total_int_refl) { // total internal reflection
+		return reflect(incident, normal);
+	}
+	else {
+		Vec refl_dir = vec_add(vec_scale(incident, eta), vec_scale(normal, eta * cos_i - sqrt(k)));
+		return vec_normalize(refl_dir);
+	}
 }
 
 Vec radiance_from_ray(Ray r, int depth); // forward declaration for recursion
@@ -231,10 +261,11 @@ Vec radiance_from_ray(Ray r, int depth) {
 		return radiance;
 	}
 	case DIFFUSE: {
-		if (is_in_shadow(hit.p, hit.n, light.position)) return (Vec){0,0,0};
+		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
+		if (is_in_shadow(hit.p, normal, light.position)) return (Vec){0,0,0};
 
 		Vec light_direction = vec_normalize(vec_sub(light.position, hit.p));
-		double cos_theta = vec_dot(hit.n, light_direction);
+		double cos_theta = vec_dot(normal, light_direction);
 		if (cos_theta < 0.0) { cos_theta = 0.0; } // only upper hemisphere
 
 		double dist_sq = vec_length_squared(vec_sub(light.position, hit.p));
@@ -247,12 +278,42 @@ Vec radiance_from_ray(Ray r, int depth) {
 		return radiance;
 	}
 	case MIRROR: {
+		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
 		// we don't implement a perfect mirror as a brdf
 		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
-		Ray refl_ray = {hit.p, reflect(r.dir, hit.n)};
-		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(hit.n, SELF_OCCLUSION_DELTA));
-		Vec radiance = vec_hadamard_prod(radiance_from_ray(refl_ray,depth), hit_sphere->color);
+		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
+		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
+		Vec radiance = vec_hadamard_prod(radiance_from_ray(refl_ray,depth+1), hit_sphere->color);
 		return radiance;
+	}
+	case REFRACTIVE: {
+		double ior = hit_sphere->color.x;
+		double eta = hit.inside ? ior : 1.0/ior;
+		// Calculate how much light reflects using the Fresnel term.
+		double reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
+		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
+
+		// reflection
+		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
+		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
+		Vec reflection_radiance = radiance_from_ray(refl_ray, depth + 1);
+
+		// refraction
+		bool internal_refl;
+		Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
+		if (internal_refl) { // total internal reflection -> exit early
+			return reflection_radiance;
+		}
+		Ray refr_ray = {hit.p, refr_dir};
+		refr_ray.origin = vec_add(refr_ray.origin, vec_scale(normal, -SELF_OCCLUSION_DELTA));
+		Vec refraction_radiance = radiance_from_ray(refr_ray, depth + 1);
+
+		Vec combined_radiance = vec_add(
+			vec_scale(reflection_radiance, reflectance),
+			vec_scale(refraction_radiance, 1.0 - reflectance)
+		);
+
+		return combined_radiance;
 	}
 	default: assert(false); // material type not implemented
 	}
