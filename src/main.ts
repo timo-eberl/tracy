@@ -63,7 +63,7 @@ function setupCameraControls() {
 	// zoom with mouse wheel
 	canvas.onwheel = function (event) {
 		startPreview();
-		let delta = event.deltaY / 120.0; // [-1;1]
+		let delta = -event.deltaY / 120.0; // [-1;1]
 		delta *= -0.08;
 		delta += 1.0; // [0.9 - 1.1]
 		camera.distance *= delta;
