@@ -1,4 +1,4 @@
-import ModuleFactory, { MainModule } from './ray_tracer';
+import ModuleFactory, { MainModule } from './tracy_c';
 
 // public API of our module
 export interface TracyModule {

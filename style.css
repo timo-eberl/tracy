@@ -13,6 +13,7 @@ canvas {
 	inset: 0;
 	width: 640px;
 	height: 480px;
+	background: black;
 }
 
 /* default color scheme */

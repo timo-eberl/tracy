@@ -3,9 +3,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   server: {
     watch: {
-      // Tell Vite's file watcher to ignore all files ending in .c and .wasm
-      // This mitigates duplicate reloads, when the c, wasm, and later the js file updates
-      ignored: ['**/*.c', '**/*.wasm'],
+      // Tell Vite's file watcher to ignore all c and wasm files.
+      // This mitigates duplicate reloads, when the c and later the js file updates
+      ignored: ['**/*.c', '**/*.wasm', '**/*.wasm.map'],
     },
   },
 })

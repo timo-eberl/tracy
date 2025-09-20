@@ -2,8 +2,8 @@
 .vscode/
 
 # Emscripten
-ray_tracer.js
-ray_tracer.d.ts
+tracy_c.js
+tracy_c.d.ts
 *.wasm
 *.wasm.map
 
