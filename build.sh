@@ -2,6 +2,8 @@
 
 emcc ray_tracer.c \
 	-o ray_tracer.js \
-	-O3 \
+	-sMODULARIZE=1 \
+	-sEXPORT_ES6=1 \
+	-sEXPORTED_RUNTIME_METHODS=cwrap,HEAPU8 \
 	-sEXPORTED_FUNCTIONS=_render_full,_render_fast \
-	-sEXPORTED_RUNTIME_METHODS=cwrap,HEAPU8
+	-O3

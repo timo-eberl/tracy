@@ -1,3 +1,5 @@
+import ModuleFactory from './ray_tracer.js';
+
 // Get the canvas and its 2D rendering context
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
@@ -26,22 +28,23 @@ let drawPreviewHandle;
 
 setupCameraControls();
 
-// Emscripten's Module object becomes available after the script loads
-Module.onRuntimeInitialized = () => {
-	// Get access to the exported C functions
-	tracy.renderFull = Module.cwrap(
-		'render_full', // function name
-		'number', // return type
-		['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // params
-	);
-	tracy.renderFast = Module.cwrap(
-		'render_fast', // function name
-		'number', // return type
-		['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // params
-	);
-	startPreview();
-	stopPreview();
-};
+// Await initialization of WebAssembly Module
+const Module = await ModuleFactory();
+
+// Get access to the exported C functions
+tracy.renderFull = Module.cwrap(
+	'render_full', // function name
+	'number', // return type
+	['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // params
+);
+tracy.renderFast = Module.cwrap(
+	'render_fast', // function name
+	'number', // return type
+	['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // params
+);
+
+startPreview();
+stopPreview();
 
 function drawPreview() {
 	const bufferPtr = tracy.renderFast(
@@ -56,13 +59,10 @@ function drawPreview() {
 }
 
 function drawFull() {
-	const startTime = performance.now();
 	const bufferPtr = tracy.renderFull(
 		width, height, degToRad(cameraRotation.x), degToRad(cameraRotation.y),
 		cameraDistance, cameraFocusPoint.x, cameraFocusPoint.y, cameraFocusPoint.z
 	);
-	const endTime = performance.now();
-	console.log(`Full render took ${(endTime-startTime)} ms.`);
 	updateImage(bufferPtr);
 }
 
@@ -143,7 +143,11 @@ function stopPreview() {
 		canvas.style.border = "dashed red 5px";
 		console.log("Starting full render...")
 		setTimeout(function () {
+			const startTime = performance.now();
 			drawFull();
+			const endTime = performance.now();
+			console.log(`Full render took ${(endTime-startTime)} ms.`);
+			
 			canvas.style.border = "";
 		}, 10.0);
 	}
