@@ -1,4 +1,6 @@
 #include <assert.h>
+// if VS Code says can't find emscripten, you need to add its path to includePath
+// something like /home/user/emsdk/upstream/emscripten/system/include
 #include <emscripten.h>
 #include <math.h>
 #include <stdio.h>

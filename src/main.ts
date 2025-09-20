@@ -1,8 +1,8 @@
-import { initTracy } from "./tracy";
+import * as Tracy from "./tracy";
 
 // Get the canvas and its 2D rendering context
-const canvas = document.querySelector("canvas");
-const context = canvas.getContext("2d");
+const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 let width = canvas.clientWidth;
 let height = canvas.clientHeight;
 
@@ -13,22 +13,27 @@ window.onresize = function() {
 
 const cameraDistanceBounds = { min: 0.01, max: 5000 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const cameraFocusPoint = { x: 0, y: 1.25, z: 0 };
-let cameraRotation = { x: 2.44, y: 0 };
-let cameraDistance = 5.5;
+const camera : Tracy.CameraProperties = {
+	rotation: { x: 2.44, y: 0 },
+	distance: 5.5,
+	focusPoint: { x: 0, y: 1.25, z: 0 },
+};
 let isMouseDown = false;
 let isMouseOver = false;
 let preview = false;
-let drawPreviewLoopHandle;
+let drawPreviewLoopHandle : number;
+let tracy : Tracy.TracyModule;
 
-setupCameraControls();
+async function main() {
+	setupCameraControls();
 
-const Tracy = await initTracy(context);
+	tracy = await Tracy.create(context);
 
-startPreview();
-stopPreview();
+	startPreview();
+	stopPreview();
+}
 
-function clamp(v, min, max) { return Math.min( Math.max(v, min), max ); }
+function clamp(v : number, min : number, max : number) { return Math.min( Math.max(v, min), max ); }
 
 function setupCameraControls() {
 	// rotate with mouse (left mouse button)
@@ -48,24 +53,24 @@ function setupCameraControls() {
 	};
 	document.onmousemove = function(event) {
 		if (isMouseDown) {
-			cameraRotation.x = clamp(
-				cameraRotation.x + event.movementY * 0.2,
+			camera.rotation.x = clamp(
+				camera.rotation.x + event.movementY * 0.2,
 				cameraRotationXBounds.min, cameraRotationXBounds.max
 			);
-			cameraRotation.y -= event.movementX * 0.2;
+			camera.rotation.y -= event.movementX * 0.2;
 		}
 	};
 	// zoom with mouse wheel
 	canvas.onwheel = function (event) {
 		startPreview();
-		let delta = event.wheelDeltaY / 120.0; // [-1;1]
+		let delta = event.deltaY / 120.0; // [-1;1]
 		delta *= -0.08;
 		delta += 1.0; // [0.9 - 1.1]
-		cameraDistance *= delta;
+		camera.distance *= delta;
 
 		// camera restrictions
-		cameraDistance = Math.max(cameraDistanceBounds.min, cameraDistance);
-		cameraDistance = Math.min(cameraDistanceBounds.max, cameraDistance);
+		camera.distance = Math.max(cameraDistanceBounds.min, camera.distance);
+		camera.distance = Math.min(cameraDistanceBounds.max, camera.distance);
 	};
 	canvas.onmouseover = function () { isMouseOver = true; };
 	canvas.onmouseout = function () {
@@ -80,7 +85,10 @@ function drawPreviewLoop() {
 	canvas.width = width/4;
 	canvas.height = height/4;
 
-	Tracy.renderFast(width/4, height/4, cameraRotation, cameraDistance, cameraFocusPoint);
+	tracy.renderFast(
+		width/4, height/4,
+		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
+	);
 
 	if (preview) {
 		drawPreviewLoopHandle = requestAnimationFrame(drawPreviewLoop);
@@ -108,7 +116,10 @@ function stopPreview() {
 
 			const startTime = performance.now();
 	
-			Tracy.renderFull(width, height, cameraRotation, cameraDistance, cameraFocusPoint);
+			tracy.renderFull(
+				width, height, 
+				{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
+			);
 
 			const endTime = performance.now();
 			console.log(`Full render took ${(endTime-startTime)} ms.`);
@@ -117,3 +128,5 @@ function stopPreview() {
 		}, 10.0);
 	}
 }
+
+main();

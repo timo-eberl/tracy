@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"target": "es6",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"removeComments": true,
+		"sourceMap": true,
+		"strict": true,
+		"noFallthroughCasesInSwitch": true,
+	},
+	"include": [ "src/**/*", "vite.config.ts" ]
+}

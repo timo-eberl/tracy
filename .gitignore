@@ -3,6 +3,7 @@
 
 # Emscripten
 ray_tracer.js
+ray_tracer.d.ts
 *.wasm
 *.wasm.map
 
