@@ -24,7 +24,7 @@ let isMouseDown = false;
 let isMouseOver = false;
 let preview = false;
 const tracy = { renderFull: undefined, renderFast: undefined };
-let drawPreviewHandle;
+let drawPreviewLoopHandle;
 
 setupCameraControls();
 
@@ -52,10 +52,6 @@ function drawPreview() {
 		cameraDistance, cameraFocusPoint.x, cameraFocusPoint.y, cameraFocusPoint.z
 	);
 	updateImage(bufferPtr);
-
-	if (preview) {
-		drawPreviewHandle = requestAnimationFrame(drawPreview);
-	}
 }
 
 function drawFull() {
@@ -127,17 +123,25 @@ function setupCameraControls() {
 	};
 };
 
+function drawPreviewLoop() {
+	drawPreview();
+
+	if (preview) {
+		drawPreviewLoopHandle = requestAnimationFrame(drawPreviewLoop);
+	}
+}
+
 function startPreview() {
 	if (!preview) {
 		preview = true;
-		drawPreview();
+		drawPreviewLoop();
 	}
 }
 
 function stopPreview() {
 	if (preview) {
-		if (drawPreviewHandle) {
-			cancelAnimationFrame(drawPreviewHandle);
+		if (drawPreviewLoopHandle) {
+			cancelAnimationFrame(drawPreviewLoopHandle);
 		}
 		preview = false;
 		canvas.style.border = "dashed red 5px";
@@ -147,7 +151,7 @@ function stopPreview() {
 			drawFull();
 			const endTime = performance.now();
 			console.log(`Full render took ${(endTime-startTime)} ms.`);
-			
+
 			canvas.style.border = "";
 		}, 10.0);
 	}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-emcc ray_tracer.c \
-	-o ray_tracer.js \
+emcc src/ray_tracer.c \
+	-o src/ray_tracer.js \
 	-sMODULARIZE=1 \
 	-sEXPORT_ES6=1 \
 	-sEXPORTED_RUNTIME_METHODS=cwrap,HEAPU8 \
