@@ -383,8 +383,8 @@ unsigned char* render_fast(
 	double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
 	// loop over pixels, calculate radiance
-	for (int y = 0; y < height; y+=4)
-	for (int x = 0; x < width; x+=4) {
+	for (int y = 0; y < height; ++y)
+	for (int x = 0; x < width; ++x) {
 		// 5.2.2
 		// Map pixel coordinates to the view plane (-1;1)
 		double world_x = (2.0 * (x + 2.0) / width - 1.0);
@@ -398,10 +398,7 @@ unsigned char* render_fast(
 		Ray r = {camera_origin, dir};
 		Vec radiance = radiance_from_ray_simple(r);
 
-		for (int yo = 0; yo < 4; ++yo)
-		for (int xo = 0; xo < 4; ++xo) {
-			radiance_buffer[(y+yo) * width + (x+xo)] = radiance;
-		}
+		radiance_buffer[(y) * width + (x)] = radiance;
 	}
 
 	tone_map_image(width, height);

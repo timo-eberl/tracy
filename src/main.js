@@ -1,18 +1,14 @@
-import ModuleFactory from './ray_tracer.js';
+import { initTracy } from "./tracy";
 
 // Get the canvas and its 2D rendering context
 const canvas = document.querySelector("canvas");
-const ctx = canvas.getContext("2d");
+const context = canvas.getContext("2d");
 let width = canvas.clientWidth;
 let height = canvas.clientHeight;
-canvas.width = width;
-canvas.height = height;
 
 window.onresize = function() {
 	width = canvas.clientWidth;
 	height = canvas.clientHeight;
-	canvas.width = width;
-	canvas.height = height;
 }
 
 const cameraDistanceBounds = { min: 0.01, max: 5000 };
@@ -23,58 +19,15 @@ let cameraDistance = 5.5;
 let isMouseDown = false;
 let isMouseOver = false;
 let preview = false;
-const tracy = { renderFull: undefined, renderFast: undefined };
 let drawPreviewLoopHandle;
 
 setupCameraControls();
 
-// Await initialization of WebAssembly Module
-const Module = await ModuleFactory();
-
-// Get access to the exported C functions
-tracy.renderFull = Module.cwrap(
-	'render_full', // function name
-	'number', // return type
-	['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // params
-);
-tracy.renderFast = Module.cwrap(
-	'render_fast', // function name
-	'number', // return type
-	['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'] // params
-);
+const Tracy = await initTracy(context);
 
 startPreview();
 stopPreview();
 
-function drawPreview() {
-	const bufferPtr = tracy.renderFast(
-		width, height, degToRad(cameraRotation.x), degToRad(cameraRotation.y),
-		cameraDistance, cameraFocusPoint.x, cameraFocusPoint.y, cameraFocusPoint.z
-	);
-	updateImage(bufferPtr);
-}
-
-function drawFull() {
-	const bufferPtr = tracy.renderFull(
-		width, height, degToRad(cameraRotation.x), degToRad(cameraRotation.y),
-		cameraDistance, cameraFocusPoint.x, cameraFocusPoint.y, cameraFocusPoint.z
-	);
-	updateImage(bufferPtr);
-}
-
-function updateImage(bufferPtr) {
-	// Create a view into the WebAssembly memory
-	// HEAPU8.buffer is "all of memory", bufferPtr is an offset on it
-	const rawArray = new Uint8ClampedArray(Module.HEAPU8.buffer, bufferPtr, width * height * 4);
-
-	// Create an ImageData object from the raw pixel data
-	const imageData = new ImageData(rawArray, width, height);
-
-	// Draw the ImageData onto the canvas
-	ctx.putImageData(imageData, 0, 0);
-}
-
-function degToRad(degree) { return degree / 360 * 2 * Math.PI; }
 function clamp(v, min, max) { return Math.min( Math.max(v, min), max ); }
 
 function setupCameraControls() {
@@ -124,7 +77,10 @@ function setupCameraControls() {
 };
 
 function drawPreviewLoop() {
-	drawPreview();
+	canvas.width = width/4;
+	canvas.height = height/4;
+
+	Tracy.renderFast(width/4, height/4, cameraRotation, cameraDistance, cameraFocusPoint);
 
 	if (preview) {
 		drawPreviewLoopHandle = requestAnimationFrame(drawPreviewLoop);
@@ -147,8 +103,13 @@ function stopPreview() {
 		canvas.style.border = "dashed red 5px";
 		console.log("Starting full render...")
 		setTimeout(function () {
+			canvas.width = width;
+			canvas.height = height;
+
 			const startTime = performance.now();
-			drawFull();
+	
+			Tracy.renderFull(width, height, cameraRotation, cameraDistance, cameraFocusPoint);
+
 			const endTime = performance.now();
 			console.log(`Full render took ${(endTime-startTime)} ms.`);
 
