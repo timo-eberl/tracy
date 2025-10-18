@@ -6,6 +6,7 @@ emcc src/tracy.c \
 	-sEXPORT_ES6=1 \
 	--emit-tsd tracy_c.d.ts \
 	-sEXPORTED_RUNTIME_METHODS=HEAPU8 \
+	-Wall \
 	-g \
 	-gsource-map \
 	-O1
