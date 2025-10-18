@@ -61,3 +61,4 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
 - [ ] Optimizations
   - [ ] Spatial data structures (12.3)
   - [ ] Importance Sampling (14.2)
+  - [ ] Multithreading
