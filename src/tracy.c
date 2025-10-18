@@ -354,7 +354,7 @@ void tone_map_image(int width, int height) {
 		image_buffer[index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
 		image_buffer[index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
 		image_buffer[index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
-		image_buffer[index + 3] = 255.999;
+		image_buffer[index + 3] = (unsigned char)255.999;
 	}
 }
 
@@ -441,7 +441,8 @@ unsigned char* render_full(
 
 		if (x == 560 && y == 90) {
 			// use for setting breakpoint
-			char* dummy = "dummy";
+			// volatile tells the compiler not to remove it
+			__asm__ __volatile__("nop");
 		}
 
 		// This factor scales our sample offsets to cover the desired range of the filter.
