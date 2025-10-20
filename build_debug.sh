@@ -9,9 +9,10 @@ emcc src/tracy.c \
 	-Wall \
 	-g \
 	-gsource-map \
-	-O1
+	-O0
 
 # HEAPU8: expose memory to JS to read image data
 # -g: Preserve debug information.
-# -O1: Simple optimizations that make the code way faster (~6x) while preserving debug information
-#      If debugging breaks, try removing it
+# -O0: No optimizations, but debugging will be limited (e.g. some local variables are removed)
+# -O1: Simple optimizations that make the code way faster (~6x) while preserving some debug information
+#      If debugging breaks, use O0
