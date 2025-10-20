@@ -452,9 +452,9 @@ unsigned char* render_full(
 		// super-sampling uses a finite grid like described in 2.6.2
 		for (int sy = 0; sy < SUPER_SAMPLE_GRID_DIM; ++sy)
 		for (int sx = 0; sx < SUPER_SAMPLE_GRID_DIM; ++sx) {
-			// evenly spaced sample offsets from the pixel center with range (-0.5;0.5)
-			double sample_offset_x = (double)(sx + 0.5) / (double)SUPER_SAMPLE_GRID_DIM - 0.5;
-			double sample_offset_y = (double)(sy + 0.5) / (double)SUPER_SAMPLE_GRID_DIM - 0.5;
+			// evenly spaced sample offsets from the pixel center with range [-0.5;0.5]
+			double sample_offset_x = (double)sx / (double)(SUPER_SAMPLE_GRID_DIM - 1) - 0.5;
+			double sample_offset_y = (double)sy / (double)(SUPER_SAMPLE_GRID_DIM - 1) - 0.5;
 			// scale to match the filters radius
 			sample_offset_x *= sample_range_scale;
 			sample_offset_y *= sample_range_scale;
