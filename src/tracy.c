@@ -32,7 +32,7 @@ int buffer_height = 0;
 // Structured Super-Sampling Configuration
 // The dimension of the grid within each pixel.
 // 3 means a 3x3 grid, for a total of 9 samples per pixel.
-#define SUPER_SAMPLE_GRID_DIM 5
+#define SUPER_SAMPLE_GRID_DIM 15
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5
@@ -73,33 +73,34 @@ Vec reflect(Vec incident, Vec normal) {
 }
 
 // light radiant energy calculation:
-// typical kitchen: assume 4x3m (12m^2) floor, 2.4m height, target illuminance is ~200 lux
+// typical kitchen: assume 4x3 m (12 m^2) floor, 2.4 m height, target illuminance is ~200 lux
 // this means a total of 2400 lumen must reach the floor
-// assume the light is 2.4m centered above the floor, the solid angle to the floor is ~1.38 sr
-// -> the luminous intensity of the point light should be 3312 lm/sr
+// assume the light is 2.4 m centered above the floor, the solid angle to the floor is ~1.38 sr
+// -> the luminous intensity of the point light should be 1739 lm/sr
 // in reality we might have a fluorescent tube or multiple individual smaller LEDs for this, which
 // typically are not isotropic (10.1.5), instead their intensity is higher downwards
 // however, since we use an isotropic point light, our total luminous flux must be higher to
-// achieve the same luminance downwards. typical fluorescent tube has 21.5W.
-// luminous flux: (3312 lm/sr) * (4pi sr) = ~41612
-// convert to radiant flux (173W/lm for a fluorescent tube): ~240W
+// achieve the same luminance downwards. typical fluorescent tube has 21.5 W.
+// luminous flux: (1739 lm/sr) * (4pi sr) = ~21850 lm
+// convert to radiant flux (172 lm/W for a fluorescent tube): ~127 W
 
 // PointLight should be removed once indirect lighting is implemented.
-// Emissive light: probably around 1m^2, so 21.5W flux correspond to 21.5W/m^2 radiosity
+// Emissive light: visible surface is probably around 1 m^2, so 21.5 W flux correspond to
+// 21.5 W/m^2 radiosity
 
 // room dimensions: (3,2.4,4)
 
 // position, radiant flux (W), color
-PointLight light = { {0,2.38,0 }, 100, {1,1,1} };
+PointLight simple_light = { {0,2.38,0 }, 127, {1,1,1} }; // only for render_fast
 Sphere scene[] = { // center, radius, color, type
 	{{ 1e4-1.5,	 1.2,	 0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
 	{{-1e4+1.5,	 1.2,	 0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
-	{{	   0,	 1.2, 1e4-2},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
+	{{	   0,	 1.2, 1e4-2}, 1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
 	{{	   0,	 1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
-	{{	   0,  62.397,	 0},   60.0, {21.5, 21.5, 21.5}, EMISSIVE} // Area Light
+	{{	   0,  62.397,	 0},   60.0, {21.5*3, 21.5*3, 21.5*3}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 // ray-sphere intersection (6.2.4)
@@ -219,7 +220,7 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 	bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Sphere*){NULL});
 	if (is_in_shadow) { // check if occluder is further away than light source
 		double hit_dist_sq = shadow_ray_hit.t * shadow_ray_hit.t;
-		double light_dist_sq = vec_length_squared(vec_sub(light.position,shadow_ray.origin));
+		double light_dist_sq = vec_length_squared(vec_sub(light_pos,shadow_ray.origin));
 		if (hit_dist_sq > light_dist_sq) { // risk of self occlusion?
 			is_in_shadow = false;
 		}
@@ -255,18 +256,55 @@ Vec radiance_from_ray_simple(Ray r) {
 
 	Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
 
-	Vec light_direction = vec_normalize(vec_sub(light.position, hit.p));
+	Vec light_direction = vec_normalize(vec_sub(simple_light.position, hit.p));
 	double cos_theta = vec_dot(normal, light_direction);
 	if (cos_theta < 0.0) { cos_theta = 0.0; } // only upper hemisphere
 
-	double dist_sq = vec_length_squared(vec_sub(light.position, hit.p));
-	double irradiance = (cos_theta * light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
-	Vec colored_irradiance = vec_scale(light.color, irradiance);
+	double dist_sq = vec_length_squared(vec_sub(simple_light.position, hit.p));
+	double irradiance = (cos_theta * simple_light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
+	Vec colored_irradiance = vec_scale(simple_light.color, irradiance);
 	// divide by pi for energy conservation 10.3.6
 	// pi is the projected solid angle over hemisphere 3.1.9
 	Vec lambertian_brdf = vec_scale((Vec){1,1,1}, 1.0/M_PI);
 	Vec radiance =  vec_hadamard_prod(lambertian_brdf, colored_irradiance);
 	return radiance;
+}
+
+// random double between 0.0 (inclusive) and 1.0 (exclusive)
+double random_double() {
+	return (double)rand() / (RAND_MAX + 1.0);
+}
+
+// create orthonormal basis (local coordinate system) from a vector
+// 'n' is the normal vector, which will become the 'w' axis.
+void create_orthonormal_basis(Vec n, Vec* u, Vec* v, Vec* w) {
+	*w = n;
+	Vec a = (fabs(w->x) > 0.9) ? (Vec){0, 1, 0} : (Vec){1, 0, 0};
+	*v = vec_normalize(vec_cross(*w, a));
+	*u = vec_cross(*w, *v);
+}
+
+// random direction on hemisphere with uniform distribution
+Vec sample_uniform_hemisphere(Vec normal) {
+	// Generate a random point on a unit sphere
+	double r1 = random_double(); // for z
+	double r2 = random_double(); // for phi
+
+	double z = 1.0 - 2.0 * r1;
+	double r = sqrt(fmax(0.0, 1.0 - z * z));
+	double phi = 2.0 * M_PI * r2;
+	
+	Vec sample_local = { r * cos(phi), r * sin(phi), z };
+	Vec u, v, w; // local coordinate system
+	create_orthonormal_basis(normal, &u, &v, &w);
+	// local -> world
+	Vec sample_world = vec_add(vec_add(
+		vec_scale(u, sample_local.x), vec_scale(v, sample_local.y)), vec_scale(w, sample_local.z)
+	);
+
+	// ensure the sample is in the correct hemisphere
+	if (vec_dot(sample_world, normal) < 0.0) { return vec_scale(sample_world, -1.0); }
+	return sample_world;
 }
 
 Vec radiance_from_ray(Ray r, int depth); // forward declaration for recursion
@@ -287,19 +325,23 @@ Vec radiance_from_ray(Ray r, int depth) {
 	}
 	case DIFFUSE: {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
-		if (is_in_shadow(hit.p, normal, light.position)) return (Vec){0,0,0};
 
-		Vec light_direction = vec_normalize(vec_sub(light.position, hit.p));
-		double cos_theta = vec_dot(normal, light_direction);
-		if (cos_theta < 0.0) { cos_theta = 0.0; } // only upper hemisphere
+		Vec next_direction = sample_uniform_hemisphere(normal);
+		double cos_theta = vec_dot(normal, next_direction);
+		assert(cos_theta >= 0.0); // only upper hemisphere
 
-		double dist_sq = vec_length_squared(vec_sub(light.position, hit.p));
-		double irradiance = (cos_theta * light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
-		Vec colored_irradiance = vec_scale(light.color, irradiance);
+		Ray refl_ray = {hit.p, next_direction};
+		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
+		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1);
+
 		// divide by pi for energy conservation 10.3.6
 		// pi is the projected solid angle over hemisphere 3.1.9
 		Vec lambertian_brdf = vec_scale(hit_sphere->color, 1.0/M_PI);
-		Vec radiance =  vec_hadamard_prod(lambertian_brdf, colored_irradiance);
+		// brdf * radiance * cos(theta)
+		Vec radiance = vec_scale(vec_hadamard_prod(lambertian_brdf, incoming_radiance), cos_theta);
+		// we now calculated the expected value, but because we integrate over the hemisphere
+		// we still need to multiply with 2 pi (8.3.3)
+		radiance = vec_scale(radiance, 2*M_PI);
 		return radiance;
 	}
 	case MIRROR: {
@@ -318,27 +360,25 @@ Vec radiance_from_ray(Ray r, int depth) {
 		double reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
 
-		// reflection
-		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
-		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec reflection_radiance = radiance_from_ray(refl_ray, depth + 1);
-
-		// refraction
-		bool internal_refl;
-		Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
-		if (internal_refl) { // total internal reflection -> exit early
+		if (reflectance > random_double()) { // do either reflection or refraction
+			// reflection
+			Ray refl_ray = {hit.p, reflect(r.dir, normal)};
+			refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
+			Vec reflection_radiance = radiance_from_ray(refl_ray, depth + 1);
 			return reflection_radiance;
 		}
-		Ray refr_ray = {hit.p, refr_dir};
-		refr_ray.origin = vec_add(refr_ray.origin, vec_scale(normal, -SELF_OCCLUSION_DELTA));
-		Vec refraction_radiance = radiance_from_ray(refr_ray, depth + 1);
-
-		Vec combined_radiance = vec_add(
-			vec_scale(reflection_radiance, reflectance),
-			vec_scale(refraction_radiance, 1.0 - reflectance)
-		);
-
-		return combined_radiance;
+		else {
+			// refraction
+			bool internal_refl;
+			Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
+			if (internal_refl) { // total internal reflection -> exit early
+				return (Vec){0,0,0};
+			}
+			Ray refr_ray = {hit.p, refr_dir};
+			refr_ray.origin = vec_add(refr_ray.origin, vec_scale(normal, -SELF_OCCLUSION_DELTA));
+			Vec refraction_radiance = radiance_from_ray(refr_ray, depth + 1);
+			return refraction_radiance;
+		}
 	}
 	default: assert(false); // material type not implemented
 	}
@@ -432,6 +472,8 @@ unsigned char* render_full(
 
 	double fov_y = 30 * 3.141 / 180.0;
 	double fov_scale = tan(fov_y / 2.0); // 5.1.4
+	
+	srand(0); // seed random generator
 
 	// loop over pixels, calculate radiance
 	for (int y = 0; y < height; ++y)
