@@ -23,16 +23,10 @@ typedef struct {
 	bool inside;
 } HitInfo;
 
-// The image buffer will be allocated on demand.
-unsigned char* image_buffer = NULL; // stores tone mapped gamma corrected colors
-Vec* radiance_buffer = NULL; // stores raw radiance
-int buffer_width = 0;
-int buffer_height = 0;
-
 // Structured Super-Sampling Configuration
 // The dimension of the grid within each pixel.
 // 3 means a 3x3 grid, for a total of 9 samples per pixel.
-#define SUPER_SAMPLE_GRID_DIM 15
+#define SUPER_SAMPLE_GRID_DIM 5
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5
@@ -41,36 +35,10 @@ int buffer_height = 0;
 // This will scale our sample offsets to cover a wider area.
 #define GAUSS_FILTER_RADIUS_IN_SIGMA 2.0
 
+#define MAX_DEPTH 4
+
 // offset used for shadow rays. may need to be adjusted depending on scene scale
 #define SELF_OCCLUSION_DELTA 0.00000001
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
-Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
-Vec vec_scale(Vec v, double s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
-Vec vec_hadamard_prod(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b.z}; }
-double vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-double vec_length(Vec v) { return sqrt(vec_dot(v, v)); }
-double vec_length_squared(Vec v) { return vec_dot(v, v); }
-Vec vec_normalize(Vec v) {
-	double l = vec_length(v);
-	if (l == 0) return (Vec){0,0,0};
-	return vec_scale(v, 1.0 / l);
-}
-Vec vec_cross(Vec a, Vec b) {
-	return (Vec){
-		a.y * b.z - a.z * b.y,
-		a.z * b.x - a.x * b.z,
-		a.x * b.y - a.y * b.x
-	};
-}
-
-// 10.3.16
-Vec reflect(Vec incident, Vec normal) {
-	return vec_sub(incident, vec_scale(normal, 2.0 * vec_dot(normal, incident)));
-}
 
 // light radiant energy calculation:
 // typical kitchen: assume 4x3 m (12 m^2) floor, 2.4 m height, target illuminance is ~200 lux
@@ -103,6 +71,41 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,  62.397,	 0},   60.0, {21.5*3, 21.5*3, 21.5*3}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
+Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
+Vec vec_scale(Vec v, double s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
+Vec vec_hadamard_prod(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b.z}; }
+double vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+double vec_length(Vec v) { return sqrt(vec_dot(v, v)); }
+double vec_length_squared(Vec v) { return vec_dot(v, v); }
+Vec vec_normalize(Vec v) {
+	double l = vec_length(v);
+	if (l == 0) return (Vec){0,0,0};
+	return vec_scale(v, 1.0 / l);
+}
+Vec vec_cross(Vec a, Vec b) {
+	return (Vec){
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
+		a.x * b.y - a.y * b.x
+	};
+}
+
+// The image buffer will be allocated on demand.
+unsigned char* image_buffer = NULL; // stores tone mapped gamma corrected colors
+Vec* radiance_buffer = NULL; // stores raw radiance
+int buffer_width = 0;
+int buffer_height = 0;
+
+// 10.3.16
+Vec reflect(Vec incident, Vec normal) {
+	return vec_sub(incident, vec_scale(normal, 2.0 * vec_dot(normal, incident)));
+}
+
 // ray-sphere intersection (6.2.4)
 bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
 	Vec oc = vec_sub(r.origin, s.center);
@@ -309,7 +312,7 @@ Vec sample_uniform_hemisphere(Vec normal) {
 
 Vec radiance_from_ray(Ray r, int depth); // forward declaration for recursion
 Vec radiance_from_ray(Ray r, int depth) {
-	if (depth > 5) { return (Vec){0, 0, 0}; }
+	if (depth > MAX_DEPTH) { return (Vec){0, 0, 0}; }
 
 	HitInfo hit;
 	Sphere* hit_sphere = NULL;
