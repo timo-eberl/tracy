@@ -20,17 +20,26 @@ const camera : Tracy.CameraProperties = {
 };
 let isMouseDown = false;
 let isMouseOver = false;
-let preview = false;
-let drawPreviewLoopHandle : number;
 let tracy : Tracy.TracyModule;
+
+// state
+let state
+	: "preview"			// previewreal-time interactive preview
+	| "waitforrender"	// wait until preview draw is finished
+	| "rendering"		// full render is in process
+	| "idle"			// full render is done
+	= "rendering"		// we immidiately render something
 
 async function main() {
 	setupCameraControls();
 
-	tracy = await Tracy.create(context);
+	tracy = Tracy.create(context);
 
-	startPreview();
-	stopPreview();
+	// draw preview once, then start full render
+	await drawPreview();
+	state = "waitforrender";
+
+	requestAnimationFrame(renderLoop);
 }
 
 function clamp(v : number, min : number, max : number) { return Math.min( Math.max(v, min), max ); }
@@ -40,19 +49,21 @@ function setupCameraControls() {
 	canvas.onmousedown = function(event) {
 		if (event.button === 0) {
 			isMouseDown = true;
-			startPreview();
+			if (state === "idle") {
+				state = "preview";
+			}
 		}
 	};
 	document.onmouseup = function(event) {
 		if (event.button === 0) {
 			isMouseDown = false
-			if (!isMouseOver) {
-				stopPreview();
+			if (!isMouseOver && state === "preview") {
+				startRendering();
 			}
 		}
 	};
 	document.onmousemove = function(event) {
-		if (isMouseDown) {
+		if (isMouseDown && state === "preview") {
 			camera.rotation.x = clamp(
 				camera.rotation.x + event.movementY * 0.2,
 				cameraRotationXBounds.min, cameraRotationXBounds.max
@@ -62,70 +73,69 @@ function setupCameraControls() {
 	};
 	// zoom with mouse wheel
 	canvas.onwheel = function (event) {
-		startPreview();
-		let delta = -event.deltaY / 120.0; // [-1;1]
-		delta *= -0.08;
-		delta += 1.0; // [0.9 - 1.1]
-		camera.distance *= delta;
+		if (state === "idle") {
+			state = "preview";
+		}
+		if (state === "preview") {
+			let delta = -event.deltaY / 120.0; // [-1;1]
+			delta *= -0.08;
+			delta += 1.0; // [0.9 - 1.1]
+			camera.distance *= delta;
 
-		// camera restrictions
-		camera.distance = Math.max(cameraDistanceBounds.min, camera.distance);
-		camera.distance = Math.min(cameraDistanceBounds.max, camera.distance);
+			// camera restrictions
+			camera.distance = Math.max(cameraDistanceBounds.min, camera.distance);
+			camera.distance = Math.min(cameraDistanceBounds.max, camera.distance);
+		}
 	};
 	canvas.onmouseover = function () { isMouseOver = true; };
 	canvas.onmouseout = function () {
 		isMouseOver = false;
-		if (!isMouseDown) {
-			stopPreview();
+		if (!isMouseDown && state === "preview") {
+			startRendering();
 		}
 	};
 };
 
-function drawPreviewLoop() {
-	canvas.width = width/4;
-	canvas.height = height/4;
-
-	tracy.renderFast(
+async function drawPreview() {
+	await tracy.renderFast(
 		width/4, height/4,
 		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
 	);
-
-	if (preview) {
-		drawPreviewLoopHandle = requestAnimationFrame(drawPreviewLoop);
-	}
 }
 
-function startPreview() {
-	if (!preview) {
-		preview = true;
-		drawPreviewLoop();
-	}
+async function drawFull() {
+	canvas.style.border = "dashed red 5px";
+
+	console.log("Starting full render...")
+	const startTime = performance.now();
+
+	await tracy.renderFull(
+		width, height,
+		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
+	);
+
+	const endTime = performance.now();
+	console.log(`Full render took ${(endTime-startTime)} ms.`);
+
+	canvas.style.border = "";
+
+	state = "idle";
 }
 
-function stopPreview() {
-	if (preview) {
-		if (drawPreviewLoopHandle) {
-			cancelAnimationFrame(drawPreviewLoopHandle);
-		}
-		preview = false;
-		canvas.style.border = "dashed red 5px";
-		console.log("Starting full render...")
-		setTimeout(function () {
-			canvas.width = width;
-			canvas.height = height;
+async function renderLoop() {
+	if (state === "preview") {
+		await drawPreview();
+	}
+	else if (state === "waitforrender") {
+		state = "rendering";
+		drawFull();
+	}
+	requestAnimationFrame(renderLoop);
+}
 
-			const startTime = performance.now();
-	
-			tracy.renderFull(
-				width, height, 
-				{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
-			);
-
-			const endTime = performance.now();
-			console.log(`Full render took ${(endTime-startTime)} ms.`);
-
-			canvas.style.border = "";
-		}, 10.0);
+function startRendering() {
+	if (state !== "rendering") {
+		state = "waitforrender";
 	}
 }
 

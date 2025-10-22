@@ -26,7 +26,7 @@ typedef struct {
 // Structured Super-Sampling Configuration
 // The dimension of the grid within each pixel.
 // 3 means a 3x3 grid, for a total of 9 samples per pixel.
-#define SUPER_SAMPLE_GRID_DIM 5
+#define SUPER_SAMPLE_GRID_DIM 2
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5

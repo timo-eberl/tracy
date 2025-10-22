@@ -1,9 +1,7 @@
-import ModuleFactory, { MainModule } from './tracy_c';
-
 // public API of our module
 export interface TracyModule {
-	renderFast: (width: number, height: number, camera: CameraProperties) => void;
-	renderFull: (width: number, height: number, camera: CameraProperties) => void;
+	renderFast: (width: number, height: number, camera: CameraProperties) => Promise<void>;
+	renderFull: (width: number, height: number, camera: CameraProperties) => Promise<void>;
 }
 
 export interface CameraProperties {
@@ -19,41 +17,56 @@ export interface CameraProperties {
 	};
 }
 
-export async function create(context: CanvasRenderingContext2D): Promise<TracyModule> {
-	// Await initialization of WebAssembly Module
-	const Module = await ModuleFactory();
+export function create(context: CanvasRenderingContext2D): TracyModule {
+	// Create the worker. The new URL(...) syntax is the modern standard for module-based workers.
+	// This requires a bundler (like Vite, Webpack, Parcel) to work correctly.
+	const worker = new Worker(new URL('./tracy.worker.ts', import.meta.url), { type: 'module' });
 
-	return {
-		renderFast: (width, height, camera) => {
-			const bufferPtr = Module._render_fast(
-				width, height, degToRad(camera.rotation.x), degToRad(camera.rotation.y),
-				camera.distance, camera.focusPoint.x, camera.focusPoint.y, camera.focusPoint.z
-			);
-			updateImage(Module, context, bufferPtr, width, height);
-		},
-		renderFull: (width, height, camera) => {
-			const bufferPtr = Module._render_full(
-				width, height, degToRad(camera.rotation.x), degToRad(camera.rotation.y),
-				camera.distance, camera.focusPoint.x, camera.focusPoint.y, camera.focusPoint.z
-			);
-			updateImage(Module, context, bufferPtr, width, height);
+	let resolveCurrentRender: ((value: void) => void) | null = null;
+
+	// Listen for messages (the final rendered image) from the worker
+	worker.onmessage = (event) => {
+		const { imageData, width, height } = event.data;
+
+		updateImage(context, imageData, width, height);
+
+		if (resolveCurrentRender) {
+			resolveCurrentRender();
+			resolveCurrentRender = null;
 		}
 	};
-}
 
-function degToRad(degree: number) { return degree / 360 * 2 * Math.PI; }
+	function callWorker(
+		command: 'renderFast' | 'renderFull', width: number, height: number,
+		camera: CameraProperties
+	) {
+		if (resolveCurrentRender) {
+			return Promise.reject(new Error("A render is already in progress."));
+		}
+		const renderPromise = new Promise<void>((resolve) => {
+			resolveCurrentRender = resolve;
+		});
+
+		worker.postMessage({ command, width, height, camera });
+		return renderPromise;
+	}
+
+	return {
+		renderFast: (w, h, cam) => callWorker('renderFast', w, h, cam),
+		renderFull: (w, h, cam) => callWorker('renderFull', w, h, cam),
+	}
+};
 
 function updateImage(
-	Module: MainModule, context: CanvasRenderingContext2D, bufferPtr: number,
-	width: number, height: number
+	context: CanvasRenderingContext2D, buffer: ArrayBuffer, width: number, height: number
 ) {
-	// Create a view into the WebAssembly memory
-	// HEAPU8.buffer is "all of memory", bufferPtr is an offset on it
-	const rawArray = new Uint8ClampedArray(Module.HEAPU8.buffer, bufferPtr, width * height * 4);
+	const rawArray = new Uint8ClampedArray(buffer);
 
 	// Create an ImageData object from the raw pixel data
 	const imageData = new ImageData(rawArray, width, height);
 
 	// Draw the ImageData onto the canvas
+	context.canvas.width = width;
+	context.canvas.height = height;
 	context.putImageData(imageData, 0, 0);
 }
