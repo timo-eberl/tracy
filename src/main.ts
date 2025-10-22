@@ -104,7 +104,7 @@ async function drawPreview() {
 }
 
 async function drawFull() {
-	canvas.style.border = "dashed red 5px";
+	canvas.classList.add('animated-border');
 
 	console.log("Starting full render...")
 	const startTime = performance.now();
@@ -117,7 +117,7 @@ async function drawFull() {
 	const endTime = performance.now();
 	console.log(`Full render took ${(endTime-startTime)} ms.`);
 
-	canvas.style.border = "";
+	canvas.classList.remove('animated-border');
 
 	state = "idle";
 }

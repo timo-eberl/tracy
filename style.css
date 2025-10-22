@@ -16,6 +16,35 @@ canvas {
 	background: black;
 }
 
+.animated-border {
+	padding: 4px;
+
+	/* Create the dashed lines using gradients */
+	background:
+		linear-gradient(90deg, red 50%, transparent 50%),
+		linear-gradient(90deg, red 50%, transparent 50%),
+		linear-gradient(0deg, red 50%, transparent 50%),
+		linear-gradient(0deg, red 50%, transparent 50%);
+
+	background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+
+	/* Define the size of the dashes (e.g., 15px dash, 4px thickness) */
+	background-size: 15px 4px, 15px 4px, 4px 15px, 4px 15px;
+
+	/* Initial position of the four "border" lines */
+	background-position: 0% 0%, 100% 100%, 0% 100%, 100% 0px;
+
+	/* Apply the animation */
+	animation: marching-ants 5s linear infinite;
+	}
+
+	@keyframes marching-ants {
+	to {
+	/* Move the background position to create the animation */
+	background-position: 100% 0%, 0% 100%, 0% 0%, 100% 100%;
+	}
+}
+
 /* default color scheme */
 :root {
 	--default-font-color: #303030;
