@@ -10,3 +10,6 @@ tracy_c.d.ts
 # npm
 node_modules/
 .npm
+
+# release build
+dist/

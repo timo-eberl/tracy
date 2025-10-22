@@ -33,6 +33,12 @@ npm run dev:debug
 
 Open the developer tools and navigate to `Sources`. You should see the c files and be able to debug them.
 
+## Release Build
+
+```bash
+npm run vite:build
+```
+
 ## To-Do
 
 > Concepts from the lecture "Moderne Techniken der Bildberechnung". Numbers in brackets indicate the chapter.
