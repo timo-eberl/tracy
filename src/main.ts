@@ -128,7 +128,7 @@ async function renderLoop() {
 	}
 	else if (state === "waitforrender") {
 		state = "rendering";
-		drawFull();
+		drawFull().then(() => state = "idle" );
 	}
 	requestAnimationFrame(renderLoop);
 }
