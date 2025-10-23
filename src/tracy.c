@@ -33,17 +33,11 @@ typedef struct {
 	bool inside;
 } HitInfo;
 
-// Structured Super-Sampling Configuration
-// The dimension of the grid within each pixel.
-// 3 means a 3x3 grid, for a total of 9 samples per pixel.
-#define SUPER_SAMPLE_GRID_DIM 6
+#define SAMPLES_PER_PIXEL 40
+
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5
-// The range of the filter in units of sigma. A value of 3.0 means we sample
-// across +/- 3-sigma, capturing >99% of the curve's influence.
-// This will scale our sample offsets to cover a wider area.
-#define GAUSS_FILTER_RADIUS_IN_SIGMA 2.0
 
 #define MAX_DEPTH 4
 
@@ -500,19 +494,11 @@ unsigned char* render_full(
 			__asm__ __volatile__("nop");
 		}
 
-		// This factor scales our sample offsets to cover the desired range of the filter.
-		// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
-		const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
-		// loop over super-sampling grid
-		// super-sampling uses a finite grid like described in 2.6.2
-		for (int sy = 0; sy < SUPER_SAMPLE_GRID_DIM; ++sy)
-		for (int sx = 0; sx < SUPER_SAMPLE_GRID_DIM; ++sx) {
-			// evenly spaced sample offsets from the pixel center with range [-0.5;0.5]
-			double sample_offset_x = (double)sx / (double)(SUPER_SAMPLE_GRID_DIM - 1) - 0.5;
-			double sample_offset_y = (double)sy / (double)(SUPER_SAMPLE_GRID_DIM - 1) - 0.5;
-			// scale to match the filters radius
-			sample_offset_x *= sample_range_scale;
-			sample_offset_y *= sample_range_scale;
+		for (int sample_index = 0; sample_index < SAMPLES_PER_PIXEL; ++sample_index) {
+			// TODO samples should influence neighbouring pixels as well
+			// (-0.5;0.5)
+			double sample_offset_x = random_double() - 0.5;
+			double sample_offset_y = random_double() - 0.5;
 
 			// 5.2.2
 			// Map pixel coordinates to the view plane (-1;1)
