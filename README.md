@@ -39,6 +39,14 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
 npm run vite:build
 ```
 
+## Build a local version (without web)
+
+Create the binary `tracy` that renders an image to `render.ppm`.
+
+```bash
+gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3
+```
+
 ## To-Do
 
 > Concepts from the lecture "Moderne Techniken der Bildberechnung". Numbers in brackets indicate the chapter.

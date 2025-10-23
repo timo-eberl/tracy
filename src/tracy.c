@@ -1,10 +1,20 @@
 #include <assert.h>
-// if VS Code says can't find emscripten, you need to add its path to includePath
-// something like /home/user/emsdk/upstream/emscripten/system/include
-#include <emscripten.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include "tracy.h"
+
+// Conditionally include emscripten.h and define EMSCRIPTEN_KEEPALIVE
+#ifdef __EMSCRIPTEN__
+	// if VS Code says it can't find emscripten, you need to add its path to includePath
+	// something like /home/user/emsdk/upstream/emscripten/system/include
+	#include <emscripten.h>
+#else
+	// For non-Emscripten builds (like GCC), define this as an empty macro
+	// so the compiler ignores it.
+	#define EMSCRIPTEN_KEEPALIVE
+#endif
 
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;

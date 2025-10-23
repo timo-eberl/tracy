@@ -2,7 +2,6 @@
 // tell TypeScript this file is in a worker context -> avoids compile error
 
 import ModuleFactory, { MainModule } from './tracy_c';
-import type { CameraProperties } from './tracy'; // Assuming you export the types
 
 // This promise ensures the Wasm module is initialized only once.
 const modulePromise: Promise<MainModule> = ModuleFactory();
