@@ -33,11 +33,14 @@ typedef struct {
 	bool inside;
 } HitInfo;
 
-#define SAMPLES_PER_PIXEL 40
+#define SAMPLES_PER_PIXEL 50
 
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
 #define GAUSS_SIGMA 0.5
+// The range of the filter in units of sigma. A value of 3.0 means we sample
+// across +/- 3-sigma, capturing >99% of the curve's influence.
+#define GAUSS_FILTER_RADIUS_IN_SIGMA 2.0
 
 #define MAX_DEPTH 4
 
@@ -482,6 +485,10 @@ unsigned char* render_full(
 	
 	srand(0); // seed random generator
 
+	// This factor scales our sample offsets to cover the desired range of the filter.
+	// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
+	const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
+
 	// loop over pixels, calculate radiance
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
@@ -496,9 +503,13 @@ unsigned char* render_full(
 
 		for (int sample_index = 0; sample_index < SAMPLES_PER_PIXEL; ++sample_index) {
 			// TODO samples should influence neighbouring pixels as well
-			// (-0.5;0.5)
-			double sample_offset_x = random_double() - 0.5;
-			double sample_offset_y = random_double() - 0.5;
+			// will be a bit annoying to build, because we first have to collect samples and then add them to the
+			// radiance buffer multiple times at different pixels
+			// also at the pixels at the edge will have less samples
+
+			// (-0.5;0.5) * sample_range_scale
+			double sample_offset_x = (random_double() - 0.5) * sample_range_scale;
+			double sample_offset_y = (random_double() - 0.5) * sample_range_scale;
 
 			// 5.2.2
 			// Map pixel coordinates to the view plane (-1;1)
