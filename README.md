@@ -58,14 +58,16 @@ gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3
 - [x] Tone mapping (4)
   - [x] Gamma correction with sRGB response curve (4.1.9)
   - [x] Global HDR to LDR tonemapping (4.2) using Reinhard
-- [x] Anti-Aliasing using supersampling (2.6.2) and a gaussian kernel (2.5.6)
-- [ ] Rendering algorithms
-  - [x] Ray casting (5.2.1, 6.1.1, 10.2.2) with local illumination (10.3.13)
-  - [x] Whitted ray tracing (12.1)
-  - [ ] Path tracing (13.5)
-- [ ] Light sources (10.1)
-  - [x] Point light source (10.1.5)
-  - [ ] Area light source (10.1.7)
+- [x] Anti-Aliasing
+  - [x] ~~using supersampling (2.6.2)~~ removed in bba9955d658de2a85d978919f2bd15bbc4dc574f (was integrated into monte carlo rendering process)
+  - [x] a gaussian kernel (2.5.6)
+- [x] Rendering algorithms
+  - [x] ~~Ray casting (5.2.1, 6.1.1, 10.2.2) with local illumination (10.3.13)~~ removed after switching to path tracing
+  - [x] ~~Whitted ray tracing (12.1)~~ removed after switching to path tracing
+  - [x] Path tracing (13.5)
+- [x] Light sources (10.1)
+  - [x] ~~Point light source (10.1.5)~~ removed after switching to path tracing
+  - [x] Area light source (10.1.7)
 - [ ] Material models (11)
   - [x] Lambertian BRDF (11.2.2)
   - [x] Perfect reflection and refraction (11.2.8)
