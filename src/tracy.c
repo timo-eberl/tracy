@@ -75,7 +75,7 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
-	{{	   0,  62.397,	 0},   60.0, {21.5*3, 21.5*3, 21.5*3}, EMISSIVE} // Area Light
+	{{	   0,  62.397,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE} // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 
@@ -330,7 +330,7 @@ Vec radiance_from_ray(Ray r, int depth) {
 	switch (hit_sphere->type) {
 	case EMISSIVE: {
 		Vec radiosity = hit_sphere->color;
-		Vec radiance = vec_scale(radiosity, 1.0/(4.0*M_PI));
+		Vec radiance = vec_scale(radiosity, 1.0/M_PI);
 		return radiance;
 	}
 	case DIFFUSE: {
