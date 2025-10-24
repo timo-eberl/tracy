@@ -44,7 +44,7 @@ npm run vite:build
 Create the binary `tracy` that renders an image to `render.ppm`.
 
 ```bash
-gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3
+gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -flto
 ```
 
 ## To-Do
