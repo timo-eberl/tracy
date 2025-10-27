@@ -78,3 +78,7 @@ gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -f
   - [ ] Spatial data structures (12.3)
   - [ ] Importance Sampling (14.2)
   - [ ] Multithreading
+  - [ ] Tiled rendering (Spatial coherency)
+  - [ ] Multiple samples per pass (Temporal coherency)
+  - [ ] Double Buffering (for incremental rendering)
+- [ ] Incremental rendering (live update displayed image)
