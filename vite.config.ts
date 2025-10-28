@@ -5,7 +5,7 @@ export default defineConfig({
     watch: {
       // Tell Vite's file watcher to ignore all c and wasm files.
       // This mitigates duplicate reloads, when the c and later the js file updates
-      ignored: ['**/*.c', '**/*.wasm', '**/*.wasm.map'],
+      ignored: ['**/*.c', '**/*.h', '**/*.wasm', '**/*.wasm.map'],
     },
   },
 })
