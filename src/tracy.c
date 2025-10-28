@@ -536,8 +536,16 @@ uint8_t* render_full(
 		Vec weighted_radiance = vec_scale(weighted_radiance_sum, 1.0 / total_weight_sum);
 
 		radiance_buffer[y * width + x] = weighted_radiance;
+
+		Vec ldr_color = reinhard_luminance(radiance_buffer[y * width + x]);
+
+		int index = (y * width + x) * 4;
+		image_buffer[index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
+		image_buffer[index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
+		image_buffer[index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
+		image_buffer[index + 3] = (uint8_t)255.999;
 	}
 
-	tone_map_image(width, height);
+	// tone_map_image(width, height);
 	return image_buffer;
 }

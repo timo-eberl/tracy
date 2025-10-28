@@ -26,9 +26,14 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 	// Listen for messages (the final rendered image) from the worker
 	worker.onmessage = (event) => {
-		const { imageData, width, height } = event.data;
+		const { sharedMemory, bufferPtr, width, height } = event.data as {
+			sharedMemory: WebAssembly.Memory; bufferPtr: number; width: number; height: number;
+		};
+		// Create a view into the WebAssembly memory
+		// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
+		const rawArray = new Uint8ClampedArray(sharedMemory.buffer, bufferPtr, width * height * 4);
 
-		updateImage(context, imageData, width, height);
+		updateImage(context, rawArray, width, height);
 
 		if (resolveCurrentRender) {
 			resolveCurrentRender();
@@ -58,12 +63,14 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 };
 
 function updateImage(
-	context: CanvasRenderingContext2D, buffer: ArrayBuffer, width: number, height: number
+	context: CanvasRenderingContext2D, arrayView: Uint8ClampedArray, width: number, height: number
 ) {
-	const rawArray = new Uint8ClampedArray(buffer);
-
+	// ImageData requires us to copy the data from the view to the shared memory
+	// This is problematic because we potentially write to the buffer on the other thread
+	// while copying it. Could be solved with double buffering.
+	const arrayCopy = new Uint8ClampedArray(arrayView);
 	// Create an ImageData object from the raw pixel data
-	const imageData = new ImageData(rawArray, width, height);
+	const imageData = new ImageData(arrayCopy, width, height);
 
 	// Draw the ImageData onto the canvas
 	context.canvas.width = width;

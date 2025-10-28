@@ -5,9 +5,12 @@ emcc src/tracy.c \
 	-sMODULARIZE=1 \
 	-sEXPORT_ES6=1 \
 	--emit-tsd tracy_c.d.ts \
-	-sEXPORTED_RUNTIME_METHODS=HEAPU8 \
+	-sSHARED_MEMORY=1 \
+	-sIMPORTED_MEMORY=1 \
 	-Wall \
 	-O3
 
-# HEAPU8: expose memory to JS to read image data
 # -O3: Max runtime optimizations
+
+# -sSHARED_MEMORY=1 -sIMPORTED_MEMORY=1
+# 	required so shared memory can be used

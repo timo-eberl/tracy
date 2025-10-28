@@ -7,5 +7,9 @@ export default defineConfig({
       // This mitigates duplicate reloads, when the c and later the js file updates
       ignored: ['**/*.c', '**/*.h', '**/*.wasm', '**/*.wasm.map'],
     },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
 })
