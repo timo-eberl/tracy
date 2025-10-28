@@ -103,7 +103,7 @@ Vec vec_cross(Vec a, Vec b) {
 }
 
 // The image buffer will be allocated on demand.
-unsigned char* image_buffer = NULL; // stores tone mapped gamma corrected colors
+uint8_t* image_buffer = NULL; // stores tone mapped gamma corrected colors
 Vec* radiance_buffer = NULL; // stores raw radiance
 int buffer_width = 0;
 int buffer_height = 0;
@@ -193,7 +193,7 @@ void set_buffer_size(int width, int height) {
 			free(radiance_buffer);
 		}
 		radiance_buffer = malloc(width * height * sizeof(Vec));
-		image_buffer = malloc(width * height * 4 * sizeof(unsigned char));
+		image_buffer = malloc(width * height * 4 * sizeof(uint8_t));
 		buffer_width = width;
 		buffer_height = height;
 	}
@@ -404,12 +404,12 @@ void tone_map_image(int width, int height) {
 		image_buffer[index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
 		image_buffer[index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
 		image_buffer[index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
-		image_buffer[index + 3] = (unsigned char)255.999;
+		image_buffer[index + 3] = (uint8_t)255.999;
 	}
 }
 
 EMSCRIPTEN_KEEPALIVE
-unsigned char* render_fast(
+uint8_t* render_fast(
 	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
 	double focus_x, double focus_y, double focus_z
 ) {
@@ -458,7 +458,7 @@ unsigned char* render_fast(
 }
 
 EMSCRIPTEN_KEEPALIVE
-unsigned char* render_full(
+uint8_t* render_full(
 	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
 	double focus_x, double focus_y, double focus_z
 ) {
