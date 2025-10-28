@@ -4,8 +4,8 @@
   "scripts": {
     "build": "./build.sh",
     "build:debug": "./build_debug.sh",
-    "watch:c": "nodemon --watch . --ext c --exec \"npm run build\"",
-    "watch:c:debug": "nodemon --watch . --ext c --exec \"npm run build:debug\"",
+    "watch:c": "nodemon --watch . --ext c,h --exec \"npm run build\"",
+    "watch:c:debug": "nodemon --watch . --ext c,h --exec \"npm run build:debug\"",
     "vite:dev": "vite",
     "vite:build": "vite build",
     "vite:preview": "vite preview",
