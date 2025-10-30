@@ -75,7 +75,7 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
-	{{	   0,  62.397,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE}, // Area Light
+	{{	   0,62.3979,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE}, // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 
