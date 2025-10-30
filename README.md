@@ -2,7 +2,9 @@
 
 This project is a simple, interactive 3D ray tracer built with C, compiled to WebAssembly, and rendered in a web browser.
 
-It is a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung".
+It started as a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung".
+
+[Live version](https://tracy.timoeberl.de/)
 
 ## Dependencies
 
