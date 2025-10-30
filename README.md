@@ -39,12 +39,12 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
 npm run vite:build
 ```
 
-## Build a local version (without web)
+## Build a native version
 
-Create the binary `tracy` that renders an image to `render.ppm`.
+Create native binary `tracy` that renders an image to `render.ppm`.
 
 ```bash
-gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -flto
+clang -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -flto
 ```
 
 ## To-Do
@@ -81,4 +81,4 @@ gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -f
   - [ ] Tiled rendering (Spatial coherency)
   - [ ] Multiple samples per pass (Temporal coherency)
   - [ ] Double Buffering (for incremental rendering)
-- [ ] Incremental rendering (live update displayed image)
+- [x] Incremental rendering (live update image)

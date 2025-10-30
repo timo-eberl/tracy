@@ -98,7 +98,7 @@ function setupCameraControls() {
 
 async function drawPreview() {
 	await tracy.renderFast(
-		width, height,
+		width/2, height/2,
 		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
 	);
 }
@@ -111,7 +111,8 @@ async function drawFull() {
 
 	await tracy.renderFull(
 		width, height,
-		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
+		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint },
+		50 // samples per pixel
 	);
 
 	const endTime = performance.now();
