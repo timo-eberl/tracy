@@ -14,35 +14,40 @@ function degToRad(degree: number) { return degree / 360 * 2 * Math.PI; }
 
 // Listen for messages from the main thread
 self.onmessage = async (event) => {
-	const { command, width, height, camera } = event.data as {
-		command: 'renderFast' | 'renderFull', width:number, height:number, camera:CameraProperties
+	const { command, width, height, camera, samplesPerPixel } = event.data as {
+		command: 'renderFast' | 'renderFull', width: number, height: number,
+		camera:CameraProperties, samplesPerPixel: number,
 	};
 
 	// Await initialization of WebAssembly Module
 	const Module = await modulePromise;
 
-	let renderFunction;
+	Module._render_init(
+		width, height, degToRad(camera.rotation.x), degToRad(camera.rotation.y),
+		camera.distance, camera.focusPoint.x, camera.focusPoint.y, camera.focusPoint.z
+	);
+
 	if (command === 'renderFast') {
-		renderFunction = Module._render_fast;
+		const bufferPtr = Module._render_fast();
+
+		self.postMessage( { sharedMemory, bufferPtr, width, height, finished: true } );
 	}
 	else if (command === 'renderFull') {
-		renderFunction = Module._render_full;
+		const samplesPerRun = 2;
+		let samplesRemaining = samplesPerPixel;
+
+		while (samplesRemaining > 0) {
+			// either a full run, or whatever is left
+			const samplesForThisRun = Math.min(samplesRemaining, samplesPerRun);
+			const bufferPtr = Module._render_refine(samplesForThisRun);
+			samplesRemaining -= samplesForThisRun;
+
+			const isFinished = (samplesRemaining === 0);
+			self.postMessage( { sharedMemory, bufferPtr, width, height, finished: isFinished } );
+		}
 	}
 	else {
 		console.error("Worker: Unknown command:", command);
 		return;
 	}
-
-	const bufferPtr = renderFunction(
-		width, height, degToRad(camera.rotation.x), degToRad(camera.rotation.y),
-		camera.distance, camera.focusPoint.x, camera.focusPoint.y, camera.focusPoint.z
-	);
-
-	// Send the result back to the main thread.
-	// The second argument is a list of "Transferable Objects".
-	// This transfers ownership of the buffer's memory to the main thread instead of
-	// copying it, which is extremely fast.
-	self.postMessage(
-		{ sharedMemory, bufferPtr, width, height }
-	);
 };

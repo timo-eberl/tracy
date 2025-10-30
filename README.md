@@ -81,4 +81,4 @@ gcc -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -f
   - [ ] Tiled rendering (Spatial coherency)
   - [ ] Multiple samples per pass (Temporal coherency)
   - [ ] Double Buffering (for incremental rendering)
-- [ ] Incremental rendering (live update displayed image)
+- [x] Incremental rendering (live update image)

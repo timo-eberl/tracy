@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "tracy.h"
 
 // Conditionally include emscripten.h and define EMSCRIPTEN_KEEPALIVE
@@ -32,8 +33,6 @@ typedef struct {
 	Vec n;	    // Normal vector at the hit point
 	bool inside;
 } HitInfo;
-
-#define SAMPLES_PER_PIXEL 50
 
 // The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5
 // means the filter will be wider than a single pixel.
@@ -104,9 +103,16 @@ Vec vec_cross(Vec a, Vec b) {
 
 // The image buffer will be allocated on demand.
 uint8_t* image_buffer = NULL; // stores tone mapped gamma corrected colors
-Vec* radiance_buffer = NULL; // stores raw radiance
+Vec* summed_weighted_radiance_buffer = NULL; // stores summed raw radiance
+double* summed_weights_buffer = NULL; // stores the summed weights of the samples
 int buffer_width = 0;
 int buffer_height = 0;
+
+// state variables
+int width, height;
+Vec camera_origin;
+Vec forward, right, up;
+int sample_count;
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
@@ -180,23 +186,32 @@ Vec reinhard_luminance(Vec rgb_hdr) {
 	return vec_scale(rgb_hdr, l_ldr/l_hdr);
 }
 
-void set_buffer_size(int width, int height) {
+void initialize_buffers() {
 	// (Re)allocate buffer if dimensions change or not allocated yet
 	if (
-		image_buffer == NULL || radiance_buffer == NULL
+		image_buffer == NULL || summed_weighted_radiance_buffer == NULL
+		|| summed_weights_buffer == NULL
 		|| width != buffer_width || height != buffer_height)
 	{
 		if (image_buffer != NULL) {
 			free(image_buffer);
 		}
-		if (radiance_buffer != NULL) {
-			free(radiance_buffer);
+		if (summed_weighted_radiance_buffer != NULL) {
+			free(summed_weighted_radiance_buffer);
 		}
-		radiance_buffer = malloc(width * height * sizeof(Vec));
+		if (summed_weights_buffer != NULL) {
+			free(summed_weights_buffer);
+		}
+		summed_weighted_radiance_buffer = malloc(width * height * sizeof(Vec));
+		summed_weights_buffer = malloc(width * height * sizeof(double));
 		image_buffer = malloc(width * height * 4 * sizeof(uint8_t));
 		buffer_width = width;
 		buffer_height = height;
 	}
+	// write zeros in radiance buffers
+	// no need to clear image_buffer as it's overwritten every time it's requeted
+	memset(summed_weighted_radiance_buffer, 0, width * height * sizeof(Vec));
+	memset(summed_weights_buffer, 0, width * height * sizeof(double));
 }
 
 // Calculates a weight based on the 2D Gaussian PDF.
@@ -275,7 +290,8 @@ Vec radiance_from_ray_simple(Ray r) {
 	Vec colored_irradiance = vec_scale(simple_light.color, irradiance);
 	// divide by pi for energy conservation 10.3.6
 	// pi is the projected solid angle over hemisphere 3.1.9
-	Vec lambertian_brdf = vec_scale((Vec){1,1,1}, 1.0/M_PI);
+	Vec sphere_color = hit_sphere->type == DIFFUSE ? hit_sphere->color : (Vec){1,1,1};
+	Vec lambertian_brdf = vec_scale(sphere_color, 1.0/M_PI);
 	Vec radiance =  vec_hadamard_prod(lambertian_brdf, colored_irradiance);
 	return radiance;
 }
@@ -398,50 +414,70 @@ void write_image_tone_mapped(int width, int height) {
 	// loop over pixels, do tone mapping and gamma correction
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
-		Vec ldr_color = reinhard_luminance(radiance_buffer[y * width + x]);
-		
-		int index = (y * width + x) * 4;
-		image_buffer[index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
-		image_buffer[index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
-		image_buffer[index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
-		image_buffer[index + 3] = (uint8_t)255.999;
+		// Normalize the final color by dividing by the total sum of weights.
+		// If this were a continuous integral, the sum of weights would be 1.0 and this
+		// step unnecessary. But since we are doing a discrete sum, our total weight
+		// will not be exactly 1.0, so we manually keep track of it.
+		int radiance_index = y * width + x;
+		Vec radiance = vec_scale(
+			summed_weighted_radiance_buffer[radiance_index],
+			1.0 / summed_weights_buffer[radiance_index]
+		);
+
+		Vec ldr_color = reinhard_luminance(radiance); // tone mapping
+
+		int image_index = radiance_index * 4;
+		image_buffer[image_index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
+		image_buffer[image_index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
+		image_buffer[image_index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
+		image_buffer[image_index + 3] = (uint8_t)255.999;
 	}
 }
 
 void write_image_raw(int width, int height) {
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
-		int index = (y * width + x) * 4;
-		image_buffer[index + 0] = fmin(radiance_buffer[y * width + x].x, 1.0) * 255.999;
-		image_buffer[index + 1] = fmin(radiance_buffer[y * width + x].y, 1.0) * 255.999;
-		image_buffer[index + 2] = fmin(radiance_buffer[y * width + x].z, 1.0) * 255.999;
-		image_buffer[index + 3] = (uint8_t)255.999;
+		int radiance_index = y * width + x;
+		Vec radiance = vec_scale(
+			summed_weighted_radiance_buffer[radiance_index],
+			1.0 / summed_weights_buffer[radiance_index]
+		);
+
+		int image_index = radiance_index * 4;
+		image_buffer[image_index + 0] = fmin(radiance.x, 1.0) * 255.999;
+		image_buffer[image_index + 1] = fmin(radiance.y, 1.0) * 255.999;
+		image_buffer[image_index + 2] = fmin(radiance.z, 1.0) * 255.999;
+		image_buffer[image_index + 3] = (uint8_t)255.999;
 	}
 }
 
 EMSCRIPTEN_KEEPALIVE
-uint8_t* render_fast(
-	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
-	double focus_x, double focus_y, double focus_z
+void render_init(
+	int p_width, int p_height, double p_cam_angle_x, double p_cam_angle_y, double p_cam_dist,
+	double p_focus_x, double p_focus_y, double p_focus_z
 ) {
-	set_buffer_size(width, height);
+	width = p_width; height = p_height;
+	initialize_buffers();
 
-	Vec focus_point = {focus_x, focus_y, focus_z};
-
+	Vec focus_point = {p_focus_x, p_focus_y, p_focus_z};
 	// Calculate Camera Position using spherical coordinates around the focus point
-	double cam_x = focus_point.x + cam_dist * sin(cam_angle_y) * cos(cam_angle_x);
-	double cam_y = focus_point.y + cam_dist * sin(cam_angle_x);
-	double cam_z = focus_point.z + cam_dist * cos(cam_angle_y) * cos(cam_angle_x);
-	Vec camera_origin = {cam_x, cam_y, cam_z};
+	double cam_x = focus_point.x + p_cam_dist * sin(p_cam_angle_y) * cos(p_cam_angle_x);
+	double cam_y = focus_point.y + p_cam_dist * sin(p_cam_angle_x);
+	double cam_z = focus_point.z + p_cam_dist * cos(p_cam_angle_y) * cos(p_cam_angle_x);
+	camera_origin = (Vec){cam_x, cam_y, cam_z};
 
 	// Create the cameras coordinate system (basis vectors) 5.1.6
-	Vec forward = vec_normalize(vec_sub(focus_point, camera_origin));
+	forward = vec_normalize(vec_sub(focus_point, camera_origin));
 	Vec world_up = {0, 1, 0};
-	Vec right = vec_normalize(vec_cross(forward, world_up));
-	Vec up = vec_normalize(vec_cross(right, forward));
+	right = vec_normalize(vec_cross(forward, world_up));
+	up = vec_normalize(vec_cross(right, forward));
 
+	sample_count = 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint8_t* render_fast() {
 	double aspect_ratio = (double)width / height;
-
 	double fov_y = 30 * 3.141 / 180.0;
 	double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
@@ -461,7 +497,8 @@ uint8_t* render_fast(
 		Ray r = {camera_origin, dir};
 		Vec radiance = radiance_from_ray_simple(r);
 
-		radiance_buffer[(y) * width + (x)] = radiance;
+		summed_weighted_radiance_buffer[(y) * width + (x)] = radiance;
+		summed_weights_buffer[(y) * width + (x)] = 1.0;
 	}
 
 	write_image_tone_mapped(width, height);
@@ -469,54 +506,31 @@ uint8_t* render_fast(
 }
 
 EMSCRIPTEN_KEEPALIVE
-uint8_t* render_full(
-	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
-	double focus_x, double focus_y, double focus_z
-) {
-	set_buffer_size(width, height);
-
-	Vec focus_point = {focus_x, focus_y, focus_z};
-
-	// Calculate Camera Position using spherical coordinates around the focus point
-	double cam_x = focus_point.x + cam_dist * sin(cam_angle_y) * cos(cam_angle_x);
-	double cam_y = focus_point.y + cam_dist * sin(cam_angle_x);
-	double cam_z = focus_point.z + cam_dist * cos(cam_angle_y) * cos(cam_angle_x);
-	Vec camera_origin = {cam_x, cam_y, cam_z};
-
-	// Create the cameras coordinate system (basis vectors) 5.1.6
-	Vec forward = vec_normalize(vec_sub(focus_point, camera_origin));
-	Vec world_up = {0, 1, 0};
-	Vec right = vec_normalize(vec_cross(forward, world_up));
-	Vec up = vec_normalize(vec_cross(right, forward));
-
-	double aspect_ratio = (double)width / height;
-
-	double fov_y = 30 * 3.141 / 180.0;
-	double fov_scale = tan(fov_y / 2.0); // 5.1.4
-	
-	srand(0); // seed random generator
+uint8_t* render_refine(unsigned int n_samples) {
+	const double aspect_ratio = (double)width / height;
+	const double fov_y = 30 * 3.141 / 180.0;
+	const double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
 	// This factor scales our sample offsets to cover the desired range of the filter.
 	// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
 	const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
 
-	// loop over pixels, calculate radiance
-	for (int y = 0; y < height; ++y)
-	for (int x = 0; x < width; ++x) {
-		Vec weighted_radiance_sum = {0, 0, 0};
-		double total_weight_sum = 0.0;
+	for (int sample_index = 0; sample_index < n_samples; ++sample_index) {
+		// TODO samples should influence neighbouring pixels as well
+		// will be a bit annoying to build, because we first have to collect samples
+		// and then add them to the radiance buffer multiple times at different pixels.
+		// also at the pixels at the edge will have less samples
 
-		if (x == 560 && y == 90) {
-			// use for setting breakpoint
-			// volatile tells the compiler not to remove it
-			__asm__ __volatile__("nop");
-		}
+		srand(sample_count); // seed random generator
 
-		for (int sample_index = 0; sample_index < SAMPLES_PER_PIXEL; ++sample_index) {
-			// TODO samples should influence neighbouring pixels as well
-			// will be a bit annoying to build, because we first have to collect samples and then add them to the
-			// radiance buffer multiple times at different pixels
-			// also at the pixels at the edge will have less samples
+		// loop over pixels, calculate radiance
+		for (int y = 0; y < height; ++y)
+		for (int x = 0; x < width; ++x) {
+			if (x == 560 && y == 90) {
+				// use for setting breakpoint
+				// volatile tells the compiler not to remove it
+				__asm__ __volatile__("nop");
+			}
 
 			// (-0.5;0.5) * sample_range_scale
 			double sample_offset_x = (random_double() - 0.5) * sample_range_scale;
@@ -536,17 +550,14 @@ uint8_t* render_full(
 			Vec radiance = radiance_from_ray(r,0);
 
 			double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
-			weighted_radiance_sum = vec_add(weighted_radiance_sum, vec_scale(radiance, weight));
-			total_weight_sum += weight;
+
+			int index = y * width + x;
+			summed_weighted_radiance_buffer[index] = vec_add(
+				summed_weighted_radiance_buffer[index], vec_scale(radiance, weight)
+			);
+			summed_weights_buffer[index] += weight;
+			sample_count += 1;
 		}
-
-		// Normalize the final color by dividing by the total sum of weights.
-		// If this were a continuous integral, the sum of weights would be 1.0 and this
-		// step unnecessary. But since we are doing a discrete sum, our total weight
-		// will not be exactly 1.0, so we manually keep track of it.
-		Vec weighted_radiance = vec_scale(weighted_radiance_sum, 1.0 / total_weight_sum);
-
-		radiance_buffer[y * width + x] = weighted_radiance;
 	}
 
 	write_image_tone_mapped(width, height);

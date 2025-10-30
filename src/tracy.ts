@@ -1,7 +1,9 @@
 // public API of our module
 export interface TracyModule {
 	renderFast: (width: number, height: number, camera: CameraProperties) => Promise<void>;
-	renderFull: (width: number, height: number, camera: CameraProperties) => Promise<void>;
+	renderFull: (
+		width: number, height: number, camera: CameraProperties, samplesPerPixel: number
+	) => Promise<void>;
 }
 
 export interface CameraProperties {
@@ -26,8 +28,9 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 	// Listen for messages (the final rendered image) from the worker
 	worker.onmessage = (event) => {
-		const { sharedMemory, bufferPtr, width, height } = event.data as {
+		const { sharedMemory, bufferPtr, width, height, finished } = event.data as {
 			sharedMemory: WebAssembly.Memory; bufferPtr: number; width: number; height: number;
+			finished: boolean
 		};
 		// Create a view into the WebAssembly memory
 		// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
@@ -35,7 +38,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 		updateImage(context, rawArray, width, height);
 
-		if (resolveCurrentRender) {
+		if (finished && resolveCurrentRender) {
 			resolveCurrentRender();
 			resolveCurrentRender = null;
 		}
@@ -43,7 +46,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 	function callWorker(
 		command: 'renderFast' | 'renderFull', width: number, height: number,
-		camera: CameraProperties
+		camera: CameraProperties, samplesPerPixel: number
 	) {
 		if (resolveCurrentRender) {
 			return Promise.reject(new Error("A render is already in progress."));
@@ -52,13 +55,13 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 			resolveCurrentRender = resolve;
 		});
 
-		worker.postMessage({ command, width, height, camera });
+		worker.postMessage({ command, width, height, camera, samplesPerPixel });
 		return renderPromise;
 	}
 
 	return {
-		renderFast: (w, h, cam) => callWorker('renderFast', w, h, cam),
-		renderFull: (w, h, cam) => callWorker('renderFull', w, h, cam),
+		renderFast: (w, h, cam) => callWorker('renderFast', w, h, cam, 0),
+		renderFull: (w, h, cam, spp) => callWorker('renderFull', w, h, cam, spp),
 	}
 };
 

@@ -39,14 +39,17 @@ int main() {
 
 	printf("Rendering scene at %dx%d...\n", width, height);
 
-	unsigned char* image_buffer = render_full(
+	render_init(
 		width, height, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z
 	);
 
-	printf("Saving image to 'render.ppm'...\n");
-
-	// Save the rendered image
-	save_image_as_ppm("render.ppm", image_buffer, width, height);
+	// do incremental updates and update image each time for live preview
+	// to view the changes live open render.ppm in an image viewer
+	for (size_t i = 0; i < 10; i++) {
+		unsigned char* image_buffer = render_refine(5);
+		printf("Saving image to 'render.ppm'...\n");
+		save_image_as_ppm("render.ppm", image_buffer, width, height);
+	}
 
 	printf("Done.\n");
 
