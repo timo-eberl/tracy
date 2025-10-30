@@ -75,7 +75,7 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
-	{{	   0,  62.397,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE} // Area Light
+	{{	   0,  62.397,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE}, // Area Light
 };
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 
@@ -394,16 +394,27 @@ Vec radiance_from_ray(Ray r, int depth) {
 	}
 }
 
-void tone_map_image(int width, int height) {
+void write_image_tone_mapped(int width, int height) {
 	// loop over pixels, do tone mapping and gamma correction
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
 		Vec ldr_color = reinhard_luminance(radiance_buffer[y * width + x]);
-
+		
 		int index = (y * width + x) * 4;
 		image_buffer[index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
 		image_buffer[index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
 		image_buffer[index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
+		image_buffer[index + 3] = (uint8_t)255.999;
+	}
+}
+
+void write_image_raw(int width, int height) {
+	for (int y = 0; y < height; ++y)
+	for (int x = 0; x < width; ++x) {
+		int index = (y * width + x) * 4;
+		image_buffer[index + 0] = fmin(radiance_buffer[y * width + x].x, 1.0) * 255.999;
+		image_buffer[index + 1] = fmin(radiance_buffer[y * width + x].y, 1.0) * 255.999;
+		image_buffer[index + 2] = fmin(radiance_buffer[y * width + x].z, 1.0) * 255.999;
 		image_buffer[index + 3] = (uint8_t)255.999;
 	}
 }
@@ -453,7 +464,7 @@ uint8_t* render_fast(
 		radiance_buffer[(y) * width + (x)] = radiance;
 	}
 
-	tone_map_image(width, height);
+	write_image_tone_mapped(width, height);
 	return image_buffer;
 }
 
@@ -538,6 +549,6 @@ uint8_t* render_full(
 		radiance_buffer[y * width + x] = weighted_radiance;
 	}
 
-	tone_map_image(width, height);
+	write_image_tone_mapped(width, height);
 	return image_buffer;
 }
