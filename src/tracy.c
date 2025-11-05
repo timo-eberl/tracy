@@ -515,7 +515,7 @@ uint8_t* render_refine(unsigned int n_samples) {
 	// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
 	const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
 
-	for (int sample_index = 0; sample_index < n_samples; ++sample_index) {
+	for (size_t sample_index = 0; sample_index < n_samples; ++sample_index) {
 		// TODO samples should influence neighbouring pixels as well
 		// will be a bit annoying to build, because we first have to collect samples
 		// and then add them to the radiance buffer multiple times at different pixels.

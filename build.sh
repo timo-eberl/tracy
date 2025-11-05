@@ -8,6 +8,7 @@ emcc src/tracy.c \
 	-sSHARED_MEMORY=1 \
 	-sIMPORTED_MEMORY=1 \
 	-Wall \
+	-Wextra \
 	-O3
 
 # -O3: Max runtime optimizations
