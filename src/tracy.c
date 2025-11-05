@@ -410,7 +410,7 @@ Vec radiance_from_ray(Ray r, int depth) {
 	}
 }
 
-void write_image_tone_mapped(int width, int height) {
+void write_image_tone_mapped() {
 	// loop over pixels, do tone mapping and gamma correction
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
@@ -434,7 +434,7 @@ void write_image_tone_mapped(int width, int height) {
 	}
 }
 
-void write_image_raw(int width, int height) {
+void write_image_raw() {
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x) {
 		int radiance_index = y * width + x;
@@ -501,7 +501,7 @@ uint8_t* render_fast() {
 		summed_weights_buffer[(y) * width + (x)] = 1.0;
 	}
 
-	write_image_tone_mapped(width, height);
+	write_image_tone_mapped();
 	return image_buffer;
 }
 
@@ -560,6 +560,6 @@ uint8_t* render_refine(unsigned int n_samples) {
 		}
 	}
 
-	write_image_tone_mapped(width, height);
+	write_image_tone_mapped();
 	return image_buffer;
 }
