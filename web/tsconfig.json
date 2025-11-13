@@ -8,5 +8,5 @@
 		"strict": true,
 		"noFallthroughCasesInSwitch": true,
 	},
-	"include": [ "src/**/*", "vite.config.ts" ]
+	"include": [ "src/**/*", "vite.config.ts", "web/tracy_c.js", "web/main.ts", "web/tracy_c.d.ts", "web/tracy.ts", "web/tracy.worker.ts" ]
 }

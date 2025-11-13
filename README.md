@@ -13,6 +13,8 @@ It started as a learning project with the purpose to apply and understand the to
 
 ## Getting Started
 
+> Most of the web stuff is outdated, web needs to be fixed after the restructuring
+
 Install local development tools (`live-server`, `nodemon`, etc.):
 
 ```bash
@@ -46,7 +48,7 @@ npm run vite:build
 Create native binary `tracy` that renders an image to `render.ppm`.
 
 ```bash
-clang -std=c11 src/render_to_image.c src/tracy.c -o tracy -lm -O3 -march=native -flto
+clang -std=c11 native/render_to_image.c src/tracy.c -Isrc -o tracy -lm -O3 -march=native -flto
 ```
 
 ## To-Do

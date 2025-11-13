@@ -1,4 +1,4 @@
-import * as Tracy from "./tracy";
+import * as Tracy from "../src/tracy";
 
 // Get the canvas and its 2D rendering context
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
