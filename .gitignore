@@ -11,6 +11,9 @@ tracy_c.d.ts
 node_modules/
 .npm
 
+# zig
+.zig-cache/
+
 # release build
 dist/
 
