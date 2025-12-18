@@ -22,3 +22,5 @@ dist/
 tracy
 # local build writes to this image
 render.ppm
+render_c.ppm
+render_zig.ppm

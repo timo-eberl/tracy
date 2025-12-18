@@ -1,4 +1,4 @@
-// render to an image file - without web
+// render to an image file
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,8 +47,8 @@ int main() {
 	// to view the changes live open render.ppm in an image viewer
 	for (size_t i = 0; i < 10; i++) {
 		unsigned char* image_buffer = render_refine(5);
-		printf("Saving image to 'render.ppm'...\n");
-		save_image_as_ppm("render.ppm", image_buffer, width, height);
+		printf("Step %d/10: Saving to 'render_c.ppm'...\n", i + 1);
+		save_image_as_ppm("render_c.ppm", image_buffer, width, height);
 	}
 
 	printf("Done.\n");

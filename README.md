@@ -43,12 +43,12 @@ Open the developer tools and navigate to `Sources`. You should see the c files a
 npm run vite:build
 ```
 
-## Build a native version
+## Usage example with C
 
 Create native binary `tracy` that renders an image to `render.ppm`.
 
 ```bash
-clang -std=c11 native/render_to_image.c src/tracy.c -Iinclude -o tracy -lm -O3 -march=native -flto
+clang -std=c11 examples/c_render/main.c src/tracy.c -Iinclude -o tracy -lm -O3 -march=native -flto
 ```
 
 ## To-Do
