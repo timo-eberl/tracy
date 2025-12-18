@@ -186,8 +186,16 @@ double luminance(Vec rgb) {
 // simple reinhard tone mapping operator based on luminance
 Vec reinhard_luminance(Vec rgb_hdr) {
 	double l_hdr = luminance(rgb_hdr);
+	if (l_hdr <= 0.0) return (Vec){0, 0, 0}; // Handle black so we don't divide by 0
 	double l_ldr = l_hdr / (1.0 + l_hdr);
 	return vec_scale(rgb_hdr, l_ldr / l_hdr);
+}
+
+// 0-1 to 0-255
+uint8_t quantize(double v) {
+	if (v < 0.0) v = 0.0;
+	if (v > 1.0) v = 1.0;
+	return (uint8_t)(v * 255.999);
 }
 
 void initialize_buffers() {
@@ -416,10 +424,10 @@ void write_image_tone_mapped() {
 			Vec ldr_color = reinhard_luminance(radiance); // tone mapping
 
 			int image_index = radiance_index * 4;
-			image_buffer[image_index + 0] = linear_to_srgb(ldr_color.x) * 255.999;
-			image_buffer[image_index + 1] = linear_to_srgb(ldr_color.y) * 255.999;
-			image_buffer[image_index + 2] = linear_to_srgb(ldr_color.z) * 255.999;
-			image_buffer[image_index + 3] = (uint8_t)255.999;
+			image_buffer[image_index + 0] = quantize(ldr_color.x);
+			image_buffer[image_index + 1] = quantize(ldr_color.y);
+			image_buffer[image_index + 2] = quantize(ldr_color.z);
+			image_buffer[image_index + 3] = quantize(1.0);
 		}
 }
 
