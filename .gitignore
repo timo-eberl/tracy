@@ -13,6 +13,7 @@ node_modules/
 
 # zig
 .zig-cache/
+zig-out/
 
 # release build
 dist/
