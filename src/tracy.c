@@ -27,6 +27,22 @@
 // offset used for shadow rays. may need to be adjusted depending on scene scale
 #define SELF_OCCLUSION_DELTA 0.00000001
 
+// clang-format off
+// allow one line typedefs
+typedef struct { double x, y, z; } Vec;
+typedef struct { Vec origin; Vec dir; } Ray;
+typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
+typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
+// color is treated differently depending on the material type
+// DIFFUSE: perfect lambertian diffuse, color=albedo
+// EMISSIVE: only emission, color=radiosity (W/m^2)
+// MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
+// REFRACTIVE: reflection and refraction, color.x=ior
+typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
+// t: distance, p: point, n: normal, inside: flag
+typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
+// clang-format on
+
 // light radiant energy calculation:
 // typical kitchen: assume 4x3 m (12 m^2) floor, 2.4 m height, target illuminance is ~200 lux
 // this means a total of 2400 lumen must reach the floor

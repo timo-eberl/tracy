@@ -4,22 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// clang-format off
-// allow one line typedefs
-typedef struct { double x, y, z; } Vec;
-typedef struct { Vec origin; Vec dir; } Ray;
-typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
-typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
-// color is treated differently depending on the material type
-// DIFFUSE: perfect lambertian diffuse, color=albedo
-// EMISSIVE: only emission, color=radiosity (W/m^2)
-// MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
-// REFRACTIVE: reflection and refraction, color.x=ior
-typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
-// t: distance, p: point, n: normal, inside: flag
-typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
-// clang-format on
-
 /**
  * Initializes or reconfigures the renderer with new scene parameters.
  * Must be called at least once before any rendering. Calling it again will
