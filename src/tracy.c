@@ -48,6 +48,8 @@
 
 // position, radiant flux (W), color
 PointLight simple_light = { {0,2.38,0 }, 127, {1,1,1} }; // only for render_fast
+// clang-format off
+// KEEP ALIGNED: Tabular data for scene definition
 Sphere scene[] = { // center, radius, color, type
 	{{ 1e4-1.5,	 1.2,	 0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
 	{{-1e4+1.5,	 1.2,	 0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
@@ -58,11 +60,15 @@ Sphere scene[] = { // center, radius, color, type
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
 	{{	   0,62.3979,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE}, // Area Light
 };
+// clang-format on
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+// clang-format off
+// KEEP COMPACT: Vector intrinsics are more readable as one-liners
 Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
 Vec vec_scale(Vec v, double s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
@@ -70,6 +76,7 @@ Vec vec_hadamard_prod(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b
 double vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 double vec_length(Vec v) { return sqrt(vec_dot(v, v)); }
 double vec_length_squared(Vec v) { return vec_dot(v, v); }
+// clang-format on
 Vec vec_normalize(Vec v) {
 	double l = vec_length(v);
 	if (l == 0) return (Vec){0,0,0};
