@@ -1,19 +1,50 @@
-# WASM + C Ray Tracer
+# Tracy
 
-This project is a simple, interactive 3D ray tracer built with C, compiled to WebAssembly, and rendered in a web browser.
+Path Tracer written in C.
 
-It started as a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung".
+It started as a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung" ("modern rendering techniques").
+
+It is actively being developed with a focus on test-driven development in the context of the lecture "System Engineering and Management".
+
+## C Example
+
+Writes image to a ppm file.
+
+### Clang
+
+```bash
+clang -std=c11 examples/c_render/main.c src/tracy.c -Iinclude -o tracy -lm -O3 -march=native -flto
+./tracy
+```
+
+### Zig
+
+```
+zig build run-c
+```
+
+## Zig Example
+
+Writes image to a ppm file.
+
+```
+zig build run-zig
+```
+
+## Web version
+
+> Currently broken
+
+This application is a simple, interactive 3D ray tracer built with C, compiled to WebAssembly, and rendered in a web browser.
 
 [Live version](https://tracy.timoeberl.de/)
 
-## Dependencies
+### Dependencies
 
 - [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html): The compiler toolchain for compiling C to WebAssembly
 - [Node.js and npm](https://nodejs.org/): Used to manage development dependencies and run automation scripts
 
-## Getting Started
-
-> Most of the web stuff is outdated, web needs to be fixed after the restructuring
+### Getting Started
 
 Install local development tools (`live-server`, `nodemon`, etc.):
 
@@ -27,7 +58,7 @@ Perform C-to-WASM compilation, start a local web server, and watch for file chan
 npm run dev
 ```
 
-## Debugging
+### Debugging
 
 You can debug your C code with Chrome and the [C/C++ DevTools Support (DWARF)](https://chromewebstore.google.com/detail/cc++-devtools-support-dwa/pdcpmagijalfljmkmjngeonclgbbannb) extension. Firefox's debugger doesn't work properly.
 
@@ -37,18 +68,10 @@ npm run dev:debug
 
 Open the developer tools and navigate to `Sources`. You should see the c files and be able to debug them.
 
-## Release Build
+### Release Build
 
 ```bash
 npm run vite:build
-```
-
-## Usage example with C
-
-Create native binary `tracy` that renders an image to `render.ppm`.
-
-```bash
-clang -std=c11 examples/c_render/main.c src/tracy.c -Iinclude -o tracy -lm -O3 -march=native -flto
 ```
 
 ## To-Do
