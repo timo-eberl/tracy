@@ -1,9 +1,11 @@
 #ifndef TRACY_H_
 #define TRACY_H_
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
+// clang-format off
+// allow one line typedefs
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;
 typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
@@ -14,22 +16,17 @@ typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
 // REFRACTIVE: reflection and refraction, color.x=ior
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
-typedef struct {
-	double t;   // Distance to hit
-	Vec p;	    // Hit point in world space
-	Vec n;	    // Normal vector at the hit point
-	bool inside;
-} HitInfo;
+// t: distance, p: point, n: normal, inside: flag
+typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
+// clang-format on
 
 /**
  * Initializes or reconfigures the renderer with new scene parameters.
  * Must be called at least once before any rendering. Calling it again will
  * reset the render progress with the new settings.
  */
-void render_init(
-	int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
-	double focus_x, double focus_y, double focus_z
-);
+void render_init(int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
+				 double focus_x, double focus_y, double focus_z);
 
 /**
  * Generates a fast, low-quality preview of the scene.

@@ -1,0 +1,29 @@
+BasedOnStyle: LLVM
+Language: Cpp # Clang-format uses Cpp logic for C
+Standard: Latest
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Always
+
+ColumnLimit: 100
+
+BreakBeforeBraces: Attach # K&R style (opening brace on same line)
+
+# Compacting One-Liners
+AllowShortBlocksOnASingleLine: Always
+AllowShortFunctionsOnASingleLine: Inline      # Allows vec_add(...) { return ...; }
+AllowShortIfStatementsOnASingleLine: Always   # Allows if (is_inside) cos_i = -cos_i;
+AllowShortCaseLabelsOnASingleLine: true
+
+# Pointers
+PointerAlignment: Left # Matches "uint8_t* image_buffer"
+
+# Spacing
+SpaceBeforeParens: ControlStatements # "if (..)" vs "func(..)"
+SpaceInEmptyParentheses: false
+
+# Alignment
+AlignConsecutiveDeclarations: false
+AlignConsecutiveAssignments: false
