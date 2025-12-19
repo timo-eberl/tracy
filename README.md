@@ -8,7 +8,7 @@ It is actively being developed with a focus on test-driven development in the co
 
 ## C Example
 
-Writes image to a ppm file.
+Writes image to a file.
 
 ### Make
 
@@ -24,7 +24,7 @@ zig build run-c
 
 ## Zig Example
 
-Writes image to a ppm file.
+Writes image to a file.
 
 ```
 zig build run-zig

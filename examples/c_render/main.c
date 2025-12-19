@@ -2,24 +2,34 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h> // for uint8_t
 #include "tracy.h"
 
-void save_image_as_ppm(const char* file_path, unsigned char* image_buffer, int width, int height) {
-	FILE *fp = fopen(file_path, "w");
+void save_image_as_tga(const char* file_path, unsigned char* buffer, int width, int height) {
+	FILE *fp = fopen(file_path, "wb"); // Must be "wb" for binary
 	if (!fp) {
 		fprintf(stderr, "Error: Could not open file %s for writing.\n", file_path);
 		return;
 	}
 
-	// Write the PPM header (P3 = ASCII RGB)
-	fprintf(fp, "P3\n%d %d\n255\n", width, height);
+	// 18-byte TGA Header (Uncompressed 32-bit RGBA)
+	unsigned char header[18] = {0};
+	header[2]  = 2;                             // Uncompressed true-color
+	header[12] = width  & 0xFF;                 // Width LSB
+	header[13] = (width  >> 8) & 0xFF;          // Width MSB
+	header[14] = height & 0xFF;                 // Height LSB
+	header[15] = (height >> 8) & 0xFF;          // Height MSB
+	header[16] = 32;                            // 32 bits per pixel (RGBA)
+	header[17] = 0x20;                          // Origin: Top-Left
 
-	// Write the pixel data
+	fwrite(header, 1, 18, fp);
+
+	// TGA expects BGRA order. We swap R and B from the RGBA buffer while writing.
 	for (int i = 0; i < width * height; ++i) {
-		fprintf(fp, "%d %d %d\n",
-			image_buffer[i * 4 + 0],
-			image_buffer[i * 4 + 1],
-			image_buffer[i * 4 + 2]);
+		fputc(buffer[i * 4 + 2], fp); // B
+		fputc(buffer[i * 4 + 1], fp); // G
+		fputc(buffer[i * 4 + 0], fp); // R
+		fputc(buffer[i * 4 + 3], fp); // A
 	}
 
 	fclose(fp);
@@ -44,11 +54,10 @@ int main() {
 	);
 
 	// do incremental updates and update image each time for live preview
-	// to view the changes live open render.ppm in an image viewer
 	for (size_t i = 0; i < 10; i++) {
 		unsigned char* image_buffer = render_refine(5);
-		printf("Step %d/10: Saving to 'render_c.ppm'...\n", ((int)i + 1));
-		save_image_as_ppm("render_c.ppm", image_buffer, width, height);
+		printf("Step %d/10: Saving to 'render_c.tga'...\n", ((int)i + 1));
+		save_image_as_tga("render_c.tga", image_buffer, width, height);
 	}
 
 	printf("Done.\n");

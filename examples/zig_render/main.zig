@@ -3,24 +3,35 @@ const tracy = @cImport({
     @cInclude("tracy.h");
 });
 
-/// Writes the image buffer to a PPM (P3 ASCII) file.
-fn saveImageAsPpm(file_path: []const u8, image_buffer: []u8, width: i32, height: i32) !void {
+fn saveImageAsTga(file_path: []const u8, image_buffer: []u8, width: i32, height: i32) !void {
     const file = try std.fs.cwd().createFile(file_path, .{});
     defer file.close();
 
     var bw = std.io.bufferedWriter(file.writer());
     const writer = bw.writer();
 
-    try writer.print("P3\n{d} {d}\n255\n", .{ width, height });
+    // 18-byte TGA Header for 32-bit uncompressed RGBA
+    var header = [_]u8{0} ** 18;
+    header[2] = 2; // True-color
+    header[12] = @intCast(width & 0xFF);
+    header[13] = @intCast((width >> 8) & 0xFF);
+    header[14] = @intCast(height & 0xFF);
+    header[15] = @intCast((height >> 8) & 0xFF);
+    header[16] = 32; // Bits per pixel
+    header[17] = 0x20; // Top-to-bottom flag
+
+    try writer.writeAll(&header);
 
     const num_pixels: usize = @intCast(width * height);
     for (0..num_pixels) |i| {
-        try writer.print("{d} {d} {d}\n", .{
-            image_buffer[i * 4 + 0],
-            image_buffer[i * 4 + 1],
-            image_buffer[i * 4 + 2],
-        });
+        // TGA expects BGRA, buffer is RGBA
+        try writer.writeByte(image_buffer[i * 4 + 2]); // B
+        try writer.writeByte(image_buffer[i * 4 + 1]); // G
+        try writer.writeByte(image_buffer[i * 4 + 0]); // R
+        try writer.writeByte(image_buffer[i * 4 + 3]); // A
     }
+
+    try bw.flush();
 }
 
 pub fn main() !void {
@@ -46,9 +57,9 @@ pub fn main() !void {
         const buffer_len: usize = @intCast(width * height * 4);
         const buffer = buffer_ptr[0..buffer_len];
 
-        try stdout.print("Step {d}/10: Saving to 'render_zig.ppm'...\n", .{i + 1});
+        try stdout.print("Step {d}/10: Saving to 'render_zig.tga'...\n", .{i + 1});
 
-        try saveImageAsPpm("render_zig.ppm", buffer, width, height);
+        try saveImageAsTga("render_zig.tga", buffer, width, height);
     }
 
     try stdout.print("Done.\n", .{});
