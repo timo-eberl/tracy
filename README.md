@@ -10,11 +10,10 @@ It is actively being developed with a focus on test-driven development in the co
 
 Writes image to a ppm file.
 
-### Clang
+### Make
 
 ```bash
-clang -std=c11 examples/c_render/main.c src/tracy.c -Iinclude -o tracy -lm -O3 -march=native -flto
-./tracy
+make run
 ```
 
 ### Zig
