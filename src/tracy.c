@@ -73,7 +73,7 @@ Sphere scene[] = { // center, radius, color, type
 	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
-	{{	   0,62.3979,	 0},   60.0, {2*21.5, 2*21.5, 2*21.5}, EMISSIVE}, // Area Light
+	{{	   0,62.3979,	 0},   60.0, {5*21.5, 5*21.5, 5*21.5}, EMISSIVE}, // Area Light
 };
 // clang-format on
 int num_spheres = sizeof(scene) / sizeof(Sphere);
@@ -188,13 +188,11 @@ Vec reinhard_luminance(Vec rgb_hdr) {
 	double l_hdr = luminance(rgb_hdr);
 	if (l_hdr <= 0.0) return (Vec){0, 0, 0}; // Handle black so we don't divide by 0
 	double l_ldr = l_hdr / (1.0 + l_hdr);
-	return vec_scale(rgb_hdr, l_ldr / l_hdr);
+	Vec v = vec_scale(rgb_hdr, l_ldr / l_hdr);
+	return (Vec){fmin(v.x, 1.0), fmin(v.y, 1.0), fmin(v.z, 1.0)};
 }
-
 // 0-1 to 0-255
 uint8_t quantize(double v) {
-	if (v < 0.0) v = 0.0;
-	if (v > 1.0) v = 1.0;
 	return (uint8_t)(v * 255.999);
 }
 
@@ -424,9 +422,9 @@ void write_image_tone_mapped() {
 			Vec ldr_color = reinhard_luminance(radiance); // tone mapping
 
 			int image_index = radiance_index * 4;
-			image_buffer[image_index + 0] = quantize(ldr_color.x);
-			image_buffer[image_index + 1] = quantize(ldr_color.y);
-			image_buffer[image_index + 2] = quantize(ldr_color.z);
+			image_buffer[image_index + 1] = quantize(linear_to_srgb(ldr_color.y));
+			image_buffer[image_index + 2] = quantize(linear_to_srgb(ldr_color.z));
+			image_buffer[image_index + 0] = quantize(linear_to_srgb(ldr_color.x));
 			image_buffer[image_index + 3] = quantize(1.0);
 		}
 }
