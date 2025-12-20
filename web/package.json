@@ -1,11 +1,11 @@
 {
   "name": "tracy",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "scripts": {
-    "build": "./build.sh",
-    "build:debug": "./build_debug.sh",
-    "watch:c": "nodemon --watch . --ext c,h --exec \"npm run build\"",
-    "watch:c:debug": "nodemon --watch . --ext c,h --exec \"npm run build:debug\"",
+    "build": "make -C .. web",
+    "build:debug": "make -C .. web-debug",
+    "watch:c": "nodemon --watch ../src --watch ../include --ext c,h --exec \"npm run build\"",
+    "watch:c:debug": "nodemon --watch ../src --watch ../include --ext c,h --exec \"npm run build:debug\"",
     "vite:dev": "vite",
     "vite:build": "vite build",
     "vite:preview": "vite preview",
@@ -21,7 +21,7 @@
   "bugs": {
     "url": "https://github.com/timo-eberl/tracy/issues"
   },
-  "homepage": "https://github.com/timo-eberl/tracy#readme",
+  "homepage": "https://tracy.timoeberl.de",
   "description": "",
   "devDependencies": {
     "concurrently": "^9.2.0",

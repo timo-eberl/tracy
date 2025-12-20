@@ -1,25 +1,23 @@
 # Tracy
 
-Path Tracer written in C.
+Path Tracer written in C. An interactive web version is deployed [here](https://tracy.timoeberl.de/).
 
 It started as a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung" ("modern rendering techniques").
 
-It is actively being developed with a focus on test-driven development in the context of the lecture "System Engineering and Management".
+It is actively being developed with a focus on automated testing and profiling in the context of the lecture "System Engineering and Management".
 
 ## C Example
 
 Writes image to a file.
 
-### Make
-
+Make:
 ```bash
 make run
 ```
 
-### Zig
-
+Zig:
 ```
-zig build run-c
+zig build run-c [-Doptimize=ReleaseFast]
 ```
 
 ## Zig Example
@@ -27,16 +25,12 @@ zig build run-c
 Writes image to a file.
 
 ```
-zig build run-zig
+zig build run-zig [-Doptimize=ReleaseFast]
 ```
 
-## Web version
+## Web application
 
-> Currently broken
-
-This application is a simple, interactive 3D ray tracer built with C, compiled to WebAssembly, and rendered in a web browser.
-
-[Live version](https://tracy.timoeberl.de/)
+Simple, interactive web app that uses tracy (compiled to WebAssembly)
 
 ### Dependencies
 
@@ -45,14 +39,16 @@ This application is a simple, interactive 3D ray tracer built with C, compiled t
 
 ### Getting Started
 
-Install local development tools (`live-server`, `nodemon`, etc.):
+```bash
+cd web/
+```
 
+Install local development tools (`live-server`, `nodemon`, etc.):
 ```bash
 npm install
 ```
 
 Perform C-to-WASM compilation, start a local web server, and watch for file changes:
-
 ```bash
 npm run dev
 ```
