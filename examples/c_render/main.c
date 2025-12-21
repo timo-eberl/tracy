@@ -1,12 +1,10 @@
 // render to an image file
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h> // for uint8_t
 #include "tracy.h"
+#include <stdio.h>
 
 void save_image_as_tga(const char* file_path, unsigned char* buffer, int width, int height) {
-	FILE *fp = fopen(file_path, "wb"); // Must be "wb" for binary
+	FILE* fp = fopen(file_path, "wb"); // Must be "wb" for binary
 	if (!fp) {
 		fprintf(stderr, "Error: Could not open file %s for writing.\n", file_path);
 		return;
@@ -14,13 +12,13 @@ void save_image_as_tga(const char* file_path, unsigned char* buffer, int width, 
 
 	// 18-byte TGA Header (Uncompressed 32-bit RGBA)
 	unsigned char header[18] = {0};
-	header[2]  = 2;                             // Uncompressed true-color
-	header[12] = width  & 0xFF;                 // Width LSB
-	header[13] = (width  >> 8) & 0xFF;          // Width MSB
-	header[14] = height & 0xFF;                 // Height LSB
-	header[15] = (height >> 8) & 0xFF;          // Height MSB
-	header[16] = 32;                            // 32 bits per pixel (RGBA)
-	header[17] = 0x20;                          // Origin: Top-Left
+	header[2] = 2;					   // Uncompressed true-color
+	header[12] = width & 0xFF;		   // Width LSB
+	header[13] = (width >> 8) & 0xFF;  // Width MSB
+	header[14] = height & 0xFF;		   // Height LSB
+	header[15] = (height >> 8) & 0xFF; // Height MSB
+	header[16] = 32;				   // 32 bits per pixel (RGBA)
+	header[17] = 0x20;				   // Origin: Top-Left
 
 	fwrite(header, 1, 18, fp);
 
@@ -49,9 +47,7 @@ int main() {
 
 	printf("Rendering scene at %dx%d...\n", width, height);
 
-	render_init(
-		width, height, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z
-	);
+	render_init(width, height, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
 	// do incremental updates and update image each time for live preview
 	for (size_t i = 0; i < 10; i++) {
