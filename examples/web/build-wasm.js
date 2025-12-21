@@ -4,7 +4,7 @@ const isDebug = process.argv.includes('--debug');
 
 // Emscripten Flags (Shared across debug/release)
 const emflags = [
-	'-I../include',
+	'-I../../include',
 	'-sMODULARIZE=1',
 	'-sEXPORT_ES6=1',
 	'-sSHARED_MEMORY=1', '-sIMPORTED_MEMORY=1',	// required so shared memory can be used
@@ -27,7 +27,7 @@ const emDebug = [
 console.log(`Building WASM (${isDebug ? 'debug' : 'release'})...`);
 
 const args = [
-	'../src/tracy.c',
+	'../../src/tracy.c',
 	...emflags,
 	...(isDebug ? emDebug : emRelease),
 	'-o', 'src/tracy_c.js'

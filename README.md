@@ -53,7 +53,7 @@ Simple, interactive web app that uses tracy (compiled to WebAssembly).
 ### Getting Started
 
 ```bash
-cd web/
+cd examples/web/
 ```
 
 Install local development tools (`live-server`, `nodemon`, etc.):

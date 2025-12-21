@@ -5,8 +5,8 @@
   "scripts": {
     "build": "node build-wasm.js",
     "build:debug": "node build-wasm.js --debug",
-    "watch:c": "nodemon --watch ../src --watch ../include --ext c,h --exec \"npm run build\"",
-    "watch:c:debug": "nodemon --watch ../src --watch ../include --ext c,h --exec \"npm run build:debug\"",
+    "watch:c": "nodemon --watch ../../src --watch ../../include --ext c,h --exec \"npm run build\"",
+    "watch:c:debug": "nodemon --watch ../../src --watch ../../include --ext c,h --exec \"npm run build:debug\"",
     "vite:dev": "vite",
     "vite:build": "vite build",
     "vite:preview": "vite preview",
