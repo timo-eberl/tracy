@@ -6,31 +6,44 @@ It started as a learning project with the purpose to apply and understand the to
 
 It is actively being developed with a focus on automated testing and profiling in the context of the lecture "System Engineering and Management".
 
-## C Example
+## Native Development
 
-Writes image to a file.
+The project includes examples in both C and Zig. Both render the scene to an uncompressed `.tga` image file.
 
-Make:
+### Building with Zig (Cross-Platform)
+
+Zig handles the compilation of the C code, the Zig example, and runs the test suite.
+
 ```bash
-make run
-```
-
-Zig:
-```
+# Build and run the C CLI example
 zig build run-c [-Doptimize=ReleaseFast]
-```
 
-## Zig Example
-
-Writes image to a file.
-
-```
+# Build and run the Zig CLI example
 zig build run-zig [-Doptimize=ReleaseFast]
 ```
 
-## Web application
+### Building with Make (Unix/Linux)
 
-Simple, interactive web app that uses tracy (compiled to WebAssembly)
+```bash
+# Compile and run the C CLI example
+make run
+```
+
+## Testing
+
+This project uses Zig as a test runner to perform white-box testing on the C implementation. The tests are located in `tests/`.
+
+```bash
+# Run all unit tests
+zig build test
+
+# Run tests and print a summary of passed/failed tests
+zig build test --summary all
+```
+
+## Web Application
+
+Simple, interactive web app that uses tracy (compiled to WebAssembly).
 
 ### Dependencies
 
@@ -61,7 +74,7 @@ You can debug your C code with Chrome and the [C/C++ DevTools Support (DWARF)](h
 npm run dev:debug
 ```
 
-Open the developer tools and navigate to `Sources`. You should see the c files and be able to debug them.
+Open the developer tools and navigate to `Sources`. You should see the C files and be able to debug them.
 
 ### Release Build
 
