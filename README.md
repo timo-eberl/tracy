@@ -16,10 +16,10 @@ Zig handles the compilation of the C code, the Zig example, and runs the test su
 
 ```bash
 # Build and run the C CLI example
-zig build run-c [-Doptimize=ReleaseFast]
+zig build run-c -Doptimize=ReleaseFast -Dtarget=native
 
 # Build and run the Zig CLI example
-zig build run-zig [-Doptimize=ReleaseFast]
+zig build run-zig -Doptimize=ReleaseFast -Dtarget=native
 ```
 
 ### Building with Make (Unix/Linux)
