@@ -512,6 +512,9 @@ uint8_t* render_refine(unsigned int n_samples) {
 		// will be a bit annoying to build, because we first have to collect samples
 		// and then add them to the radiance buffer multiple times at different pixels.
 		// also at the pixels at the edge will have less samples
+		// Optimization: To make this thread-safe without slow floating-point atomics, accumulate
+		// into thread-local tile buffers (with padding/ghost zones) and merge them once the tile is
+		// done.
 
 		srand(sample_count); // seed random generator
 
