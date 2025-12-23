@@ -584,12 +584,17 @@ uint8_t* render_refine(unsigned int n_samples) {
 				Vec radiance = radiance_from_ray(r, 0);
 
 				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
-				// Determine the integer range of pixels that overlap with the Gaussian radius
-				// centered at the sample point (film_x, film_y).
-				int min_nx = (int)floor(film_x - filter_radius);
-				int max_nx = (int)ceil(film_x + filter_radius);
-				int min_ny = (int)floor(film_y - filter_radius);
-				int max_ny = (int)ceil(film_y + filter_radius);
+				// Determine the integer range of pixels where the pixel center (x + 0.5) falls
+				// within the filter radius of the sample point (film_x, film_y).
+				int min_nx = (int)ceil(film_x - 0.5 - filter_radius);
+				int max_nx = (int)floor(film_x - 0.5 + filter_radius) + 1;
+				int min_ny = (int)ceil(film_y - 0.5 - filter_radius);
+				int max_ny = (int)floor(film_y - 0.5 + filter_radius) + 1;
+
+				// with box filtering only the original pixel should be covered
+				if (filter_type == FILTER_BOX) {
+					assert(min_nx == x && max_nx == x + 1 && min_ny == y && max_ny == y + 1);
+				}
 
 				for (int ny = min_ny; ny < max_ny; ++ny) {
 					for (int nx = min_nx; nx < max_nx; ++nx) {
