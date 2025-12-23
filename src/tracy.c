@@ -15,11 +15,11 @@
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 
-// The standard deviation (sigma) of the Gaussian bell curve.
+// Filter configuration constants
 #define GAUSS_SIGMA 0.5
-// The range of the filter in units of sigma. A value of 3.0 means we sample across +/- 3-sigma,
-// capturing >99% of the curve's influence. Visually 2 looks almost the same as 3.
-#define GAUSS_FILTER_RADIUS_IN_SIGMA 3.0
+#define GAUSS_RADIUS 1.5 // 3 * Sigma, captures >99% of gaussian curves influence
+#define MITCHELL_RADIUS 2.0
+#define BOX_RADIUS 0.5
 
 #define MAX_DEPTH 4
 
@@ -40,6 +40,7 @@ typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
 // t: distance, p: point, n: normal, inside: flag
 typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
+typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } FilterType;
 // clang-format on
 
 // light radiant energy calculation:
@@ -116,6 +117,7 @@ int width, height;
 Vec camera_origin;
 Vec forward, right, up;
 int sample_count;
+FilterType filter_type; // Current selected filter
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
@@ -192,6 +194,7 @@ Vec reinhard_luminance(Vec rgb_hdr) {
 }
 // 0-1 to 0-255
 uint8_t quantize(double v) {
+	v = (v < 0.0f) ? 0.0f : (v > 1.0f) ? 1.0f : v; // clamp 0 1
 	return (uint8_t)(v * 255.999);
 }
 
@@ -215,10 +218,31 @@ void initialize_buffers() {
 	memset(summed_weights_buffer, 0, width * height * sizeof(double));
 }
 
+// 1D Box Filter
+double box_1d(double x) {
+	return (fabs(x) < 0.5) ? 1.0 : 0.0;
+}
+
+// 1D Mitchell-Netravali filter function with B=1/3, C=1/3.
+// This filter is separable: W(x,y) = w(x) * w(y)
+// The support radius is strictly 2.0.
+double mitchell_1d(double x) {
+	x = fabs(x);
+	if (x >= 2.0) return 0.0;
+
+	// Hardcoded coefficients for B=1/3, C=1/3
+	// 0 <= x < 1: 1/6 * (7x^3 - 12x^2 + 16/3)
+	if (x < 1.0) {
+		return (7.0 * x * x * x - 12.0 * x * x + 16.0 / 3.0) * (1.0 / 6.0);
+	}
+	// 1 <= x < 2: 1/6 * (-7/3x^3 + 12x^2 - 20x + 32/3)
+	else {
+		return ((-7.0 / 3.0) * x * x * x + 12.0 * x * x - 20.0 * x + 32.0 / 3.0) * (1.0 / 6.0);
+	}
+}
+
 // Calculates a weight based on the 2D Gaussian PDF.
 // This implements the formula: (1 / (2πσ²)) e^(-(x² + y²) / (2σ²))
-// We are doing a normalization in the render loop, so the normalization
-// constant could be omitted.
 double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
 	double two_sigma_squared = 2.0 * sigma * sigma;
 	// normalization constant: (1 / (2πσ²))
@@ -446,10 +470,12 @@ void write_image_raw() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void render_init(int p_width, int p_height, double p_cam_angle_x, double p_cam_angle_y,
-				 double p_cam_dist, double p_focus_x, double p_focus_y, double p_focus_z) {
+void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angle_x,
+				 double p_cam_angle_y, double p_cam_dist, double p_focus_x, double p_focus_y,
+				 double p_focus_z) {
 	width = p_width;
 	height = p_height;
+	filter_type = (FilterType)p_filter_type;
 	initialize_buffers();
 
 	Vec focus_point = {p_focus_x, p_focus_y, p_focus_z};
@@ -504,7 +530,16 @@ uint8_t* render_refine(unsigned int n_samples) {
 	const double fov_y = 30 * 3.141 / 180.0;
 	const double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
-	const double filter_radius = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA;
+	double filter_radius;
+	if (filter_type == FILTER_BOX) {
+		filter_radius = BOX_RADIUS;
+	} else if (filter_type == FILTER_GAUSSIAN) {
+		filter_radius = GAUSS_RADIUS;
+	} else if (filter_type == FILTER_MITCHELL) {
+		filter_radius = MITCHELL_RADIUS;
+	} else {
+		assert(false); // filter not implemented
+	}
 
 	for (size_t sample_index = 0; sample_index < n_samples; ++sample_index) {
 		// We do Sample Splatting: A single ray distributes weighted radiance to all neighboring
@@ -566,7 +601,17 @@ uint8_t* render_refine(unsigned int n_samples) {
 							// center
 							double dist_x = film_x - (nx + 0.5);
 							double dist_y = film_y - (ny + 0.5);
-							double weight = gaussian_weight_2d(dist_x, dist_y, GAUSS_SIGMA);
+
+							double weight;
+							if (filter_type == FILTER_BOX) {
+								weight = box_1d(dist_x) * box_1d(dist_y);
+							} else if (filter_type == FILTER_GAUSSIAN) {
+								weight = gaussian_weight_2d(dist_x, dist_y, GAUSS_SIGMA);
+							} else if (filter_type == FILTER_MITCHELL) {
+								weight = mitchell_1d(dist_x) * mitchell_1d(dist_y);
+							} else {
+								assert(false); // filter not implemented
+							}
 
 							int index = ny * width + nx;
 							summed_weighted_radiance_buffer[index] =

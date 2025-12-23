@@ -1,9 +1,15 @@
 // public API of our module
 export interface TracyModule {
-	renderFast: (width: number, height: number, camera: CameraProperties) => Promise<void>;
-	renderFull: (
-		width: number, height: number, camera: CameraProperties, samplesPerPixel: number
-	) => Promise<void>;
+	renderFast: (settings: RenderSettings) => Promise<void>;
+	renderFull: (settings: RenderSettings) => Promise<void>;
+}
+
+export interface RenderSettings {
+	width: number,
+	height: number,
+	filterType: number,
+	camera: CameraProperties,
+	samplesPerPixel: number,
 }
 
 export interface CameraProperties {
@@ -45,8 +51,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 	};
 
 	function callWorker(
-		command: 'renderFast' | 'renderFull', width: number, height: number,
-		camera: CameraProperties, samplesPerPixel: number
+		command: 'renderFast' | 'renderFull', s: RenderSettings
 	) {
 		if (resolveCurrentRender) {
 			return Promise.reject(new Error("A render is already in progress."));
@@ -55,13 +60,13 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 			resolveCurrentRender = resolve;
 		});
 
-		worker.postMessage({ command, width, height, camera, samplesPerPixel });
+		worker.postMessage( { command, s } );
 		return renderPromise;
 	}
 
 	return {
-		renderFast: (w, h, cam) => callWorker('renderFast', w, h, cam, 0),
-		renderFull: (w, h, cam, spp) => callWorker('renderFull', w, h, cam, spp),
+		renderFast: (s) => callWorker('renderFast', s),
+		renderFull: (s) => callWorker('renderFull', s),
 	}
 };
 

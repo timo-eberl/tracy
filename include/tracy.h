@@ -9,8 +9,9 @@
  * Must be called at least once before any rendering. Calling it again will
  * reset the render progress with the new settings.
  */
-void render_init(int width, int height, double cam_angle_x, double cam_angle_y, double cam_dist,
-				 double focus_x, double focus_y, double focus_z);
+void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angle_x,
+				 double p_cam_angle_y, double p_cam_dist, double p_focus_x, double p_focus_y,
+				 double p_focus_z);
 
 /**
  * Generates a fast, low-quality preview of the scene.

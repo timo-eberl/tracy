@@ -3,6 +3,9 @@
 #include "tracy.h"
 #include <stdio.h>
 
+#define STEPS 10
+#define SAMPLES_PER_STEP 5
+
 void save_image_as_tga(const char* file_path, unsigned char* buffer, int width, int height) {
 	FILE* fp = fopen(file_path, "wb"); // Must be "wb" for binary
 	if (!fp) {
@@ -38,6 +41,8 @@ int main() {
 	const int width = 640;
 	const int height = 480;
 
+	const int filter_type = 0;
+
 	const double cam_angle_x = 0.04258603374866164;
 	const double cam_angle_y = 0.0;
 	const double cam_dist = 5.5;
@@ -47,12 +52,13 @@ int main() {
 
 	printf("Rendering scene at %dx%d...\n", width, height);
 
-	render_init(width, height, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
+	render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y,
+				focus_z);
 
 	// do incremental updates and update image each time for live preview
-	for (size_t i = 0; i < 10; i++) {
-		unsigned char* image_buffer = render_refine(5);
-		printf("Step %d/10: Saving to 'render_c.tga'...\n", ((int)i + 1));
+	for (size_t i = 0; i < STEPS; i++) {
+		unsigned char* image_buffer = render_refine(SAMPLES_PER_STEP);
+		printf("Step %d/%d: Saving to 'render_c.tga'...\n", ((int)i + 1), STEPS);
 		save_image_as_tga("render_c.tga", image_buffer, width, height);
 	}
 

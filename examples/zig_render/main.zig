@@ -38,6 +38,8 @@ pub fn main() !void {
     const width: i32 = 640;
     const height: i32 = 480;
 
+    const filter_type = 0;
+
     const cam_angle_x = 0.04258603374866164;
     const cam_angle_y = 0.0;
     const cam_dist = 5.5;
@@ -49,7 +51,7 @@ pub fn main() !void {
 
     try stdout.print("Rendering scene at {d}x{d}...\n", .{ width, height });
 
-    tracy.render_init(width, height, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
+    tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
     var i: usize = 0;
     while (i < 10) : (i += 1) {

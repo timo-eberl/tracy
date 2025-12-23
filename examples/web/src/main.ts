@@ -6,21 +6,21 @@ const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 let width = canvas.clientWidth;
 let height = canvas.clientHeight;
 
-window.onresize = function() {
+window.onresize = function () {
 	width = canvas.clientWidth;
 	height = canvas.clientHeight;
 }
 
 const cameraDistanceBounds = { min: 0.01, max: 5000 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const camera : Tracy.CameraProperties = {
+const camera: Tracy.CameraProperties = {
 	rotation: { x: 2.44, y: 0 },
 	distance: 5.5,
 	focusPoint: { x: 0, y: 1.25, z: 0 },
 };
 let isMouseDown = false;
 let isMouseOver = false;
-let tracy : Tracy.TracyModule;
+let tracy: Tracy.TracyModule;
 
 // state
 let state
@@ -42,11 +42,11 @@ async function main() {
 	requestAnimationFrame(renderLoop);
 }
 
-function clamp(v : number, min : number, max : number) { return Math.min( Math.max(v, min), max ); }
+function clamp(v: number, min: number, max: number) { return Math.min(Math.max(v, min), max); }
 
 function setupCameraControls() {
 	// rotate with mouse (left mouse button)
-	canvas.onmousedown = function(event) {
+	canvas.onmousedown = function (event) {
 		if (event.button === 0) {
 			isMouseDown = true;
 			if (state === "idle") {
@@ -54,7 +54,7 @@ function setupCameraControls() {
 			}
 		}
 	};
-	document.onmouseup = function(event) {
+	document.onmouseup = function (event) {
 		if (event.button === 0) {
 			isMouseDown = false
 			if (!isMouseOver && state === "preview") {
@@ -62,7 +62,7 @@ function setupCameraControls() {
 			}
 		}
 	};
-	document.onmousemove = function(event) {
+	document.onmousemove = function (event) {
 		if (isMouseDown && state === "preview") {
 			camera.rotation.x = clamp(
 				camera.rotation.x + event.movementY * 0.2,
@@ -97,10 +97,17 @@ function setupCameraControls() {
 };
 
 async function drawPreview() {
-	await tracy.renderFast(
-		width/2, height/2,
-		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint }
-	);
+	await tracy.renderFast({
+		width: width / 2,
+		height: height / 2,
+		filterType: 1,
+		camera: {
+			rotation: camera.rotation,
+			distance: camera.distance,
+			focusPoint: camera.focusPoint
+		},
+		samplesPerPixel: 0
+	});
 }
 
 async function drawFull() {
@@ -109,14 +116,20 @@ async function drawFull() {
 	console.log("Starting full render...")
 	const startTime = performance.now();
 
-	await tracy.renderFull(
-		width, height,
-		{ rotation: camera.rotation, distance: camera.distance, focusPoint: camera.focusPoint },
-		50 // samples per pixel
-	);
+	await tracy.renderFull({
+		width: width,
+		height: height,
+		filterType: 0,
+		camera: {
+			rotation: camera.rotation,
+			distance: camera.distance,
+			focusPoint: camera.focusPoint
+		},
+		samplesPerPixel: 50
+	});
 
 	const endTime = performance.now();
-	console.log(`Full render took ${(endTime-startTime)} ms.`);
+	console.log(`Full render took ${(endTime - startTime)} ms.`);
 
 	canvas.classList.remove('animated-border');
 
@@ -129,7 +142,7 @@ async function renderLoop() {
 	}
 	else if (state === "waitforrender") {
 		state = "rendering";
-		drawFull().then(() => state = "idle" );
+		drawFull().then(() => state = "idle");
 	}
 	requestAnimationFrame(renderLoop);
 }

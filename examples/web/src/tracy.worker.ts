@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // tell TypeScript this file is in a worker context -> avoids compile error
 
-import { CameraProperties } from './tracy';
+import { CameraProperties, RenderSettings } from './tracy';
 import ModuleFactory, { MainModule } from './tracy_c';
 
 // We create a shared memory that we use to initialize our wasm module with
@@ -14,27 +14,27 @@ function degToRad(degree: number) { return degree / 360 * 2 * Math.PI; }
 
 // Listen for messages from the main thread
 self.onmessage = async (event) => {
-	const { command, width, height, camera, samplesPerPixel } = event.data as {
-		command: 'renderFast' | 'renderFull', width: number, height: number,
-		camera:CameraProperties, samplesPerPixel: number,
+	const { command, s } = event.data as {
+		command: 'renderFast' | 'renderFull', s: RenderSettings,
 	};
 
 	// Await initialization of WebAssembly Module
 	const Module = await modulePromise;
 
 	Module._render_init(
-		width, height, degToRad(camera.rotation.x), degToRad(camera.rotation.y),
-		camera.distance, camera.focusPoint.x, camera.focusPoint.y, camera.focusPoint.z
+		s.width, s.height, s.filterType, degToRad(s.camera.rotation.x), degToRad(s.camera.rotation.y),
+		s.camera.distance, s.camera.focusPoint.x, s.camera.focusPoint.y, s.camera.focusPoint.z
 	);
 
 	if (command === 'renderFast') {
 		const bufferPtr = Module._render_fast();
-
-		self.postMessage( { sharedMemory, bufferPtr, width, height, finished: true } );
+		self.postMessage({
+			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true
+		});
 	}
 	else if (command === 'renderFull') {
-		const samplesPerRun = 2;
-		let samplesRemaining = samplesPerPixel;
+		let samplesPerRun = 1;
+		let samplesRemaining = s.samplesPerPixel;
 
 		while (samplesRemaining > 0) {
 			// either a full run, or whatever is left
@@ -43,7 +43,11 @@ self.onmessage = async (event) => {
 			samplesRemaining -= samplesForThisRun;
 
 			const isFinished = (samplesRemaining === 0);
-			self.postMessage( { sharedMemory, bufferPtr, width, height, finished: isFinished } );
+			self.postMessage({
+				sharedMemory, bufferPtr, width: s.width, height: s.height, finished: isFinished
+			});
+
+			samplesPerRun++;
 		}
 	}
 	else {
