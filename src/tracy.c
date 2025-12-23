@@ -15,12 +15,11 @@
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 
-// The standard deviation (sigma) of the Gaussian bell curve. A value of 0.5 means the filter will
-// be wider than a single pixel.
+// The standard deviation (sigma) of the Gaussian bell curve.
 #define GAUSS_SIGMA 0.5
 // The range of the filter in units of sigma. A value of 3.0 means we sample across +/- 3-sigma,
-// capturing >99% of the curve's influence.
-#define GAUSS_FILTER_RADIUS_IN_SIGMA 2.0
+// capturing >99% of the curve's influence. Visually 2 looks almost the same as 3.
+#define GAUSS_FILTER_RADIUS_IN_SIGMA 3.0
 
 #define MAX_DEPTH 4
 
@@ -409,7 +408,7 @@ Vec radiance_from_ray(Ray r, int depth) {
 
 void write_image_tone_mapped() {
 	// loop over pixels, do tone mapping and gamma correction
-	for (int y = 0; y < height; ++y)
+	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
 			// Normalize the final color by dividing by the total sum of weights.
 			// If this were a continuous integral, the sum of weights would be 1.0 and this
@@ -427,10 +426,11 @@ void write_image_tone_mapped() {
 			image_buffer[image_index + 0] = quantize(linear_to_srgb(ldr_color.x));
 			image_buffer[image_index + 3] = quantize(1.0);
 		}
+	}
 }
 
 void write_image_raw() {
-	for (int y = 0; y < height; ++y)
+	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
 			int radiance_index = y * width + x;
 			Vec radiance = vec_scale(summed_weighted_radiance_buffer[radiance_index],
@@ -442,6 +442,7 @@ void write_image_raw() {
 			image_buffer[image_index + 2] = fmin(radiance.z, 1.0) * 255.999;
 			image_buffer[image_index + 3] = (uint8_t)255.999;
 		}
+	}
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -474,7 +475,7 @@ uint8_t* render_fast() {
 	double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
 	// loop over pixels, calculate radiance
-	for (int y = 0; y < height; ++y)
+	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
 			// 5.2.2
 			// Map pixel coordinates to the view plane (-1;1)
@@ -492,7 +493,7 @@ uint8_t* render_fast() {
 			summed_weighted_radiance_buffer[(y)*width + (x)] = radiance;
 			summed_weights_buffer[(y)*width + (x)] = 1.0;
 		}
-
+	}
 	write_image_tone_mapped();
 	return image_buffer;
 }
@@ -503,15 +504,12 @@ uint8_t* render_refine(unsigned int n_samples) {
 	const double fov_y = 30 * 3.141 / 180.0;
 	const double fov_scale = tan(fov_y / 2.0); // 5.1.4
 
-	// This factor scales our sample offsets to cover the desired range of the filter.
-	// For sigma=0.5, radius=3 samples will range from -1.5 to 1.5
-	const double sample_range_scale = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA * 2.0;
+	const double filter_radius = GAUSS_SIGMA * GAUSS_FILTER_RADIUS_IN_SIGMA;
 
 	for (size_t sample_index = 0; sample_index < n_samples; ++sample_index) {
-		// TODO samples should influence neighbouring pixels as well
-		// will be a bit annoying to build, because we first have to collect samples
-		// and then add them to the radiance buffer multiple times at different pixels.
-		// also at the pixels at the edge will have less samples
+		// We do Sample Splatting: A single ray distributes weighted radiance to all neighboring
+		// pixels within the filter radius (e.g. 2x2 block).
+
 		// Optimization: To make this thread-safe without slow floating-point atomics, accumulate
 		// into thread-local tile buffers (with padding/ghost zones) and merge them once the tile is
 		// done.
@@ -519,7 +517,7 @@ uint8_t* render_refine(unsigned int n_samples) {
 		srand(sample_count); // seed random generator
 
 		// loop over pixels, calculate radiance
-		for (int y = 0; y < height; ++y)
+		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
 				if (x == 560 && y == 90) {
 					// use for setting breakpoint
@@ -527,16 +525,22 @@ uint8_t* render_refine(unsigned int n_samples) {
 					__asm__ __volatile__("nop");
 				}
 
-				// (-0.5;0.5) * sample_range_scale
-				double sample_offset_x = (random_double() - 0.5) * sample_range_scale;
-				double sample_offset_y = (random_double() - 0.5) * sample_range_scale;
+				// Sample splatting strategy:
+				// Pick a specific point on the continuous film plane within this pixel.
+				// We jitter by [-0.5, 0.5] to cover the pixel area evenly.
+				// TODO: Use a better more uniform distribution
+				double jitter_x = random_double() - 0.5;
+				double jitter_y = random_double() - 0.5;
+
+				double film_x = x + 0.5 + jitter_x;
+				double film_y = y + 0.5 + jitter_y;
 
 				// 5.2.2
-				// Map pixel coordinates to the view plane (-1;1)
-				double world_x = (2.0 * (x + 0.5 + sample_offset_x) / width - 1.0);
-				double world_y = 1.0 - 2.0 * (y + 0.5 + sample_offset_y) / height;
+				// Map coordinates to the view plane (-1;1)
+				double world_x = (2.0 * film_x / width - 1.0);
+				double world_y = 1.0 - 2.0 * film_y / height;
 
-				// Calculate the direction for the ray for this pixel
+				// Calculate the direction for the ray for this sample
 				Vec right_comp = vec_scale(right, world_x * fov_scale * aspect_ratio);
 				Vec up_comp = vec_scale(up, world_y * fov_scale);
 				Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
@@ -544,14 +548,37 @@ uint8_t* render_refine(unsigned int n_samples) {
 				Ray r = {camera_origin, dir};
 				Vec radiance = radiance_from_ray(r, 0);
 
-				double weight = gaussian_weight_2d(sample_offset_x, sample_offset_y, GAUSS_SIGMA);
+				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
+				// Determine the integer range of pixels that overlap with the Gaussian radius
+				// centered at the sample point (film_x, film_y).
+				int min_nx = (int)floor(film_x - filter_radius);
+				int max_nx = (int)ceil(film_x + filter_radius);
+				int min_ny = (int)floor(film_y - filter_radius);
+				int max_ny = (int)ceil(film_y + filter_radius);
 
-				int index = y * width + x;
-				summed_weighted_radiance_buffer[index] =
-					vec_add(summed_weighted_radiance_buffer[index], vec_scale(radiance, weight));
-				summed_weights_buffer[index] += weight;
+				for (int ny = min_ny; ny < max_ny; ++ny) {
+					for (int nx = min_nx; nx < max_nx; ++nx) {
+						// Boundary check: ensure we don't write outside valid memory.
+						// Note: Pixels at the very edge will receive less weight (fewer samples),
+						// resulting in higher variance/noise at borders, but correct average.
+						if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+							// Calculate weight based on distance from sample to neighbor pixel
+							// center
+							double dist_x = film_x - (nx + 0.5);
+							double dist_y = film_y - (ny + 0.5);
+							double weight = gaussian_weight_2d(dist_x, dist_y, GAUSS_SIGMA);
+
+							int index = ny * width + nx;
+							summed_weighted_radiance_buffer[index] =
+								vec_add(summed_weighted_radiance_buffer[index],
+										vec_scale(radiance, weight));
+							summed_weights_buffer[index] += weight;
+						}
+					}
+				}
 				sample_count += 1;
 			}
+		}
 	}
 
 	write_image_tone_mapped();
