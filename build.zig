@@ -4,6 +4,31 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Disable LTO for Debug builds
+    const use_lto = optimize != .Debug;
+
+    // PCG Configuration
+    const pcg_include = b.path("dependencies/pcg-c/include");
+    const pcg_sources = [_][]const u8{
+        "dependencies/pcg-c/src/pcg-advance-128.c",
+        "dependencies/pcg-c/src/pcg-advance-16.c",
+        "dependencies/pcg-c/src/pcg-advance-32.c",
+        "dependencies/pcg-c/src/pcg-advance-64.c",
+        "dependencies/pcg-c/src/pcg-advance-8.c",
+        "dependencies/pcg-c/src/pcg-global-32.c",
+        "dependencies/pcg-c/src/pcg-global-64.c",
+        "dependencies/pcg-c/src/pcg-output-128.c",
+        "dependencies/pcg-c/src/pcg-output-16.c",
+        "dependencies/pcg-c/src/pcg-output-32.c",
+        "dependencies/pcg-c/src/pcg-output-64.c",
+        "dependencies/pcg-c/src/pcg-output-8.c",
+        "dependencies/pcg-c/src/pcg-rngs-128.c",
+        "dependencies/pcg-c/src/pcg-rngs-16.c",
+        "dependencies/pcg-c/src/pcg-rngs-32.c",
+        "dependencies/pcg-c/src/pcg-rngs-64.c",
+        "dependencies/pcg-c/src/pcg-rngs-8.c",
+    };
+
     // --- THE LIBRARY ---
     // We keep this module/artifact to produce 'libtracy.a' for external users,
     // even though our own examples bypass it for performance.
@@ -14,6 +39,8 @@ pub fn build(b: *std.Build) void {
     });
     tracy_mod.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = &.{"-std=c11"} });
     tracy_mod.addIncludePath(b.path("include"));
+    tracy_mod.addIncludePath(pcg_include);
+    for (pcg_sources) |src| tracy_mod.addCSourceFile(.{ .file = b.path(src) });
     const lib = b.addLibrary(.{
         .linkage = .static,
         .name = "tracy",
@@ -39,10 +66,12 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    c_exe.want_lto = true;
+    c_exe.want_lto = use_lto;
     c_exe.root_module.addCSourceFile(.{ .file = b.path("examples/c_render/main.c") });
     c_exe.root_module.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = &.{"-std=c11"} });
     c_exe.root_module.addIncludePath(b.path("include"));
+    c_exe.root_module.addIncludePath(pcg_include);
+    for (pcg_sources) |src| c_exe.root_module.addCSourceFile(.{ .file = b.path(src) });
     c_exe.linkSystemLibrary("m");
     b.installArtifact(c_exe);
     const run_c = b.addRunArtifact(c_exe);
@@ -58,9 +87,11 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    zig_exe.want_lto = true;
+    zig_exe.want_lto = use_lto;
     zig_exe.root_module.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = &.{"-std=c11"} });
     zig_exe.root_module.addIncludePath(b.path("include"));
+    zig_exe.root_module.addIncludePath(pcg_include);
+    for (pcg_sources) |src| zig_exe.root_module.addCSourceFile(.{ .file = b.path(src) });
     zig_exe.linkSystemLibrary("m");
     b.installArtifact(zig_exe);
     const run_zig = b.addRunArtifact(zig_exe);
@@ -75,6 +106,8 @@ pub fn build(b: *std.Build) void {
     });
     test_mod.addIncludePath(b.path("include"));
     test_mod.addIncludePath(b.path("src"));
+    test_mod.addIncludePath(pcg_include);
+    for (pcg_sources) |src| test_mod.addCSourceFile(.{ .file = b.path(src) });
     const tests = b.addTest(.{ .root_module = test_mod });
     tests.linkSystemLibrary("m");
     const run_tests = b.addRunArtifact(tests);

@@ -1,4 +1,5 @@
 #include "tracy.h"
+#include "pcg_variants.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -118,6 +119,9 @@ Vec camera_origin;
 Vec forward, right, up;
 int sample_count;
 FilterType filter_type; // Current selected filter
+
+// Global RNG state for PCG32
+pcg32_random_t rng;
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
@@ -320,7 +324,7 @@ Vec radiance_from_ray_simple(Ray r) {
 
 // random double between 0.0 (inclusive) and 1.0 (exclusive)
 double random_double() {
-	return (double)rand() / (RAND_MAX + 1.0);
+	return (double)pcg32_random_r(&rng) / 4294967296.0;
 }
 
 // create orthonormal basis (local coordinate system) from a vector
@@ -549,7 +553,8 @@ uint8_t* render_refine(unsigned int n_samples) {
 		// into thread-local tile buffers (with padding/ghost zones) and merge them once the tile is
 		// done.
 
-		srand(sample_count); // seed random generator
+		// Seed with current sample count as state, fixed sequence
+		pcg32_srandom_r(&rng, sample_count, 54u);
 
 		// loop over pixels, calculate radiance
 		for (int y = 0; y < height; ++y) {
