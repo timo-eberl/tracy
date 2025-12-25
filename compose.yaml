@@ -1,0 +1,33 @@
+services:
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tracy:latest
+    working_dir: /app/web
+    ports: 
+      3000:3000
+    volumes:
+      - .:/app
+      - /app/web/node_modules
+      - /app/zig-cache
+      - /app/zig-out
+
+    command: npm start
+
+  test-runner:
+    image: tracy:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile
+
+    volumes:
+      # sync directory
+      - .:/app
+
+      - /app/web/node_modules # prevent local node modules from overwriting containers - needed?
+      - /app/zig-cache
+      - /app/zig-out
+
+    command: npm run test:native # used to override CMD in Dockerfile
+
