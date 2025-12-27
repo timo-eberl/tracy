@@ -1,6 +1,10 @@
 #ifndef TRACY_H_
 #define TRACY_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -27,5 +31,9 @@ uint8_t* render_fast();
  * @return A pointer to the internal buffer with the updated RGBA image.
  */
 uint8_t* render_refine(unsigned int n_samples);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // TRACY_H_
