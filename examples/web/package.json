@@ -11,7 +11,10 @@
     "vite:build": "vite build",
     "vite:preview": "vite preview",
     "dev": "concurrently \"npm:watch:c\" \"npm:vite:dev\"",
-    "dev:debug": "concurrently \"npm:watch:c:debug\" \"npm:vite:dev\""
+    "dev:debug": "concurrently \"npm:watch:c:debug\" \"npm:vite:dev\"",
+    "dev:docker": "concurrently \"npm:watch:c\" \"vite --host\"",
+    "test:native": "cd .. && zig build test --summary all",
+    "deploy": "npm run build && vite build"
   },
   "repository": {
     "type": "git",

@@ -3,31 +3,42 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     image: tracy:latest
-    working_dir: /app/web
-    ports: 
-      3000:3000
+    working_dir: /app/examples/web
+    ports: [
+      5173:5173
+    ]
     volumes:
       - .:/app
-      - /app/web/node_modules
+      - /app/examples/web/node_modules
       - /app/zig-cache
       - /app/zig-out
 
-    command: npm start
+    command: npm run dev:docker
 
   test-runner:
     image: tracy:latest
     build: 
       context: .
       dockerfile: Dockerfile
-
+      target: test
+    working_dir: /app/examples/web
     volumes:
       # sync directory
       - .:/app
-
-      - /app/web/node_modules # prevent local node modules from overwriting containers - needed?
-      - /app/zig-cache
-      - /app/zig-out
+      - /app/examples/web/node_modules # prevent local node modules from overwriting containers - needed?
 
     command: npm run test:native # used to override CMD in Dockerfile
 
+  # nginx server
+    # TODO 
+    # build files using vite -> copy files to nginx container 
+  production:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: tracy:prod
+    ports: ["8080:80"]
+    
