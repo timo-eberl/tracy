@@ -1,0 +1,29 @@
+# ensures node modules don't get copied but installed new everytime or uses cached node_modules
+**/node_modules
+
+
+# zig files
+zig-cache/
+zig-out/
+
+# --- Version Control ---
+.git/
+.gitignore
+
+# --- Docker ---
+# The container doesn't need to know how to build itself
+Dockerfile
+compose.yaml
+.dockerignore
+
+# --- OS & Editor Junk ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Build Artifacts ---
+# If you have a local build folder for C stuff
+build/
+dist/
