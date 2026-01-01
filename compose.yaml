@@ -1,4 +1,7 @@
 services:
+
+  # starts the vite server
+  # NOTE: probably unnessecary
   webapp:
     build:
       context: .
@@ -17,6 +20,8 @@ services:
 
     command: npm run dev:docker
 
+  # runs zig tests
+  # NOTE: might be needed to ensure tests pass on a neutral environment from time to time. Reusable for github actions
   test-runner:
     image: tracy:latest
     build: 

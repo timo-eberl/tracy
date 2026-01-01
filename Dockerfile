@@ -48,13 +48,7 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 
 
-FROM emscripten/emsdk:latest as test
-
-# Setup
-RUN apt-get update && apt-get install -y \
-	wget \
-	xz-utils \
-	&& rm -rf /var/lib/apt/lists/*
+FROM base as test
 
 # Install Zig
 ARG ZIG_VERSION=0.15.2 
@@ -71,25 +65,6 @@ RUN rm zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
 
 # add zig to path
 ENV PATH="/usr/local/zig:${PATH}"
-
-
-WORKDIR /app/web
-
-# copy npm configs first so that it doesn't run npm install if these have not changed # TODO test
-# --> if we only change some code but no node packages we can still reuse the cached packages
-COPY web/package.json web/package-lock.json ./
-
-# npm ci - clean install - reads only package-lock.json - requires a manual npm install for every update of the package.json file # TODO keep or throw out
-RUN npm ci
-
-WORKDIR /app/
-
-# we ensure the node_packages don't get copied at this step in the .dockerignore
-COPY . .
-
-WORKDIR /app/web/
-
-EXPOSE 5173
 
 CMD ["npm" , "test"]
 
