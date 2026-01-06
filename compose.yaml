@@ -13,7 +13,7 @@ services:
       5173:5173
     ]
     volumes:
-      - .:/app
+      - .:/app:z
       - /app/examples/web/node_modules
       - /app/zig-cache
       - /app/zig-out
@@ -31,7 +31,7 @@ services:
     working_dir: /app/examples/web
     volumes:
       # sync directory
-      - .:/app
+      - .:/app:z
       - /app/examples/web/node_modules # prevent local node modules from overwriting containers - needed?
 
     command: npm run test:native # used to override CMD in Dockerfile
