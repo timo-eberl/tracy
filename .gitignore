@@ -23,3 +23,7 @@ tracy
 # local build writes to this image
 render_c.tga
 render_zig.tga
+
+
+compile_commands.json
+
