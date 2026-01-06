@@ -1,0 +1,48 @@
+name: Test and Deploy
+
+# Runs when you push to the 'main' branch
+on:
+  push:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  # IMAGE_NAME will be "username/repo"
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Required to push to GHCR
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 1. Run Tests
+      # We build the 'test' stage from your Dockerfile and run it.
+      # If "npm test" fails inside the container, the workflow stops here.
+      - name: Run Tests
+        run: |
+          docker build --target test -t app-test .
+          docker run --rm app-test
+
+      # 2. Build & Push Production
+      # This only happens if step 1 succeeded.
+      # Uses the 'production' target (Nginx) and pushes it to the registry.
+      - name: Build and Push Production Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: production
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
