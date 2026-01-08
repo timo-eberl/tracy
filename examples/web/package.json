@@ -14,7 +14,9 @@
     "dev:debug": "concurrently \"npm:watch:c:debug\" \"npm:vite:dev\"",
     "dev:docker": "concurrently \"npm:watch:c\" \"vite --host\"",
     "test:native": "cd .. && zig build test --summary all",
-    "deploy": "npm run build && vite build"
+    "deploy": "npm run build && vite build",
+    "zig_build:wasm": "zig build web -Dbuild-web -Doptimize=ReleaseSmall -Demsdk=$EMSDK",
+    "zig_build": "npm run zig_build:wasm && vite build"
   },
   "repository": {
     "type": "git",

@@ -69,6 +69,37 @@ ENV PATH="/usr/local/zig:${PATH}"
 CMD ["npm" , "test"]
 
 
+# Start with an image that has Emscripten (it's the hardest to install)
+FROM base AS zig-build
 
+# Install Zig (manually downloading binary)
+ARG ZIG_VERSION=0.14.1 
+ARG ZIG_ARCH=x86_64
+ARG ZIG_OS=linux
+
+# download, extract move zig to global path
+ARG p=https://ziglang.org/download/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
+RUN echo ${p}
+RUN wget -q https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz 
+RUN tar -xf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz 
+RUN mv zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} /usr/local/zig 
+RUN rm zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
+
+ENV PATH="/usr/local/zig:${PATH}"
+
+# Run the build (Zig -> WASM -> Vite -> Dist)
+# The emscripten/emsdk image sets $EMSDK automatically!
+RUN npm run zig_build
+
+
+FROM nginx:alpine as zig-production
+
+COPY examples/web/nginx.conf /etc/nginx/nginx.conf
+
+COPY --from=zig-build /app/examples/web/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
 
 

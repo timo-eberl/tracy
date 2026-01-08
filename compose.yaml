@@ -47,3 +47,24 @@ services:
     image: tracy:prod
     ports: ["8080:80"]
     
+  zig-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: zig-build
+    image: tracy:zig-build
+    # 1. Mount the volume so you can see the files (and the build output) on your host
+    volumes:
+      - .:/app
+    # 2. The "Trap": Run build; if it fails, sleep for 1 hour so the container stays up
+    command: >
+      /bin/bash -c "npm run build || (echo 'Build Failed - Sleeping...' && sleep 3600)"
+
+  zig-production:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: zig-production
+    image: tracy:prod
+    ports: ["8080:80"]
+
