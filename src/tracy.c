@@ -67,11 +67,11 @@ PointLight simple_light = {{0, 2.38, 0}, 127, {1, 1, 1}}; // only for render_fas
 // clang-format off
 // KEEP ALIGNED: Tabular data for scene definition
 Sphere scene[] = { // center, radius, color, type
-	{{ 1e4-1.5,	 1.2,	 0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
-	{{-1e4+1.5,	 1.2,	 0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
-	{{	   0,	 1.2, 1e4-2}, 1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
-	{{	   0,	 1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
-	{{	   0,-1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
+	{{-1e4-1.5,	 1.2,	 0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
+	{{+1e4+1.5,	 1.2,	 0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
+	{{	   0,	 1.2,-1e4-2}, 1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
+	{{	   0,	-1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
+	{{	   0,1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
 	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
 	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
 	{{	   0,62.3979,	 0},   60.0, {5*21.5, 5*21.5, 5*21.5}, EMISSIVE}, // Area Light
@@ -524,7 +524,7 @@ uint8_t* render_fast() {
 			summed_weights_buffer[(y)*width + (x)] = 1.0;
 		}
 	}
-	write_image_tone_mapped();
+	write_image_raw();
 	return image_buffer;
 }
 
@@ -636,6 +636,6 @@ uint8_t* render_refine(unsigned int n_samples) {
 		}
 	}
 
-	write_image_tone_mapped();
+	write_image_raw();
 	return image_buffer;
 }
