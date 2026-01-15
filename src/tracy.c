@@ -285,8 +285,8 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 // Calculates the refraction direction using Snell's Law from 11.2.9
 // Also handles Total Internal Reflection.
 Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
-	double cos_i = vec_dot(incident, normal);
-	if (cos_i > 0.0) { printf("cos_i: %f\n", cos_i); }
+	double cos_i = -vec_dot(incident, normal);
+	assert(cos_i > 0.0);
 
 	double k = 1 - eta * eta * (1 - cos_i * cos_i);
 	*total_int_refl = k < 0;
