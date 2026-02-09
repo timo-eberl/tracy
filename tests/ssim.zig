@@ -3,6 +3,8 @@ const math = std.math;
 const tga = @import("utils/tga.zig");
 // load image
 // pipeline load img -> (tone map?) --> (gamma correction?) --> split color channels --> calc SSIM --> average over channels
+// TODO HDR
+//
 
 // fixed kernel size 11 for now
 pub const Gaussian = struct {
