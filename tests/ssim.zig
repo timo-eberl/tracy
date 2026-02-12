@@ -1,39 +1,15 @@
 const std = @import("std");
 const math = std.math;
 const tga = @import("utils/tga.zig");
+const filters = @import("utils/gaussian.zig");
 // load image
 // pipeline load img -> (tone map?) --> (gamma correction?) --> split color channels --> calc SSIM --> average over channels
 // TODO HDR
 //
 
-// fixed kernel size 11 for now
-pub const Gaussian = struct {
-    weights: [11]f32,
-    pub fn init(sigma: f32) Gaussian {
-        var weights: [11]f32 = undefined;
-        @memset(&weights, 0.0);
-        var sum: f32 = 0.0;
-        for (0..11) |i| {
-            const pos: f32 = @floatFromInt(i);
-            const x = pos - 5.0;
-            const exponent = -(x * x) / (2.0 * sigma * sigma);
-            const val = @exp(exponent);
-            weights[i] = val;
-            sum += val;
-        }
-        // normalization
-        for (weights, 0..) |w, i| {
-            weights[i] = w / sum;
-        }
-        return Gaussian{
-            .weights = weights,
-        };
-    }
-};
-
 // calculates the mean SSIM across the 3 color channels of a tga image
 pub fn calcSSIM(allocator: std.mem.Allocator, tga_img_1: tga.ImageF32, tga_img_2: tga.ImageF32) !f32 {
-    const gaussian = Gaussian.init(1.5);
+    const gaussian = filters.Gaussian.init(1.5);
     if (tga_img_1.width != tga_img_2.width or tga_img_1.height != tga_img_2.height) {
         return error.ImageSizeMismatchError;
     }
@@ -47,7 +23,7 @@ pub fn calcSSIM(allocator: std.mem.Allocator, tga_img_1: tga.ImageF32, tga_img_2
 }
 // calculates Mean for a single pixel using a gaussian kernel
 // generic type of the image vector to allow for u8 input values in the first pass
-pub fn getWeightedMean(img: []const f32, width: usize, cx: usize, cy: usize, kernel: *const Gaussian, vertical: bool) f32 {
+pub fn getWeightedMean(img: []const f32, width: usize, cx: usize, cy: usize, kernel: *const filters.Gaussian, vertical: bool) f32 {
     const height = img.len / width;
 
     const i_center = if (vertical) @as(isize, @intCast(cy)) else @as(isize, @intCast(cx));
@@ -66,20 +42,11 @@ pub fn getWeightedMean(img: []const f32, width: usize, cx: usize, cy: usize, ker
         else
             cy * width + neighbor_usize;
         mean += w * img[pixelPos];
-        //PREVIOUS CHECK: if ((neighbor >= 0) and (neighbor < i_limit)) {
-        //     const neighbor_usize: usize = @intCast(neighbor);
-        //     const pixelPos = if (vertical)
-        //         width * neighbor_usize + cx
-        //     else
-        //         cy * width + neighbor_usize;
-        //     const img_val = img[pixelPos];
-        //     mean += w * img_val;
-        // }
     }
     return mean;
 }
 
-pub fn calcMeans(allocator: std.mem.Allocator, img: []const f32, width: usize, kernel: Gaussian) ![]f32 {
+pub fn calcMeans(allocator: std.mem.Allocator, img: []const f32, width: usize, kernel: filters.Gaussian) ![]f32 {
     const height = img.len / width;
 
     const temp = try allocator.alloc(f32, img.len);
@@ -112,7 +79,7 @@ pub fn multiply(allocator: std.mem.Allocator, img_1: []const f32, img_2: []const
     return product;
 }
 
-pub fn calcChannelSSIM(allocator: std.mem.Allocator, img_1: []const f32, img_2: []const f32, width: usize, kernel: Gaussian) !f32 {
+pub fn calcChannelSSIM(allocator: std.mem.Allocator, img_1: []const f32, img_2: []const f32, width: usize, kernel: filters.Gaussian) !f32 {
     const ally = allocator;
 
     // calculate means
@@ -172,6 +139,6 @@ pub fn calcChannelSSIM(allocator: std.mem.Allocator, img_1: []const f32, img_2: 
 }
 
 pub fn main() void {
-    const g = Gaussian.init(1.5);
+    const g = filters.Gaussian.init(1.5);
     _ = g;
 }
