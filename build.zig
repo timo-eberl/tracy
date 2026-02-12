@@ -166,6 +166,36 @@ pub fn build(b: *std.Build) void {
     const gaussian_module = b.createModule(.{
         .root_source_file = b.path("tests/utils/gaussian.zig"),
     });
+    const exr_module = b.createModule(.{
+        .root_source_file = b.path("tests/utils/exr.zig"),
+    });
+    exr_module.addIncludePath(b.path("dependencies/tinyexr"));
+
+    // tinyexr as lib
+    const tinyexr_lib = b.addStaticLibrary(.{
+        .name = "tinyexr_lib",
+        .target = native_target,
+        .optimize = optimize,
+    });
+    // add sources
+    tinyexr_lib.addCSourceFile(.{
+        .file = b.path("dependencies/tinyexr/exr_impl.cpp"),
+        .flags = &.{
+            "-std=c++11",
+            "-fno-sanitize=undefined",
+        },
+    });
+    tinyexr_lib.addCSourceFile(.{
+        .file = b.path("dependencies/tinyexr/miniz.c"),
+        .flags = &.{"-O3"}, // Optimize compression
+    });
+    // add includes
+    tinyexr_lib.addIncludePath(b.path("dependencies/tinyexr"));
+    // link dependencies
+    tinyexr_lib.linkLibCpp();
+    tinyexr_lib.linkSystemLibrary("m");
+    tinyexr_lib.linkLibC();
+
     // SSIM Test
     const ssim_module = b.createModule(.{
         .root_source_file = b.path("tests/metrics/ssim/ssim_test.zig"),
@@ -179,6 +209,22 @@ pub fn build(b: *std.Build) void {
     );
     const run_ssim_test = b.addRunArtifact(ssim_test);
     b.step("ssim_test", "Run SSIM test").dependOn(&run_ssim_test.step);
+
+    // RMSE Test
+    const rmse_module = b.createModule(.{
+        .root_source_file = b.path("tests/metrics/rmse/rmse_test.zig"),
+        .target = native_target,
+        .optimize = optimize,
+    });
+    rmse_module.addIncludePath(b.path("dependencies/tinyexr"));
+
+    rmse_module.addImport("exr_utils", exr_module);
+    const rmse_test = b.addTest(
+        .{ .root_module = rmse_module },
+    );
+    rmse_test.linkLibrary(tinyexr_lib);
+    const run_rmse_test = b.addRunArtifact(rmse_test);
+    b.step("rmse_test", "Run RMSE test").dependOn(&run_rmse_test.step);
 
     // --- UNIT TESTS ---
     const test_mod = b.createModule(.{
@@ -196,7 +242,7 @@ pub fn build(b: *std.Build) void {
     const run_tests = b.addRunArtifact(tests);
     b.step("test", "Run all tests").dependOn(&run_tests.step);
 
-    // BENCHMARKING
+    // EXR Test
     const bench_mod = b.createModule(.{ .root_source_file = b.path("tests/read_exr_test.zig"), .target = native_target, .optimize = optimize, .link_libc = true });
     bench_mod.addIncludePath(b.path("include"));
     bench_mod.addIncludePath(b.path("src"));
@@ -204,19 +250,7 @@ pub fn build(b: *std.Build) void {
     bench_mod.addIncludePath(b.path("dependencies/tinyexr"));
     for (pcg_sources) |src| bench_mod.addCSourceFile(.{ .file = b.path(src) });
     const bench = b.addExecutable(.{ .name = "benchmark", .root_module = bench_mod });
-    bench.linkSystemLibrary("m");
-    bench.addCSourceFile(.{
-        .file = b.path("dependencies/tinyexr/exr_impl.cpp"), // Path to the .cpp file
-        .flags = &.{
-            "-std=c++11",
-            "-fno-sanitize=undefined",
-        },
-    });
-    bench.addCSourceFile(.{
-        .file = b.path("dependencies/tinyexr/miniz.c"),
-        .flags = &.{"-O3"}, // Optimize compression
-    });
-    bench.linkLibCpp();
+    bench.linkLibrary(tinyexr_lib);
     const run_bench = b.addRunArtifact(bench);
 
     b.step("bench", "Run Benchmarks").dependOn(&run_bench.step);
