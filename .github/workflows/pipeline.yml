@@ -77,6 +77,18 @@ jobs:
           mkdir -p data-branch/logs
           mv ssim_results.txt data-branch/logs/${{ env.bench_version }}.txt
       
+      # 3. Generate Dashboard (README.md)
+      - name: Generate Dashboard
+        run: |
+          # Inputs:
+          # 1. The CSV we just updated (data-branch/history.csv)
+          # 2. The destination README (data-branch/README.md)
+          
+          python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md
+          
+          # Debug: Check if it looks right
+          head -n 20 data-branch/README.md
+
       # commit and push
       - name: Commit and Push
         working-directory: data-branch
