@@ -159,6 +159,27 @@ pub fn build(b: *std.Build) void {
         web_step.dependOn(&emcc_cmd.step);
     }
 
+    // test utils
+    const tga_module = b.createModule(.{
+        .root_source_file = b.path("tests/utils/tga.zig"),
+    });
+    const gaussian_module = b.createModule(.{
+        .root_source_file = b.path("tests/utils/gaussian.zig"),
+    });
+    // SSIM Test
+    const ssim_module = b.createModule(.{
+        .root_source_file = b.path("tests/metrics/ssim/ssim_test.zig"),
+        .target = native_target,
+        .optimize = optimize,
+    });
+    ssim_module.addImport("tga_utils", tga_module);
+    ssim_module.addImport("gaussian_utils", gaussian_module);
+    const ssim_test = b.addTest(
+        .{ .root_module = ssim_module },
+    );
+    const run_ssim_test = b.addRunArtifact(ssim_test);
+    b.step("ssim_test", "Run SSIM test").dependOn(&run_ssim_test.step);
+
     // --- UNIT TESTS ---
     const test_mod = b.createModule(.{
         .root_source_file = b.path("tests/all_tests.zig"),
