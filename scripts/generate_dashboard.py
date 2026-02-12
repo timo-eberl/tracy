@@ -82,7 +82,7 @@ xychart-beta
 
 # 3. Assemble the README Content
 markdown_content = f"""
-# 🚀 Benchmark Dashboard
+# Benchmark Dashboard
 
 This dashboard tracks the image quality performance (RMSE) of the renderer over time.
 
@@ -92,7 +92,7 @@ This dashboard tracks the image quality performance (RMSE) of the renderer over 
 | **Date** | {latest_date} |
 | **RMSE** | **{latest_rmse}** |
 
-## 📈 Performance Trend
+## Performance Trend
 {graph_block}
 
 ---
