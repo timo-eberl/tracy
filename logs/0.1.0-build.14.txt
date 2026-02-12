@@ -1,0 +1,17 @@
+--- SSIM BENCHMARK REPORT ---
+Version: 0.1.0-build.14
+Date: Thu Feb 12 22:18:12 UTC 2026
+Commit: 38f7759f66236cf771a2f1c9309a252a188efa9f
+-----------------------------
+ssim_test
++- run test stderr
+========================= SSIM REPORT =========================
+black.tga                           vs  1_iterations_render_zig.tga         | SSIM: 0.007679
+1_iterations_render_zig.tga         vs  2_iterations_render_zig.tga         | SSIM: 0.567191
+2_iterations_render_zig.tga         vs  3_iterations_render_zig.tga         | SSIM: 0.748695
+3_iterations_render_zig.tga         vs  4_iterations_render_zig.tga         | SSIM: 0.824040
+4_iterations_render_zig.tga         vs  5_iterations_render_zig.tga         | SSIM: 0.862469
+5_iterations_render_zig.tga         vs  20_iterations_render_zig.tga        | SSIM: 0.333130
+---------------------------------------------------------------
+20_iterations_render_zig.tga        vs  black.tga                           | SSIM: 0.000146
+===============================================================
