@@ -174,4 +174,29 @@ pub fn build(b: *std.Build) void {
     tests.linkSystemLibrary("m");
     const run_tests = b.addRunArtifact(tests);
     b.step("test", "Run all tests").dependOn(&run_tests.step);
+
+    // BENCHMARKING
+    const bench_mod = b.createModule(.{ .root_source_file = b.path("tests/read_exr_test.zig"), .target = native_target, .optimize = optimize, .link_libc = true });
+    bench_mod.addIncludePath(b.path("include"));
+    bench_mod.addIncludePath(b.path("src"));
+    bench_mod.addIncludePath(pcg_include);
+    bench_mod.addIncludePath(b.path("dependencies/tinyexr"));
+    for (pcg_sources) |src| bench_mod.addCSourceFile(.{ .file = b.path(src) });
+    const bench = b.addExecutable(.{ .name = "benchmark", .root_module = bench_mod });
+    bench.linkSystemLibrary("m");
+    bench.addCSourceFile(.{
+        .file = b.path("dependencies/tinyexr/exr_impl.cpp"), // Path to the .cpp file
+        .flags = &.{
+            "-std=c++11",
+            "-fno-sanitize=undefined",
+        },
+    });
+    bench.addCSourceFile(.{
+        .file = b.path("dependencies/tinyexr/miniz.c"),
+        .flags = &.{"-O3"}, // Optimize compression
+    });
+    bench.linkLibCpp();
+    const run_bench = b.addRunArtifact(bench);
+
+    b.step("bench", "Run Benchmarks").dependOn(&run_bench.step);
 }
