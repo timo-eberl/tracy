@@ -1,20 +1,70 @@
-name: Build and Publish
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"] # Ensure this matches your branch name (e.g. 'main' or 'master')
+    branches: ["main"]
 
 env:
   REGISTRY: ghcr.io
-  # IMAGE_NAME will be "username/repo"
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-deploy:
+  # --- JOB 1: BENCHMARK (Native) ---
+  benchmark:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Required to push to GHCR
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Calculate Version
+      - name: Calculate Version
+        id: version
+        run: |
+          # Default to 0.0.1 if file missing
+          if [ -f VERSION ]; then
+            MAN_VERSION=$(cat VERSION | tr -d '[:space:]')
+          else
+            MAN_VERSION="0.0.1"
+          fi
+          FULL_VERSION="${MAN_VERSION}-build.${{ github.run_number }}"
+          echo "bench_version=$FULL_VERSION" >> $GITHUB_ENV
+
+      # 2. Build Benchmark Image (Target: benchmark-env)
+      - name: Build Benchmark Image
+        run: docker build --target benchmark-env -t ssim-bench .
+
+      # 3. Run Test & Capture Output
+      - name: Run SSIM Test
+        run: |
+          echo "--- SSIM BENCHMARK REPORT ---" > ssim_results.txt
+          echo "Version: ${{ env.bench_version }}" >> ssim_results.txt
+          echo "Date: $(date)" >> ssim_results.txt
+          echo "Commit: $GITHUB_SHA" >> ssim_results.txt
+          echo "-----------------------------" >> ssim_results.txt
+          
+          # Run the test container
+          docker run --rm ssim-bench >> ssim_results.txt 2>&1
+          
+          cat ssim_results.txt
+
+      # 4. Save Report
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssim-report-${{ env.bench_version }}
+          path: ssim_results.txt
+
+  # --- JOB 2: DEPLOY (Web/WASM) ---
+  deploy:
+    needs: benchmark # <--- CRITICAL: Only runs if benchmark passes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
@@ -27,7 +77,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build and push production (Skip tests)
+      # Build and push production (Target: production)
       - name: Build and Push Production Image
         uses: docker/build-push-action@v5
         with:

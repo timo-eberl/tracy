@@ -103,3 +103,38 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 
 
+
+
+
+# --- Benchmark  ---
+# We use a clean Linux image, not Emscripten, to keep it faster/smaller for native tests
+FROM ubuntu:24.04 as benchmark-env
+
+# Install Dependencies (Basic C++ tools + Utils)
+RUN apt-get update && apt-get install -y \
+	wget \
+	xz-utils \
+	build-essential \
+	time \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Install Zig 
+ARG ZIG_VERSION=0.14.1 
+ARG ZIG_ARCH=x86_64
+ARG ZIG_OS=linux
+
+RUN wget -q https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz \
+	&& tar -xf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz \
+	&& mv zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} /usr/local/zig \
+	&& rm zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
+
+ENV PATH="/usr/local/zig:${PATH}"
+
+WORKDIR /app
+
+# Copy Source Code
+# We copy everything so the test has access to images/references
+COPY . .
+# Default Command
+# When this container runs, it executes the test and prints to Standard Output
+CMD ["zig", "build", "ssim_test"]
