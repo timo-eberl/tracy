@@ -2,58 +2,62 @@ import sys
 import csv
 import os
 import json
-import re
 
-# Verwendung: python update_benchmark.py ssim_results.txt data-branch/history.csv
+# Usage: python update_benchmark.py ssim_results.json data-branch/history.csv
 
 if len(sys.argv) < 3:
-    print("Fehler: Fehlende Argumente.")
+    print("Error: Missing Args.")
+    print("Usage: python update_benchmark.py <json_file> <csv_file>")
     sys.exit(1)
 
-log_path = sys.argv[1]
+json_path = sys.argv[1]
 csv_path = sys.argv[2]
 
 
-def extract_json(path):
+def read_benchmark_json(path):
     try:
         with open(path, "r") as f:
-            content = f.read()
-            # Findet alles zwischen den JSON-Tags
-            match = re.search(
-                r"---JSON_START---(.*?)---JSON_END---", content, re.DOTALL
-            )
-            if match:
-                return json.loads(match.group(1).strip())
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: File {path} not found.")
+    except json.JSONDecodeError as e:
+        print(f"Error: Faulty JSON-Format{path}: {e}")
     except Exception as e:
-        print(f"Parsing Fehler: {e}")
+        print(f"Unexpected Error: {e}")
     return None
 
 
-# Daten extrahieren
-data = extract_json(log_path)
+# read data
+data = read_benchmark_json(json_path)
 
 if not data:
-    print("Keine validen JSON-Daten gefunden!")
     sys.exit(1)
 
-# CSV schreiben
+# prepare data
+row = {
+    "date": data.get("timestamp", "N/A"),
+    "version": data.get("version", "unknown"),
+    "rmse": data.get("rmse_value", 0.0),
+    "commit": data.get("commit", "unknown"),
+}
+
+# write to csv
 file_exists = os.path.isfile(csv_path)
+directory = os.path.dirname(csv_path)
 
-with open(csv_path, mode="a", newline="") as csvfile:
-    # Wir definieren die Spalten, die wir in der CSV haben wollen
-    fieldnames = ["date", "version", "rmse", "commit"]
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+if directory and not os.path.exists(directory):
+    os.makedirs(directory)
 
-    if not file_exists:
-        writer.writeheader()
+try:
+    with open(csv_path, mode="a", newline="") as csvfile:
+        fieldnames = ["date", "version", "rmse", "commit"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    writer.writerow(
-        {
-            "date": data.get("timestamp"),
-            "version": data.get("version"),
-            "rmse": data.get("rmse_value"),
-            "commit": data.get("commit"),
-        }
-    )
+        if not file_exists:
+            writer.writeheader()
 
-print(f"Erfolg: Daten für {data.get('version')} importiert.")
+        writer.writerow(row)
+    print(f"Success: {row['version']} (RMSE: {row['rmse']}) was added to {csv_path}.")
+except Exception as e:
+    print(f"Error while writing CSV: {e}")
+    sys.exit(1)

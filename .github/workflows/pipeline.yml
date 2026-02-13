@@ -39,11 +39,8 @@ jobs:
       # 3. Run Test & Capture Output
       - name: Run SSIM Test
         run: |
-          echo "--- SSIM BENCHMARK REPORT ---" > ssim_results.txt
-          echo "Version: ${{ env.bench_version }}" >> ssim_results.txt
-          echo "Date: $(date)" >> ssim_results.txt
-          echo "Commit: $GITHUB_SHA" >> ssim_results.txt
-          echo "-----------------------------" >> ssim_results.txt
+          RAW_SCORE=$(docker run --rm ssim-bench zig build ssim_test)
+          python3 scripts/create_log.py "$RAW_SCORE" ssim_results.txt
           
           # Run the test container
           docker run --rm ssim-bench >> ssim_results.txt 2>&1

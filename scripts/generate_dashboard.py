@@ -10,7 +10,7 @@ if len(sys.argv) < 3:
 csv_path = sys.argv[1]
 readme_path = sys.argv[2]
 
-# 1. Read Data
+# Read Data
 versions = []
 rmse_values = []
 dates = []
@@ -48,7 +48,7 @@ if os.path.exists(csv_path):
     except Exception as e:
         print(f"Error reading CSV: {e}")
 
-# 2. Generate Mermaid Graph
+# Generate Mermaid Graph
 # We use a variable for the backticks to avoid breaking the script when copying
 fence = "```"
 
@@ -80,7 +80,7 @@ xychart-beta
     line {data_series}
 {fence}"""
 
-# 3. Assemble the README Content
+# Assemble the README Content
 markdown_content = f"""
 # Benchmark Dashboard
 
@@ -99,7 +99,7 @@ This dashboard tracks the image quality performance (RMSE) of the renderer over 
 *Last updated by GitHub Actions on {latest_date}.*
 """
 
-# 4. Write to File
+# Write to File
 try:
     with open(readme_path, "w") as f:
         f.write(markdown_content)
