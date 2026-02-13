@@ -219,7 +219,7 @@ pub fn build(b: *std.Build) void {
     });
     rmse_exe.addIncludePath(b.path("dependencies/tinyexr"));
 
-    rmse_exe.addImport("exr_utils", exr_module);
+    rmse_exe.root_module.addImport("exr_utils", exr_module);
     rmse_exe.linkLibrary(tinyexr_lib);
     b.installArtifact(rmse_exe);
 
