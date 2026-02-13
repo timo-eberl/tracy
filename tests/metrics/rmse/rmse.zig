@@ -2,6 +2,35 @@ const std = @import("std");
 
 const exr_utils = @import("exr_utils");
 
+pub fn compareAndLog(allocator: std.mem.Allocator, path_a: [:0]const u8, path_b: [:0]const u8) !void {
+    _ = allocator;
+    // Load both images
+    var ref_img = try exr_utils.loadExr(path_a);
+    defer ref_img.deinit();
+
+    var test_img = try exr_utils.loadExr(path_b);
+    defer test_img.deinit();
+
+    // Log results prettily
+    // We use std.fs.path.basename to strip "tests/img/" from the print output for clarity
+    const name_a = std.fs.path.basename(path_a);
+    const name_b = std.fs.path.basename(path_b);
+
+    // Formatting:
+    // {s: <35} means "print string, left-aligned, padded to 35 chars"
+    // {d:.6}   means "print float with 6 decimal places"
+    // Run the metric
+    const score = try computeRmse(ref_img, test_img);
+
+    //std.debug.print(": {d:.6}\n", .{rmse_score});
+
+    // Simple Pass/Fail for CI/CD
+    // if (rmse > 0.01) {
+    //     std.debug.print("FAIL: Error too high!\n", .{});
+    //     std.process.exit(1);
+    // }
+    std.debug.print("{s: <35} vs  {s: <35} | Convergence Error (RMSE): {d:.6}\n", .{ name_a, name_b, score });
+}
 pub fn computeRmse(ref_img: exr_utils.ExrImage, test_img: exr_utils.ExrImage) !f32 {
     const w_check: usize = ref_img.width;
     _ = w_check;
