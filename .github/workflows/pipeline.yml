@@ -34,26 +34,26 @@ jobs:
 
       # 2. Build Benchmark Image (Target: benchmark-env)
       - name: Build Benchmark Image
-        run: docker build --target benchmark-env -t ssim-bench .
+        run: docker build --target benchmark-env -t rmse-bench .
 
       # 3. Run Test & Capture Output
-      - name: Run SSIM Test
+      - name: Run RMSE Test
         run: |
-          RAW_SCORE=$(docker run --rm ssim-bench zig build ssim_test)
-          python3 scripts/create_log.py "$RAW_SCORE" ssim_results.txt
+          RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_test)
+          python3 scripts/create_log.py "$RAW_SCORE" rmse_results.txt
           
           # Run the test container
-          docker run --rm ssim-bench >> ssim_results.txt 2>&1
+          docker run --rm rmse-bench >> rmse_results.txt 2>&1
           
-          cat ssim_results.txt
+          cat rmse_results.txt
 
       # 4. Save Report
       - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ssim-report-${{ env.bench_version }}
-          path: ssim_results.txt
+          name: rmse-report-${{ env.bench_version }}
+          path: rmse_results.txt
 
       # Move data to orphan branch
       - name: Checkout Data Branch
@@ -65,14 +65,14 @@ jobs:
       #  run script to integrate new data
       - name: Run Python Script
         run: |
-          python3 scripts/update_benchmark.py ssim_results.txt data-branch/history.csv
+          python3 scripts/update_benchmark.py rmse_results.txt data-branch/history.csv
           
           # Debug: check content
           cat data-branch/history.csv
 
           # ensure directory exists
           mkdir -p data-branch/logs
-          mv ssim_results.txt data-branch/logs/${{ env.bench_version }}.txt
+          mv rmse_results.txt data-branch/logs/${{ env.bench_version }}.txt
       
       # 3. Generate Dashboard (README.md)
       - name: Generate Dashboard
