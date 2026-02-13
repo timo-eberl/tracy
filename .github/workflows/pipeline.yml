@@ -42,9 +42,6 @@ jobs:
           RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_run)
           python3 scripts/create_log.py "$RAW_SCORE" rmse_results.txt
           
-          # Run the test container
-          docker run --rm rmse-bench >> rmse_results.txt 2>&1
-          
           cat rmse_results.txt
 
       # 4. Save Report
