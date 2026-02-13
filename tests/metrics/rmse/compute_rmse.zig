@@ -5,7 +5,7 @@ const rmse = @import("rmse.zig");
 
 const stdout = std.io.getStdOut().writer();
 
-test "RMSE test" {
+pub fn main() !void {
     //const ally = testing.allocator;
     // const ref_fp = "../../img/exr/reference.exr";
     // const target_fp = "../../../render_c.exr";

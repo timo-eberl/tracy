@@ -137,4 +137,4 @@ WORKDIR /app
 COPY . .
 # Default Command
 # When this container runs, it executes the test and prints to Standard Output
-CMD ["zig", "build", "rmse_test"]
+CMD ["zig", "build", "rmse_run"]

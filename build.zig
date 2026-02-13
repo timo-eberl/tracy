@@ -211,20 +211,21 @@ pub fn build(b: *std.Build) void {
     b.step("ssim_test", "Run SSIM test").dependOn(&run_ssim_test.step);
 
     // RMSE Test
-    const rmse_module = b.createModule(.{
-        .root_source_file = b.path("tests/metrics/rmse/rmse_test.zig"),
+    const rmse_exe = b.addExecutable(.{
+        .name = "rmse_tool",
+        .root_source_file = b.path("tests/metrics/rmse/compute_rmse.zig"),
         .target = native_target,
         .optimize = optimize,
     });
-    rmse_module.addIncludePath(b.path("dependencies/tinyexr"));
+    rmse_exe.addIncludePath(b.path("dependencies/tinyexr"));
 
-    rmse_module.addImport("exr_utils", exr_module);
-    const rmse_test = b.addTest(
-        .{ .root_module = rmse_module },
-    );
-    rmse_test.linkLibrary(tinyexr_lib);
-    const run_rmse_test = b.addRunArtifact(rmse_test);
-    b.step("rmse_test", "Run RMSE test").dependOn(&run_rmse_test.step);
+    rmse_exe.addImport("exr_utils", exr_module);
+    rmse_exe.linkLibrary(tinyexr_lib);
+    b.installArtifact(rmse_exe);
+
+    const run_cmd = b.addRunArtifact(rmse_exe);
+    const run_step = b.step("rmse_run", "Generate RMSE score");
+    run_step.dependOn(&run_cmd.step);
 
     // --- UNIT TESTS ---
     const test_mod = b.createModule(.{
