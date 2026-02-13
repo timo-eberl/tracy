@@ -26,5 +26,5 @@ test "RMSE test" {
     // 4. Generate a float between 0.0 and 1.0
     // float(f32) or float(f64) both work
     const my_rand = random.float(f32);
-    stdout.print("{d:.4}", .{my_rand});
+    try stdout.print("{d:.4}", .{my_rand});
 }
