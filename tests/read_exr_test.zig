@@ -2,7 +2,7 @@ const std = @import("std");
 const exr_utils = @import("utils/exr.zig");
 // to change to a test file using the test keyword instead of main don't forget to switch b.addExecutable to b.addTest in the build.zig
 pub fn main() !void {
-    const filename = "reference.exr";
+    const filename = "tests/img/exr/reference.exr";
 
     std.debug.print("Loading {s}...\n", .{filename});
     var img = try exr_utils.loadExr(filename);
