@@ -1,0 +1,14 @@
+name: 'Setup Zig Cache'
+description: 'Zig Caching'
+runs:
+  using: "composite"
+  steps:
+    - name: Cache zig folders
+      uses: actions/cache@v4
+      with:
+        path: |
+          .zig-cache
+          ~/.cache/zig
+        key: ${{ runner.os }}-zig-${{ hashFiles('build.zig') }}
+        restore-keys: |
+          ${{ runner.os }}-zig-

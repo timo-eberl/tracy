@@ -24,19 +24,10 @@ jobs:
           fetch-depth: 0 # needed for changed-files tool
       
       # zig cache
-      - name: Cache zig folders
-        uses: actions/cache@v3
-        with:
-          path: |
-            .zig-cache
-            ~/.cache/zig
-          # key built from OS and content of build.zig 
-          key: ${{ runner.os }}-zig-${{ hashFiles('build.zig') }}
-          # use most recent as fallback
-          restore-keys: |
-            ${{ runner.os }}-zig-
+      - name: Setup Cache
+        uses: ./.github/actions/setup-zig-cache
 
-      # 1. Calculate Version
+      # Calculate Version
       - name: Calculate Version
         id: version
         run: |
@@ -57,22 +48,28 @@ jobs:
         with:
           files: Dockerfile
 
-      - name: Prepare Benchmark Environment
+      - name: Pull Image
+        if: steps.changed-dockerfile.outputs.any_changed == 'false'
         run: |
-          REGISTRY_IMAGE="ghcr.io/timo-eberl/tracy-bench:latest"
-
-          if [ "${{ steps.changed-dockerfile.outputs.any_changed }}" == "true" ]; then
-            echo "Detected Change in the Dockerfile. Building new Image"
-            docker build --target benchmark-env -t rmse-bench .
+          if docker pull ghcr.io/timo-eberl/tracy-bench:latest; then
+            docker tag ghcr.io/timo-eberl/tracy-bench:latest rmse-bench
           else
-            if docker pull $REGISTRY_IMAGE; then
-              echo "Pulled $REGISTRY_IMAGE successfully"
-              docker tag $REGISTRY_IMAGE rmse-bench
-            else
-              echo "No image found or pull failed. Building from scratch..."
-              docker build --target benchmark-env -t rmse-bench .
-            fi
+            echo "Pull failed, building locally..."
+            docker build -t rmse-bench --target benchmark-env .
           fi
+
+      - name: Dockerfile Changed -> Build new Benchmark Image
+        uses: docker/build-push-action@v5
+        if: steps.changed-dockerfile.outputs.any_changed == 'true'
+        with:
+          context: .
+          target: benchmark-env
+          push: false
+          tags: rmse-bench
+          cache-from: type=gha # use docker layer caching
+          cache-to: type=gha,mode=max
+
+      
 
       # Run Test & Capture Output
       - name: Run RMSE Benchmark
@@ -148,13 +145,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Cache
+        uses: ./.github/actions/setup-zig-cache
 
       # Build and push production (Target: production)
       - name: Build and Push Production Image
@@ -164,3 +164,6 @@ jobs:
           target: production
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          #  use GitHub Actions Cache for Docker layers
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
