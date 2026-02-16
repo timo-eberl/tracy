@@ -47,26 +47,26 @@ EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
 
-
-FROM base as test
-
-# Install Zig
-ARG ZIG_VERSION=0.15.2 
-ARG ZIG_ARCH=x86_64
-ARG ZIG_OS=linux
-
-# download, extract move zig to global path
-ARG p=https://ziglang.org/download/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
-RUN echo ${p}
-RUN wget -q https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz 
-RUN tar -xf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz 
-RUN mv zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} /usr/local/zig 
-RUN rm zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
-
-# add zig to path
-ENV PATH="/usr/local/zig:${PATH}"
-
-CMD ["npm" , "test"]
+# UNCOMMENT IF NEEDED
+# FROM base as test
+#
+# # Install Zig
+# ARG ZIG_VERSION=0.15.2 
+# ARG ZIG_ARCH=x86_64
+# ARG ZIG_OS=linux
+#
+# # download, extract move zig to global path
+# ARG p=https://ziglang.org/download/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
+# RUN echo ${p}
+# RUN wget -q https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz 
+# RUN tar -xf zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz 
+# RUN mv zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION} /usr/local/zig 
+# RUN rm zig-${ZIG_ARCH}-${ZIG_OS}-${ZIG_VERSION}.tar.xz
+#
+# # add zig to path
+# ENV PATH="/usr/local/zig:${PATH}"
+#
+# CMD ["npm" , "test"]
 
 
 # Start with an image that has Emscripten (it's the hardest to install)
