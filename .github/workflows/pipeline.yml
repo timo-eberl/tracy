@@ -69,7 +69,6 @@ jobs:
           cache-from: type=gha # use docker layer caching
           cache-to: type=gha,mode=max
 
-      
       # render the target image
       - name: Render Scene
         run: |
@@ -78,9 +77,6 @@ jobs:
           -v ~/.cache/zig:/root/.cache/zig \
           -w /app \
           rmse-bench zig build run-zig -Doptimize=ReleaseSafe
-
-
-
 
       # Run Test & Capture Output
       # set volumes so that we don't have to rebuild upon code change
@@ -96,93 +92,25 @@ jobs:
           
           cat rmse_results.txt
 
-      # Save Report
-      - name: Upload Results
+      - name: Generate Preview Image
+        uses: ./.github/actions/exr-to-png-conversion
+
+      - name: Upload All Benchmark Assets
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rmse-report-${{ env.bench_version }}
-          path: rmse_results.txt
+          name: full-assets-${{ env.bench_version }}
+          path: |
+            rmse_results.txt
+            render_zig.exr
+            preview.png
+          retention-days: 7    
 
-      # Move data to orphan branch
-      - name: Checkout Data Branch
-        uses: actions/checkout@v4
+      - name: Deploy to Benchmarks Branch
+        if: success()
+        uses: ./.github/actions/process-benchmark-data
         with:
-          ref: benchmarks
-          path: data-branch
-          fetch-depth: 0
-      #  run script to integrate new data
-      - name: Update Benchmark CSV
-        run: |
-          python3 scripts/update_benchmark.py rmse_results.txt data-branch/history.csv
-          
-          # Debug: check content
-          cat data-branch/history.csv
-
-          # ensure directory exists
-          mkdir -p data-branch/logs
-          mv rmse_results.txt data-branch/logs/${{ env.bench_version }}.txt
-      
-        
-      - name: Setup Python for Image Conversion
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Conversion Dependencies
-        run: pip install mitsuba numpy Pillow
-
-      - name: Convert EXR to PNG
-        run: python3 exr_to_png.py
-
-      # Das PNG in den Daten-Branch schieben
-      - name: Update Data Branch with Image
-        run: |
-          cp preview.png data-branch/preview.png
-
-      # add the rendered image to the artifacts
-      - name: Upload Render Preview
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: render-preview-${{ env.bench_version }}
-          # TODO change to exr
-          path: render_zig.exr
-          retention-days: 7
-
-      - name: Save Rendering in Benchmark Branch
-        run: |
-          # Verzeichnis im data-branch erstellen
-          mkdir -p data-branch/renderings
-          
-          # Das Bild als 'latest.png' für das Dashboard speichern
-          cp preview.png data-branch/renderings/latest.png
-          
-          # Optional: Versionierte Kopie speichern, falls ihr eine Galerie wollt
-          cp preview.png data-branch/renderings/${{ env.bench_version }}.png
-
-      # 3. Generate Dashboard (README.md)
-      - name: Generate Dashboard
-        run: |
-          # Inputs:
-          # 1. The CSV we just updated (data-branch/history.csv)
-          # 2. The destination README (data-branch/README.md)
-          
-          python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md
-          
-          # Debug: Check if it looks right
-          head -n 20 data-branch/README.md
-
-      # commit and push
-      - name: Commit and Push
-        working-directory: data-branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Benchmark: ${{ env.bench_version }}"
-          git push origin HEAD:benchmarks
-
+          bench_version: ${{ env.bench_version }}
 
   # --- JOB 2: DEPLOY (Web/WASM) ---
   deploy:
