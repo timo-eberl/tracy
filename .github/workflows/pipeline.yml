@@ -22,7 +22,7 @@ jobs:
       
       # zig cache
       - name: Cache zig folders
-        uses: actions:cache@v3
+        uses: actions/cache@v3
         with:
           path: |
             .zig-cache
