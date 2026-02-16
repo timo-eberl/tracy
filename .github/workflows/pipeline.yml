@@ -70,6 +70,25 @@ jobs:
           cache-to: type=gha,mode=max
 
       
+      # render the target image
+      - name: Render Scene
+        run: |
+          docker run --rm \
+          -v $(pwd):/app \
+          -v ~/.cache/zig:/root/.cache/zig \
+          -w /app \
+          rmse-bench zig build run-zig -Doptimize=ReleaseSafe
+
+      # add the rendered image to the artifacts
+      - name: Upload Render Preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-preview-${{ env.bench_version }}
+          # TODO change to exr
+          path: render_zig.tga
+          retention-days: 7
+
 
       # Run Test & Capture Output
       # set volumes so that we don't have to rebuild upon code change
