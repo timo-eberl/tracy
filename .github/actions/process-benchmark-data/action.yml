@@ -1,0 +1,53 @@
+name: 'Process Benchmark Data'
+description: 'Handles checkout, conversion, dashboarding, and git push'
+
+inputs:
+  bench_version:
+    description: 'The version string'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    # Checkout the branch locally inside this action
+    - name: Checkout Benchmark Branch
+      uses: actions/checkout@v4
+      with:
+        ref: benchmarks
+        path: data-branch
+        fetch-depth: 0
+
+    # Conversion Logic
+    - name: Convert EXR to PNG
+      shell: bash
+      run: python3 exr_to_png.py
+
+    # Data Integration
+    - name: Update CSV and Logs
+      shell: bash
+      run: |
+        python3 scripts/update_benchmark.py rmse_results.txt data-branch/history.csv
+        mkdir -p data-branch/logs
+        cp rmse_results.txt data-branch/logs/${{ inputs.bench_version }}.txt
+
+    - name: Update Renderings Folder
+      shell: bash
+      run: |
+        mkdir -p data-branch/renderings
+        cp preview.png data-branch/renderings/latest.png
+        cp preview.png data-branch/renderings/${{ inputs.bench_version }}.png
+
+    - name: Generate Dashboard
+      shell: bash
+      run: python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md
+
+    # Push
+    - name: Commit and Push
+      shell: bash
+      working-directory: data-branch
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add .
+        git commit -m "Benchmark Update: ${{ inputs.bench_version }}"
+        git push origin HEAD:benchmarks

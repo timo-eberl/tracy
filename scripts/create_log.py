@@ -3,7 +3,7 @@ import sys
 import os
 from datetime import datetime
 
-# Usage: python create_log.py <raw_rmse_value> <output_path>
+# Verwendung: python create_log.py <raw_rmse_value> <output_path>
 
 if len(sys.argv) < 3:
     print("Usage: python create_log.py <rmse_score> <output_path>")

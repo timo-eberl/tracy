@@ -1,0 +1,18 @@
+name: 'EXR to PNG Conversion'
+description: 'Sets up Python and converts the rendered EXR to a PNG preview'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Conversion Dependencies
+      shell: bash
+      run: pip install mitsuba numpy Pillow
+
+    - name: Convert EXR to PNG
+      shell: bash
+      run: python3 exr_to_png.py

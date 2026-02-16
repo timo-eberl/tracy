@@ -95,6 +95,10 @@ This dashboard tracks the image quality performance (RMSE) of the renderer over 
 ## Performance Trend
 {graph_block}
 
+
+## Latest Render
+![Latest Render](renderings/latest.png)
+
 ---
 *Last updated by GitHub Actions on {latest_date}.*
 """

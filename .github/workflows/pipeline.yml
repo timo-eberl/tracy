@@ -69,7 +69,14 @@ jobs:
           cache-from: type=gha # use docker layer caching
           cache-to: type=gha,mode=max
 
-      
+      # render the target image
+      - name: Render Scene
+        run: |
+          docker run --rm \
+          -v $(pwd):/app \
+          -v ~/.cache/zig:/root/.cache/zig \
+          -w /app \
+          rmse-bench zig build run-zig -Doptimize=ReleaseSafe
 
       # Run Test & Capture Output
       # set volumes so that we don't have to rebuild upon code change
@@ -85,55 +92,25 @@ jobs:
           
           cat rmse_results.txt
 
-      # 4. Save Report
-      - name: Upload Results
+      - name: Generate Preview Image
+        uses: ./.github/actions/exr-to-png-conversion
+
+      - name: Upload All Benchmark Assets
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rmse-report-${{ env.bench_version }}
-          path: rmse_results.txt
+          name: full-assets-${{ env.bench_version }}
+          path: |
+            rmse_results.txt
+            render_zig.exr
+            preview.png
+          retention-days: 7    
 
-      # Move data to orphan branch
-      - name: Checkout Data Branch
-        uses: actions/checkout@v4
+      - name: Deploy to Benchmarks Branch
+        if: success()
+        uses: ./.github/actions/process-benchmark-data
         with:
-          ref: benchmarks
-          path: data-branch
-          fetch-depth: 0
-      #  run script to integrate new data
-      - name: Run Python Script
-        run: |
-          python3 scripts/update_benchmark.py rmse_results.txt data-branch/history.csv
-          
-          # Debug: check content
-          cat data-branch/history.csv
-
-          # ensure directory exists
-          mkdir -p data-branch/logs
-          mv rmse_results.txt data-branch/logs/${{ env.bench_version }}.txt
-      
-      # 3. Generate Dashboard (README.md)
-      - name: Generate Dashboard
-        run: |
-          # Inputs:
-          # 1. The CSV we just updated (data-branch/history.csv)
-          # 2. The destination README (data-branch/README.md)
-          
-          python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md
-          
-          # Debug: Check if it looks right
-          head -n 20 data-branch/README.md
-
-      # commit and push
-      - name: Commit and Push
-        working-directory: data-branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Benchmark: ${{ env.bench_version }}"
-          git push origin HEAD:benchmarks
-
+          bench_version: ${{ env.bench_version }}
 
   # --- JOB 2: DEPLOY (Web/WASM) ---
   deploy:
