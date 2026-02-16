@@ -79,15 +79,7 @@ jobs:
           -w /app \
           rmse-bench zig build run-zig -Doptimize=ReleaseSafe
 
-      # add the rendered image to the artifacts
-      - name: Upload Render Preview
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: render-preview-${{ env.bench_version }}
-          # TODO change to exr
-          path: render_zig.tga
-          retention-days: 7
+
 
 
       # Run Test & Capture Output
@@ -104,7 +96,7 @@ jobs:
           
           cat rmse_results.txt
 
-      # 4. Save Report
+      # Save Report
       - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,7 +112,7 @@ jobs:
           path: data-branch
           fetch-depth: 0
       #  run script to integrate new data
-      - name: Run Python Script
+      - name: Update Benchmark CSV
         run: |
           python3 scripts/update_benchmark.py rmse_results.txt data-branch/history.csv
           
@@ -131,6 +123,44 @@ jobs:
           mkdir -p data-branch/logs
           mv rmse_results.txt data-branch/logs/${{ env.bench_version }}.txt
       
+        
+      - name: Setup Python for Image Conversion
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Conversion Dependencies
+        run: pip install mitsuba numpy Pillow
+
+      - name: Convert EXR to PNG
+        run: python3 exr_to_png.py
+
+      # Das PNG in den Daten-Branch schieben
+      - name: Update Data Branch with Image
+        run: |
+          cp preview.png data-branch/preview.png
+
+      # add the rendered image to the artifacts
+      - name: Upload Render Preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-preview-${{ env.bench_version }}
+          # TODO change to exr
+          path: render_zig.exr
+          retention-days: 7
+
+      - name: Save Rendering in Benchmark Branch
+        run: |
+          # Verzeichnis im data-branch erstellen
+          mkdir -p data-branch/renderings
+          
+          # Das Bild als 'latest.png' für das Dashboard speichern
+          cp preview.png data-branch/renderings/latest.png
+          
+          # Optional: Versionierte Kopie speichern, falls ihr eine Galerie wollt
+          cp preview.png data-branch/renderings/${{ env.bench_version }}.png
+
       # 3. Generate Dashboard (README.md)
       - name: Generate Dashboard
         run: |

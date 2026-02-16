@@ -2,14 +2,14 @@ import mitsuba as mi
 import numpy as np
 from PIL import Image
 
-mi.set_variant('scalar_rgb')
+mi.set_variant("scalar_rgb")
 
 print("--- ROBUST CONVERSION START ---")
 
 # 1. Load EXR
-bitmap = mi.Bitmap("reference.exr")
+bitmap = mi.Bitmap("render_zig.exr")
 pixels_all = np.array(bitmap)
-pixels_rgb = pixels_all[:, :, 0:3] # Drop Alpha
+pixels_rgb = pixels_all[:, :, 0:3]  # Drop Alpha
 
 # 2. DEBUG: Pixel (320, 50)
 target_raw = pixels_rgb[150, 320]
@@ -34,6 +34,7 @@ print(f"FINAL 8-bit Value: {pixels_8bit[50, 320]}")
 print("This should now definitely be [255 255 255].")
 
 # 7. Save
-img = Image.fromarray(pixels_8bit, 'RGB')
-img.save("reference_final.png")
-print("Saved 'reference_final.png'.")
+img = Image.fromarray(pixels_8bit, "RGB")
+img.save("preview.png")
+print("Saved 'preview.png'.")
+
