@@ -1,6 +1,7 @@
 name: CI/CD Pipeline
 
 on:
+  workflow_dispatch: # manual start
   push:
     branches-ignore:
       - 'benchmarks'
@@ -34,6 +35,7 @@ jobs:
           # use most recent as fallback
           restore-keys: |
             ${{ runner.os }}-zig-
+
       # 1. Calculate Version
       - name: Calculate Version
         id: version
