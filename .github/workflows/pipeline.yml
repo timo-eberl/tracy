@@ -23,10 +23,14 @@ jobs:
       # zig cache
       - name: Cache zig folders
         uses: actions:cache@v3
-        # key built from OS and content of build.zig 
-        key: ${{ runner.os }}-zig-${{ hashFiles('build.zig') }}
-        # use most recent as fallback
-        restore-keys: |
+        with:
+          path: |
+            .zig-cache
+            ~/.cache/zig
+          # key built from OS and content of build.zig 
+          key: ${{ runner.os }}-zig-${{ hashFiles('build.zig') }}
+          # use most recent as fallback
+          restore-keys: |
             ${{ runner.os }}-zig-
       # 1. Calculate Version
       #
