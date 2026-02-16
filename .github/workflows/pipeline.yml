@@ -59,13 +59,15 @@ jobs:
 
       - name: Prepare Benchmark Environment
         run: |
+          REGISTRY_IMAGE="ghcr.io/timo-eberl/tracy-bench:latest"
+
           if [ "${{ steps.changed-dockerfile.outputs.any_changed }}" == "true" ]; then
             echo "Detected Change in the Dockerfile. Building new Image"
             docker build --target benchmark-env -t rmse-bench .
           else
-            if docker pull ghcr.io/timo-eberl/rmse-bench:latest; then
-              echo "Image pulled successfully."
-              docker tag ghcr.io/timo-eberl/rmse-bench:latest rmse-bench
+            if docker pull $REGISTRY_IMAGE; then
+              echo "Pulled $REGISTRY_IMAGE successfully"
+              docker tag $REGISTRY_IMAGE rmse-bench
             else
               echo "No image found or pull failed. Building from scratch..."
               docker build --target benchmark-env -t rmse-bench .
