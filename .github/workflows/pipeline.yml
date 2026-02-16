@@ -2,7 +2,8 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches-ignore:
+      - 'benchmarks'
 
 env:
   REGISTRY: ghcr.io
@@ -18,7 +19,8 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 0 # needed for changed-files tool
       
       # zig cache
       - name: Cache zig folders
@@ -33,7 +35,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-zig-
       # 1. Calculate Version
-      #
       - name: Calculate Version
         id: version
         run: |
@@ -46,11 +47,30 @@ jobs:
           FULL_VERSION="${MAN_VERSION}-build.${{ github.run_number }}"
           echo "bench_version=$FULL_VERSION" >> $GITHUB_ENV
 
-      # 2. Build Benchmark Image (Target: benchmark-env)
-      - name: Build Benchmark Image
-        run: docker build --target benchmark-env -t rmse-bench .
+      # checks for changes in the Dockerfile
+      # a push containing dockerfile changes triggers docker-publish.yml. As the two workflows run asynchronously we need to make sure that the benchmark step builds a new image from the Dockerfile instead of pulling from the container registry to avoid an outdated image.
+      - name: Check for Dockerfile Steps
+        id: changed-dockerfile
+        uses: tj-actions/changed-files@v44
+        with:
+          files: Dockerfile
 
-      # 3. Run Test & Capture Output
+      - name: Prepare Benchmark Environment
+        run: |
+          if [ "${{ steps.changed-dockerfile.outputs.any_changed }}" == "true" ]; then
+            echo "Detected Change in the Dockerfile. Building new Image"
+            docker build --target benchmark-env -t rmse-bench .
+          else
+            if docker pull ghcr.io/timo-eberl/rmse-bench:latest; then
+              echo "Image pulled successfully."
+              docker tag ghcr.io/timo-eberl/rmse-bench:latest rmse-bench
+            else
+              echo "No image found or pull failed. Building from scratch..."
+              docker build --target benchmark-env -t rmse-bench .
+            fi
+          fi
+
+      # Run Test & Capture Output
       - name: Run RMSE Benchmark
         run: |
           # RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_run)
