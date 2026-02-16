@@ -18,8 +18,18 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-
+      
+      
+      # zig cache
+      - name: Cache zig folders
+        uses: actions:cache@v3
+        # key built from OS and content of build.zig 
+        key: ${{ runner.os }}-zig-${{ hashFiles('build.zig') }}
+        # use most recent as fallback
+        restore-keys: |
+            ${{ runner.os }}-zig-
       # 1. Calculate Version
+      #
       - name: Calculate Version
         id: version
         run: |
@@ -39,7 +49,12 @@ jobs:
       # 3. Run Test & Capture Output
       - name: Run RMSE Benchmark
         run: |
-          RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_run)
+          # RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_run)
+          RAW_SCORE=$(docker run --rm \
+          -v $(pwd):/app \
+          -v ~/.cache/zig:/root/.cache/zig \
+          -w /app \
+          rmse-bench zig build rmse_run --summary none -Doptimize=Debug)
           python3 scripts/create_log.py "$RAW_SCORE" rmse_results.txt
           
           cat rmse_results.txt

@@ -5,6 +5,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Disable LTO for Debug builds
+    // LTO (Link Time Optimization pushes main optimization to linking step)
     const use_lto = optimize != .Debug;
 
     // PCG Configuration
