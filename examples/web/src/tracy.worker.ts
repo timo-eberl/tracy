@@ -8,7 +8,7 @@ import ModuleFactory, { MainModule } from './tracy_c';
 // This will be the memory that wasm uses for everything (radiance buffer, call stack, everything)
 const sharedMemory = new WebAssembly.Memory({ initial: 256, maximum: 256, shared: true });
 // This promise ensures the Wasm module is initialized only once.
-const modulePromise: Promise<MainModule> = ModuleFactory({wasmMemory: sharedMemory});
+const modulePromise: Promise<MainModule> = ModuleFactory({ wasmMemory: sharedMemory });
 
 function degToRad(degree: number) { return degree / 360 * 2 * Math.PI; }
 
@@ -27,7 +27,8 @@ self.onmessage = async (event) => {
 	);
 
 	if (command === 'renderFast') {
-		const bufferPtr = Module._render_refine(2);
+		Module._render_refine(2);
+		const bufferPtr = Module._update_image_ldr();
 		self.postMessage({
 			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true
 		});
@@ -39,7 +40,8 @@ self.onmessage = async (event) => {
 		while (samplesRemaining > 0) {
 			// either a full run, or whatever is left
 			const samplesForThisRun = Math.min(samplesRemaining, samplesPerRun);
-			const bufferPtr = Module._render_refine(samplesForThisRun);
+			Module._render_refine(samplesForThisRun);
+			const bufferPtr = Module._update_image_ldr();
 			samplesRemaining -= samplesForThisRun;
 
 			const isFinished = (samplesRemaining === 0);

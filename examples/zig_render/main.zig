@@ -55,7 +55,8 @@ pub fn main() !void {
 
     var i: usize = 0;
     while (i < 10) : (i += 1) {
-        const buffer_ptr = tracy.render_refine(5);
+        tracy.render_refine(5);
+        const buffer_ptr = tracy.update_image_ldr();
         const buffer_len: usize = @intCast(width * height * 4);
         const buffer = buffer_ptr[0..buffer_len];
 

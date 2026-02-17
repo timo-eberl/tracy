@@ -57,7 +57,8 @@ int main() {
 
 	// do incremental updates and update image each time for live preview
 	for (size_t i = 0; i < STEPS; i++) {
-		unsigned char* image_buffer = render_refine(SAMPLES_PER_STEP);
+		render_refine(SAMPLES_PER_STEP);
+		unsigned char* image_buffer = update_image_ldr();
 		printf("Step %d/%d: Saving to 'render_c.tga'...\n", ((int)i + 1), STEPS);
 		save_image_as_tga("render_c.tga", image_buffer, width, height);
 	}
