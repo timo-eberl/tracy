@@ -14,6 +14,8 @@ node_modules/
 # zig
 .zig-cache/
 zig-out/
+tests/img/zig_render/
+.rmse_results.txt
 
 # release build
 dist/

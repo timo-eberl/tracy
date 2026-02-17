@@ -1,6 +1,10 @@
 import sys
 import csv
 import os
+import json
+
+# Paths
+LOG_FILE_PATH = "tests/img/exr/zig_render/zig_render_log.txt"
 
 # Usage: python generate_dashboard.py <csv_path> <readme_path>
 if len(sys.argv) < 3:
@@ -10,94 +14,109 @@ if len(sys.argv) < 3:
 csv_path = sys.argv[1]
 readme_path = sys.argv[2]
 
-# Read Data
-versions = []
-rmse_values = []
-dates = []
-latest_ver = "N/A"
-latest_date = "N/A"
-latest_rmse = "N/A"
+# --- 1. Read Historical CSV Data ---
+versions, rmse_values, dates = [], [], []
+latest_ver, latest_date, latest_rmse = "N/A", "N/A", "N/A"
 
 if os.path.exists(csv_path):
     try:
         with open(csv_path, "r") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
-
-            # Update latest stats
             if rows:
                 latest_ver = rows[-1]["version"]
                 latest_date = rows[-1]["date"]
                 latest_rmse = rows[-1]["rmse"]
 
-            # Keep last 20 entries for the graph
-            recent_rows = rows[-20:]
-
-            for row in recent_rows:
-                # Clean up Version ID for the X-Axis
-                # Example: "0.1.0-build.145" -> "b.145"
-                v = row["version"]
-                if "build" in v:
-                    short_ver = "b." + v.split(".")[-1]
-                else:
-                    short_ver = v[-6:]  # Fallback: last 6 chars
-
-                versions.append(short_ver)
-                rmse_values.append(float(row["rmse"]))
-                dates.append(row["date"])
+                for row in rows[-20:]:
+                    v = row["version"]
+                    short_ver = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
+                    versions.append(short_ver)
+                    rmse_values.append(float(row["rmse"]))
+                    dates.append(row["date"])
     except Exception as e:
         print(f"Error reading CSV: {e}")
 
-# Generate Mermaid Graph
-# We use a variable for the backticks to avoid breaking the script when copying
+# --- 2. Read Current Render Convergence Log (Dynamic Steps) ---
+convergence_rmse = []
+if os.path.exists(LOG_FILE_PATH):
+    try:
+        with open(LOG_FILE_PATH, "r") as f:
+            # Filters out empty lines and converts all numeric lines to floats
+            for line in f:
+                clean_line = line.strip()
+                if clean_line:
+                    try:
+                        convergence_rmse.append(float(clean_line))
+                    except ValueError:
+                        continue
+    except Exception as e:
+        print(f"Error reading convergence log: {e}")
+
+# --- 3. Generate Mermaid Blocks ---
 fence = "```"
 
+# Historical Trend Graph
 if not versions:
-    graph_block = "No benchmark data available yet."
+    trend_graph = "No benchmark data available yet."
 else:
-    # Prepare data strings for Mermaid
-    # We format the list of versions as ["v1", "v2", ...]
-    x_axis = str(versions).replace("'", '"')
+    y_max_trend = max(rmse_values) * 1.2
+    trend_graph = f"""{fence}mermaid
+xychart-beta
+    title "Historical RMSE Trend (Last 20 Builds)"
+    x-axis {json.dumps(versions)}
+    y-axis "RMSE" 0 --> {y_max_trend:.4f}
+    line {rmse_values}
+{fence}"""
 
-    # We format the list of values as [0.1, 0.2, ...]
-    data_series = str(rmse_values)
+# Convergence Graph (Dynamic X-Axis)
+if not convergence_rmse:
+    convergence_graph = "*No convergence data found for the latest render.*"
+else:
+    # Dynamically create labels: ["1", "2", "3", ...]
+    num_steps = len(convergence_rmse)
+    # We format labels as strings for the Mermaid x-axis
+    steps_x_labels = [str(i + 1) for i in range(num_steps)]
 
-    # Dynamic Y-axis max
-    y_max = max(rmse_values) * 1.2 if rmse_values else 1.0
+    y_max_conv = max(convergence_rmse) * 1.1
 
-    graph_block = f"""{fence}mermaid
+    convergence_graph = f"""{fence}mermaid
 ---
 config:
     theme: base
     themeVariables:
         xyChart:
-            plotColorPalette: "#2980b9"
+            plotColorPalette: "#e67e22"
 ---
 xychart-beta
-    title "RMSE Convergence Error (Lower is Better)"
-    x-axis {x_axis}
-    y-axis "RMSE" 0 --> {y_max:.4f}
-    line {data_series}
+    title "Convergence Rate ({num_steps} Total Steps)"
+    x-axis {steps_x_labels}
+    y-axis "RMSE" 0 --> {y_max_conv:.4f}
+    line {convergence_rmse}
 {fence}"""
 
-# Assemble the README Content
+# --- 4. Assemble README ---
 markdown_content = f"""
 # Benchmark Dashboard
 
-This dashboard tracks the image quality performance (RMSE) of the renderer over time.
+This dashboard tracks the image quality performance (RMSE) of the renderer.
 
 | Metric | Latest Value |
 |--------|--------------|
 | **Version** | `{latest_ver}` |
 | **Date** | {latest_date} |
-| **RMSE** | **{latest_rmse}** |
+| **Final RMSE** | **{latest_rmse}** |
 
 ## Performance Trend
-{graph_block}
-
+{trend_graph}
 
 ## Latest Render
 ![Latest Render](renderings/latest.png)
+
+### Convergence Progress
+{convergence_graph}
+
+> This graph shows how the error decreased across {len(convergence_rmse)} rendering steps.
 
 ---
 *Last updated by GitHub Actions on {latest_date}.*
@@ -107,7 +126,9 @@ This dashboard tracks the image quality performance (RMSE) of the renderer over 
 try:
     with open(readme_path, "w") as f:
         f.write(markdown_content)
-    print(f"Successfully generated dashboard at {readme_path}")
+    print(
+        f"Successfully generated dashboard at {readme_path} with {len(convergence_rmse)} steps."
+    )
 except Exception as e:
     print(f"Error writing README: {e}")
     sys.exit(1)
