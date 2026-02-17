@@ -87,7 +87,7 @@ jobs:
           -v $(pwd):/app \
           -v ~/.cache/zig:/root/.cache/zig \
           -w /app \
-          rmse-bench zig build run-render-bench --summary none -Doptimize=Debug)
+          rmse-bench zig build run-render-bench --summary none -Doptimize=Debug
           python3 scripts/create_log.py rmse_results.txt
           
           cat rmse_results.txt
