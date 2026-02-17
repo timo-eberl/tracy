@@ -68,7 +68,7 @@ pub fn main() !void {
         const score = try rmse.computeScore(out_fp);
         scores[i] = score;
 
-        try stdout.print("computed score: {d:.4}\n", .{score});
+        // try stdout.print("computed score: {d:.4}\n", .{score});
     }
 
     const log_fp = out_dir ++ "zig_render_log.txt";

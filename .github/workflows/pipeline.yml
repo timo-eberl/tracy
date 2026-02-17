@@ -81,7 +81,7 @@ jobs:
 
       # Run Test & Capture Output
       # set volumes so that we don't have to rebuild upon code change
-      - name: Run RMSE Benchmark
+      - name: Render and Benchmark
         run: |
           # RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_run)
           docker run --rm \
