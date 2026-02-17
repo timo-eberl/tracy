@@ -70,13 +70,14 @@ jobs:
           cache-to: type=gha,mode=max
 
       # render the target image
-      - name: Render Scene
-        run: |
-          docker run --rm \
-          -v $(pwd):/app \
-          -v ~/.cache/zig:/root/.cache/zig \
-          -w /app \
-          rmse-bench zig build run-zig -Doptimize=ReleaseSafe
+      # - name: Render Scene
+      #   run: |
+      #     docker run --rm \
+      #     -v $(pwd):/app \
+      #     -v ~/.cache/zig:/root/.cache/zig \
+      #     -w /app \
+      #     rmse-bench zig build run-zig -Doptimize=ReleaseSafe
+      #
 
       # Run Test & Capture Output
       # set volumes so that we don't have to rebuild upon code change

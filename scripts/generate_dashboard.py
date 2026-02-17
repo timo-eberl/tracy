@@ -73,10 +73,10 @@ xychart-beta
 if not convergence_rmse:
     convergence_graph = "*No convergence data found for the latest render.*"
 else:
-    # Dynamically create labels: ["1", "2", "3", ...]
     num_steps = len(convergence_rmse)
-    # We format labels as strings for the Mermaid x-axis
-    steps_x_labels = [str(i + 1) for i in range(num_steps)]
+    # WICHTIG: Mermaid benötigt doppelte Anführungszeichen für Strings auf der X-Achse
+    # Wir konvertieren die Liste manuell in einen String mit doppelten Anführungszeichen
+    steps_x_labels = "[" + ", ".join([f'"{i + 1}"' for i in range(num_steps)]) + "]"
 
     y_max_conv = max(convergence_rmse) * 1.1
 
