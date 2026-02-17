@@ -27,7 +27,7 @@ self.onmessage = async (event) => {
 	);
 
 	if (command === 'renderFast') {
-		const bufferPtr = Module._render_fast();
+		const bufferPtr = Module._render_refine(2);
 		self.postMessage({
 			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true
 		});
