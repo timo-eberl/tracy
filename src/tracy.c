@@ -107,7 +107,8 @@ Vec vec_cross(Vec a, Vec b) {
 }
 
 // The image buffer will be allocated on demand.
-uint8_t* image_buffer = NULL;				 // stores tone mapped gamma corrected colors
+uint8_t* image_buffer_ldr = NULL;			 // stores tone mapped gamma corrected colors (rgba)
+float* image_buffer_hdr = NULL;				 // stores linear averaged floats (rgb)
 Vec* summed_weighted_radiance_buffer = NULL; // stores summed raw radiance
 double* summed_weights_buffer = NULL;		 // stores the summed weights of the samples
 int buffer_width = 0;
@@ -207,20 +208,23 @@ uint8_t quantize(double v) {
 
 void initialize_buffers() {
 	// (Re)allocate buffer if dimensions change or not allocated yet
-	if (image_buffer == NULL || summed_weighted_radiance_buffer == NULL ||
-		summed_weights_buffer == NULL || width != buffer_width || height != buffer_height) {
+	if (image_buffer_ldr == NULL || image_buffer_hdr == NULL ||
+		summed_weighted_radiance_buffer == NULL || summed_weights_buffer == NULL ||
+		width != buffer_width || height != buffer_height) {
 
-		if (image_buffer != NULL) { free(image_buffer); }
+		if (image_buffer_ldr != NULL) { free(image_buffer_ldr); }
+		if (image_buffer_hdr != NULL) { free(image_buffer_hdr); }
 		if (summed_weighted_radiance_buffer != NULL) { free(summed_weighted_radiance_buffer); }
 		if (summed_weights_buffer != NULL) { free(summed_weights_buffer); }
 		summed_weighted_radiance_buffer = malloc(width * height * sizeof(Vec));
 		summed_weights_buffer = malloc(width * height * sizeof(double));
-		image_buffer = malloc(width * height * 4 * sizeof(uint8_t));
+		image_buffer_ldr = malloc(width * height * 4 * sizeof(uint8_t));
+		image_buffer_hdr = malloc(width * height * 3 * sizeof(float));
 		buffer_width = width;
 		buffer_height = height;
 	}
 	// write zeros in radiance buffers
-	// no need to clear image_buffer as it's overwritten every time it's requeted
+	// no need to clear image_buffers as they are overwritten every time they are requested
 	memset(summed_weighted_radiance_buffer, 0, width * height * sizeof(Vec));
 	memset(summed_weights_buffer, 0, width * height * sizeof(double));
 }
@@ -413,29 +417,51 @@ Vec radiance_from_ray(Ray r, int depth) {
 	}
 }
 
-void write_image() {
+void write_image(bool update_ldr, bool update_hdr) {
 	// loop over pixels, do tone mapping and gamma correction
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
+			int radiance_index = y * width + x;
+
 			// Normalize the final color by dividing by the total sum of weights.
 			// If this were a continuous integral, the sum of weights would be 1.0 and this
 			// step unnecessary. But since we are doing a discrete sum, our total weight
 			// will not be exactly 1.0, so we manually keep track of it.
-			int radiance_index = y * width + x;
-			Vec radiance = vec_scale(summed_weighted_radiance_buffer[radiance_index],
-									 1.0 / summed_weights_buffer[radiance_index]);
-
-			Vec ldr_color = TONE_MAP ? vec_linear_to_srgb(reinhard_luminance(
-										   radiance)) // Reinhard tone mapping + sRGB conversion
-									 : radiance; // Just the raw values (clamped in the next step)
-
+			double weight = summed_weights_buffer[radiance_index];
+			Vec radiance = (weight > 0) ? vec_scale(summed_weighted_radiance_buffer[radiance_index],
+													1.0 / weight)
+										: (Vec){0, 0, 0};
 			int image_index = radiance_index * 4;
-			image_buffer[image_index + 0] = quantize(ldr_color.x);
-			image_buffer[image_index + 1] = quantize(ldr_color.y);
-			image_buffer[image_index + 2] = quantize(ldr_color.z);
-			image_buffer[image_index + 3] = quantize(1.0);
+
+			if (update_hdr) {
+				image_buffer_hdr[image_index + 0] = (float)radiance.x;
+				image_buffer_hdr[image_index + 1] = (float)radiance.y;
+				image_buffer_hdr[image_index + 2] = (float)radiance.z;
+			}
+
+			if (update_ldr) {
+				Vec ldr_color =
+					TONE_MAP ? vec_linear_to_srgb(reinhard_luminance(radiance)) : radiance;
+
+				image_buffer_ldr[image_index + 0] = quantize(ldr_color.x);
+				image_buffer_ldr[image_index + 1] = quantize(ldr_color.y);
+				image_buffer_ldr[image_index + 2] = quantize(ldr_color.z);
+				image_buffer_ldr[image_index + 3] = quantize(1.0);
+			}
 		}
 	}
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint8_t* update_image_ldr() {
+	write_image(true, false); // update only LDR buffer
+	return image_buffer_ldr;
+}
+
+EMSCRIPTEN_KEEPALIVE
+float* update_image_hdr() {
+	write_image(false, true); // update only HDR buffer
+	return image_buffer_hdr;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -464,7 +490,7 @@ void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angl
 }
 
 EMSCRIPTEN_KEEPALIVE
-uint8_t* render_refine(unsigned int n_samples) {
+void render_refine(unsigned int n_samples) {
 	const double aspect_ratio = (double)width / height;
 	const double fov_y = 30 * 3.141 / 180.0;
 	const double fov_scale = tan(fov_y / 2.0); // 5.1.4
@@ -570,7 +596,4 @@ uint8_t* render_refine(unsigned int n_samples) {
 			}
 		}
 	}
-
-	write_image();
-	return image_buffer;
 }
