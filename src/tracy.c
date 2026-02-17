@@ -24,6 +24,10 @@
 
 #define MAX_DEPTH 4
 
+// If true, reinhard tonemapping and srgb conversion will be used. Otherwise raw (clamped) data will
+// be written.
+#define TONE_MAP true
+
 // offset used for shadow rays. may need to be adjusted depending on scene scale
 #define SELF_OCCLUSION_DELTA 0.00000001
 
@@ -31,7 +35,6 @@
 // allow one line typedefs
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;
-typedef struct { Vec position; double radiant_flux; Vec color; } PointLight;
 typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // color is treated differently depending on the material type
 // DIFFUSE: perfect lambertian diffuse, color=albedo
@@ -56,14 +59,11 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // luminous flux: (1739 lm/sr) * (4pi sr) = ~21850 lm
 // convert to radiant flux (172 lm/W for a fluorescent tube): ~127 W
 
-// PointLight should be removed once indirect lighting is implemented.
 // Emissive light: visible surface is probably around 1 m^2, so 21.5 W flux correspond to
 // 21.5 W/m^2 radiosity
 
 // room dimensions: (3,2.4,4)
 
-// position, radiant flux (W), color
-PointLight simple_light = {{0, 2.38, 0}, 127, {1, 1, 1}}; // only for render_fast
 // clang-format off
 // KEEP ALIGNED: Tabular data for scene definition
 Sphere scene[] = { // center, radius, color, type
@@ -182,6 +182,9 @@ bool intersect_scene(Ray r, HitInfo* closest_hit, Sphere** hit_sphere) {
 double linear_to_srgb(double v) {
 	return (v <= 0.0031308) ? (12.92 * v) : (1.055 * pow(v, 0.416666667) - 0.055);
 }
+Vec vec_linear_to_srgb(Vec v) {
+	return (Vec){linear_to_srgb(v.x), linear_to_srgb(v.y), linear_to_srgb(v.z)};
+}
 
 // for tone mapping we convert our color values to a single luminance value to combat
 // the problem of washing out our image described in 4.2.5
@@ -298,30 +301,6 @@ Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
 	}
 }
 
-Vec radiance_from_ray_simple(Ray r) {
-	HitInfo hit;
-	Sphere* hit_sphere = NULL;
-	bool did_hit = intersect_scene(r, &hit, &hit_sphere);
-
-	if (!did_hit) { return (Vec){0, 0, 0}; }
-
-	Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
-
-	Vec light_direction = vec_normalize(vec_sub(simple_light.position, hit.p));
-	double cos_theta = vec_dot(normal, light_direction);
-	if (cos_theta < 0.0) { cos_theta = 0.0; } // only upper hemisphere
-
-	double dist_sq = vec_length_squared(vec_sub(simple_light.position, hit.p));
-	double irradiance = (cos_theta * simple_light.radiant_flux) / (dist_sq * 4 * M_PI); // 10.1.5
-	Vec colored_irradiance = vec_scale(simple_light.color, irradiance);
-	// divide by pi for energy conservation 10.3.6
-	// pi is the projected solid angle over hemisphere 3.1.9
-	Vec sphere_color = hit_sphere->type == DIFFUSE ? hit_sphere->color : (Vec){1, 1, 1};
-	Vec lambertian_brdf = vec_scale(sphere_color, 1.0 / M_PI);
-	Vec radiance = vec_hadamard_prod(lambertian_brdf, colored_irradiance);
-	return radiance;
-}
-
 // random double between 0.0 (inclusive) and 1.0 (exclusive)
 double random_double() {
 	return (double)pcg32_random_r(&rng) / 4294967296.0;
@@ -434,7 +413,7 @@ Vec radiance_from_ray(Ray r, int depth) {
 	}
 }
 
-void write_image_tone_mapped() {
+void write_image() {
 	// loop over pixels, do tone mapping and gamma correction
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
@@ -446,29 +425,15 @@ void write_image_tone_mapped() {
 			Vec radiance = vec_scale(summed_weighted_radiance_buffer[radiance_index],
 									 1.0 / summed_weights_buffer[radiance_index]);
 
-			Vec ldr_color = reinhard_luminance(radiance); // tone mapping
+			Vec ldr_color = TONE_MAP ? vec_linear_to_srgb(reinhard_luminance(
+										   radiance)) // Reinhard tone mapping + sRGB conversion
+									 : radiance; // Just the raw values (clamped in the next step)
 
 			int image_index = radiance_index * 4;
-			image_buffer[image_index + 1] = quantize(linear_to_srgb(ldr_color.y));
-			image_buffer[image_index + 2] = quantize(linear_to_srgb(ldr_color.z));
-			image_buffer[image_index + 0] = quantize(linear_to_srgb(ldr_color.x));
+			image_buffer[image_index + 0] = quantize(ldr_color.x);
+			image_buffer[image_index + 1] = quantize(ldr_color.y);
+			image_buffer[image_index + 2] = quantize(ldr_color.z);
 			image_buffer[image_index + 3] = quantize(1.0);
-		}
-	}
-}
-
-void write_image_raw() {
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			int radiance_index = y * width + x;
-			Vec radiance = vec_scale(summed_weighted_radiance_buffer[radiance_index],
-									 1.0 / summed_weights_buffer[radiance_index]);
-
-			int image_index = radiance_index * 4;
-			image_buffer[image_index + 0] = fmin(radiance.x, 1.0) * 255.999;
-			image_buffer[image_index + 1] = fmin(radiance.y, 1.0) * 255.999;
-			image_buffer[image_index + 2] = fmin(radiance.z, 1.0) * 255.999;
-			image_buffer[image_index + 3] = (uint8_t)255.999;
 		}
 	}
 }
@@ -496,36 +461,6 @@ void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angl
 	up = vec_normalize(vec_cross(right, forward));
 
 	sample_count = 0;
-}
-
-EMSCRIPTEN_KEEPALIVE
-uint8_t* render_fast() {
-	double aspect_ratio = (double)width / height;
-	double fov_y = 30 * 3.141 / 180.0;
-	double fov_scale = tan(fov_y / 2.0); // 5.1.4
-
-	// loop over pixels, calculate radiance
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			// 5.2.2
-			// Map pixel coordinates to the view plane (-1;1)
-			double world_x = (2.0 * (x + 2.0) / width - 1.0);
-			double world_y = 1.0 - 2.0 * (y + 2.0) / height;
-
-			// Calculate the direction for the ray for this pixel
-			Vec right_comp = vec_scale(right, world_x * fov_scale * aspect_ratio);
-			Vec up_comp = vec_scale(up, world_y * fov_scale);
-			Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
-
-			Ray r = {camera_origin, dir};
-			Vec radiance = radiance_from_ray_simple(r);
-
-			summed_weighted_radiance_buffer[(y)*width + (x)] = radiance;
-			summed_weights_buffer[(y)*width + (x)] = 1.0;
-		}
-	}
-	write_image_raw();
-	return image_buffer;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -636,6 +571,6 @@ uint8_t* render_refine(unsigned int n_samples) {
 		}
 	}
 
-	write_image_raw();
+	write_image();
 	return image_buffer;
 }
