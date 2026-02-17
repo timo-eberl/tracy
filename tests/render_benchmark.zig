@@ -1,3 +1,24 @@
+// ZIG rendering that computes rmse after each step, saves the images to a folder and prints the aggregate of the step scores to stdout
+const std = @import("std");
+const tracy = @cImport({
+    @cInclude("tracy.h");
+    @cInclude("exr_c.h");
+});
+const rmse = @import("metrics/rmse/compute_rmse.zig");
+
+fn writeScores(scores: [10]f32, filepath: []const u8) !void {
+    const file = try std.fs.cwd().createFile(filepath, .{});
+    defer file.close();
+    // wrap file in buffered writer
+    var bw = std.io.bufferedWriter(file.writer());
+    const writer = bw.writer();
+
+    for (scores) |s| {
+        try writer.print("{d:.4}\n", .{s});
+    }
+    try bw.flush();
+}
+
 pub fn main() !void {
     const width: i32 = 640;
     const height: i32 = 480;
