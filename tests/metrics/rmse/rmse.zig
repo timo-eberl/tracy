@@ -2,7 +2,7 @@ const std = @import("std");
 
 const exr_utils = @import("exr_utils");
 
-pub fn compareAndLog(allocator: std.mem.Allocator, path_a: [:0]const u8, path_b: [:0]const u8) !void {
+pub fn compareAndLog(allocator: std.mem.Allocator, path_a: [:0]const u8, path_b: [:0]const u8) !f32 {
     _ = allocator;
     // Load both images
     var ref_img = try exr_utils.loadExr(path_a);
@@ -30,7 +30,9 @@ pub fn compareAndLog(allocator: std.mem.Allocator, path_a: [:0]const u8, path_b:
     //     std.process.exit(1);
     // }
     std.debug.print("{s: <35} vs  {s: <35} | Convergence Error (RMSE): {d:.6}\n", .{ name_a, name_b, score });
+    return score;
 }
+
 pub fn computeRmse(ref_img: exr_utils.ExrImage, test_img: exr_utils.ExrImage) !f32 {
     const w_check: usize = ref_img.width;
     _ = w_check;
@@ -46,18 +48,18 @@ pub fn computeRmse(ref_img: exr_utils.ExrImage, test_img: exr_utils.ExrImage) !f
     // iterate over pixels [R G B A]
     var i: usize = 0;
     while (i < ref_img.pixels.len) : (i += 4) {
-        const r_ref = ref_img.pixels[i + 0];
+        const b_ref = ref_img.pixels[i + 0];
         const g_ref = ref_img.pixels[i + 1];
-        const b_ref = ref_img.pixels[i + 2];
+        const r_ref = ref_img.pixels[i + 2];
         // skip alpha channel
 
-        const r_test = test_img.pixels[i + 0];
+        const b_test = test_img.pixels[i + 0];
         const g_test = test_img.pixels[i + 1];
-        const b_test = test_img.pixels[i + 2];
+        const r_test = test_img.pixels[i + 2];
 
-        const r_diff = r_ref - r_test;
+        const b_diff = r_ref - r_test;
         const g_diff = g_ref - g_test;
-        const b_diff = b_ref - b_test;
+        const r_diff = b_ref - b_test;
 
         sum_sq_diff += (r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff);
     }
