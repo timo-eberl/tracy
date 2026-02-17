@@ -95,6 +95,7 @@ pub fn build(b: *std.Build) void {
     zig_exe.root_module.addIncludePath(pcg_include);
     for (pcg_sources) |src| zig_exe.root_module.addCSourceFile(.{ .file = b.path(src) });
     zig_exe.linkSystemLibrary("m");
+
     // Add TinyEXR dependencies
     zig_exe.linkLibCpp(); // Required for tinyexr implementation
     zig_exe.root_module.addIncludePath(b.path("dependencies/tinyexr"));
@@ -224,8 +225,8 @@ pub fn build(b: *std.Build) void {
 
     // RMSE Test
     const rmse_exe = b.addExecutable(.{
-        .name = "rmse_tool",
-        .root_source_file = b.path("tests/metrics/rmse/compute_rmse.zig"),
+        .name = "render_benchmark",
+        .root_source_file = b.path("tests/render_benchmark.zig"),
         .target = native_target,
         .optimize = optimize,
     });
@@ -236,8 +237,34 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(rmse_exe);
 
     const run_cmd = b.addRunArtifact(rmse_exe);
-    const run_step = b.step("rmse_run", "Generate RMSE score");
+    const run_step = b.step("rmse_run", "Generate RMSE scores");
     run_step.dependOn(&run_cmd.step);
+
+    // BENCHMARKING
+    const render_bench_exe = b.addExecutable(.{
+        .name = "render-bench-zig",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/render_benchmark.zig"),
+            .target = native_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    render_bench_exe.want_lto = use_lto;
+    render_bench_exe.root_module.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = &.{"-std=c11"} });
+    render_bench_exe.root_module.addIncludePath(b.path("include"));
+    render_bench_exe.root_module.addIncludePath(pcg_include);
+    for (pcg_sources) |src| render_bench_exe.root_module.addCSourceFile(.{ .file = b.path(src) });
+    render_bench_exe.linkSystemLibrary("m");
+
+    render_bench_exe.addIncludePath(b.path("dependencies/tinyexr"));
+
+    render_bench_exe.root_module.addImport("exr_utils", exr_module);
+    render_bench_exe.linkLibrary(tinyexr_lib);
+    b.installArtifact(render_bench_exe);
+
+    const run_render_bench = b.addRunArtifact(render_bench_exe);
+    b.step("run-render-bench", "Run the Zig example").dependOn(&run_render_bench.step);
 
     // --- UNIT TESTS ---
     const test_mod = b.createModule(.{
