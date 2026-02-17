@@ -20,14 +20,6 @@ zig build run-c -Doptimize=ReleaseFast -Dtarget=native
 
 # Build and run the Zig CLI example
 zig build run-zig -Doptimize=ReleaseFast -Dtarget=native
-```
-
-### Building with Make (Unix/Linux)
-
-```bash
-# Compile and run the C CLI example
-make run
-```
 
 ## Testing
 
