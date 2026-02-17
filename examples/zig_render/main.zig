@@ -1,38 +1,8 @@
 const std = @import("std");
 const tracy = @cImport({
     @cInclude("tracy.h");
+    @cInclude("exr_c.h");
 });
-
-fn saveImageAsTga(file_path: []const u8, image_buffer: []u8, width: i32, height: i32) !void {
-    const file = try std.fs.cwd().createFile(file_path, .{});
-    defer file.close();
-
-    var bw = std.io.bufferedWriter(file.writer());
-    const writer = bw.writer();
-
-    // 18-byte TGA Header for 32-bit uncompressed RGBA
-    var header = [_]u8{0} ** 18;
-    header[2] = 2; // True-color
-    header[12] = @intCast(width & 0xFF);
-    header[13] = @intCast((width >> 8) & 0xFF);
-    header[14] = @intCast(height & 0xFF);
-    header[15] = @intCast((height >> 8) & 0xFF);
-    header[16] = 32; // Bits per pixel
-    header[17] = 0x20; // Top-to-bottom flag
-
-    try writer.writeAll(&header);
-
-    const num_pixels: usize = @intCast(width * height);
-    for (0..num_pixels) |i| {
-        // TGA expects BGRA, buffer is RGBA
-        try writer.writeByte(image_buffer[i * 4 + 2]); // B
-        try writer.writeByte(image_buffer[i * 4 + 1]); // G
-        try writer.writeByte(image_buffer[i * 4 + 0]); // R
-        try writer.writeByte(image_buffer[i * 4 + 3]); // A
-    }
-
-    try bw.flush();
-}
 
 pub fn main() !void {
     const width: i32 = 640;
@@ -56,13 +26,22 @@ pub fn main() !void {
     var i: usize = 0;
     while (i < 10) : (i += 1) {
         tracy.render_refine(5);
-        const buffer_ptr = tracy.update_image_ldr();
-        const buffer_len: usize = @intCast(width * height * 4);
-        const buffer = buffer_ptr[0..buffer_len];
 
-        try stdout.print("Step {d}/10: Saving to 'render_zig.tga'...\n", .{i + 1});
+        // Get the Linear Float HDR buffer (RGB)
+        const buffer_ptr = tracy.update_image_hdr();
 
-        try saveImageAsTga("render_zig.tga", buffer, width, height);
+        try stdout.print("Step {d}/10: Saving to 'render_zig.exr'...\n", .{i + 1});
+
+        // Save as FP16 EXR
+        var err_msg: [*c]const u8 = null;
+        const ret = tracy.save_exr_rgb_fp16("render_zig.exr", buffer_ptr, width, height, &err_msg);
+
+        if (ret != 0) {
+            if (err_msg != null) {
+                try stdout.print("EXR Error: {s}\n", .{err_msg});
+            }
+            return error.ExrSaveFailed;
+        }
     }
 
     try stdout.print("Done.\n", .{});

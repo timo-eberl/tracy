@@ -95,6 +95,17 @@ pub fn build(b: *std.Build) void {
     zig_exe.root_module.addIncludePath(pcg_include);
     for (pcg_sources) |src| zig_exe.root_module.addCSourceFile(.{ .file = b.path(src) });
     zig_exe.linkSystemLibrary("m");
+    // Add TinyEXR dependencies
+    zig_exe.linkLibCpp(); // Required for tinyexr implementation
+    zig_exe.root_module.addIncludePath(b.path("dependencies/tinyexr"));
+    zig_exe.root_module.addCSourceFile(.{
+        .file = b.path("dependencies/tinyexr/exr_impl.cpp"),
+        .flags = &.{"-std=c++11"},
+    });
+    zig_exe.root_module.addCSourceFile(.{
+        .file = b.path("dependencies/tinyexr/miniz.c"),
+        .flags = &.{"-O3"},
+    });
     b.installArtifact(zig_exe);
     const run_zig = b.addRunArtifact(zig_exe);
     b.step("run-zig", "Run the Zig example").dependOn(&run_zig.step);

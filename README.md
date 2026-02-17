@@ -8,7 +8,7 @@ It is actively being developed with a focus on automated testing and profiling i
 
 ## Native Development
 
-The project includes examples in both C and Zig. Both render the scene to an uncompressed `.tga` image file.
+The project includes usage examples in both C and Zig.
 
 ### Building with Zig (Cross-Platform)
 
