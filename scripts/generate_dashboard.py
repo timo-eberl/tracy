@@ -63,7 +63,7 @@ else:
     y_max_trend = max(rmse_values) * 1.2
     trend_graph = f"""{fence}mermaid
 xychart-beta
-    title "Historical RMSE Trend (Last 20 Builds)"
+    title "RMSE Trend"
     x-axis {json.dumps(versions)}
     y-axis "RMSE" 0 --> {y_max_trend:.4f}
     line {rmse_values}
@@ -89,7 +89,7 @@ config:
             plotColorPalette: "#e67e22"
 ---
 xychart-beta
-    title "Convergence Rate ({num_steps} Total Steps)"
+    title "Convergence Rate"
     x-axis {steps_x_labels}
     y-axis "RMSE" 0 --> {y_max_conv:.4f}
     line {convergence_rmse}
