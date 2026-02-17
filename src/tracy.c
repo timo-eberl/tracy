@@ -431,15 +431,17 @@ void write_image(bool update_ldr, bool update_hdr) {
 			Vec radiance = (weight > 0) ? vec_scale(summed_weighted_radiance_buffer[radiance_index],
 													1.0 / weight)
 										: (Vec){0, 0, 0};
-			int image_index = radiance_index * 4;
 
 			if (update_hdr) {
+				int image_index = radiance_index * 3; // HDR has 3 components (RGB)
 				image_buffer_hdr[image_index + 0] = (float)radiance.x;
 				image_buffer_hdr[image_index + 1] = (float)radiance.y;
 				image_buffer_hdr[image_index + 2] = (float)radiance.z;
 			}
 
 			if (update_ldr) {
+				int image_index = radiance_index * 4; // LDR has 4 components (RGBA)
+
 				Vec ldr_color =
 					TONE_MAP ? vec_linear_to_srgb(reinhard_luminance(radiance)) : radiance;
 
