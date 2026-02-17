@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 // Conditionally include emscripten.h and define EMSCRIPTEN_KEEPALIVE
 #ifdef __EMSCRIPTEN__
 // if VS Code says it can't find emscripten, you need to add its path to includePath
@@ -118,11 +122,8 @@ int buffer_height = 0;
 int width, height;
 Vec camera_origin;
 Vec forward, right, up;
-int sample_count;
+int sample_count;		// Global counter of total samples processed (used for seeding)
 FilterType filter_type; // Current selected filter
-
-// Global RNG state for PCG32
-pcg32_random_t rng;
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
@@ -306,8 +307,8 @@ Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
 }
 
 // random double between 0.0 (inclusive) and 1.0 (exclusive)
-double random_double() {
-	return (double)pcg32_random_r(&rng) / 4294967296.0;
+double random_double(pcg32_random_t* rng) {
+	return (double)pcg32_random_r(rng) / 4294967296.0;
 }
 
 // create orthonormal basis (local coordinate system) from a vector
@@ -320,10 +321,10 @@ void create_orthonormal_basis(Vec n, Vec* u, Vec* v, Vec* w) {
 }
 
 // random direction on hemisphere with uniform distribution
-Vec sample_uniform_hemisphere(Vec normal) {
+Vec sample_uniform_hemisphere(Vec normal, pcg32_random_t* rng) {
 	// Generate a random point on a unit sphere
-	double r1 = random_double(); // for z
-	double r2 = random_double(); // for phi
+	double r1 = random_double(rng); // for z
+	double r2 = random_double(rng); // for phi
 
 	double z = 1.0 - 2.0 * r1;
 	double r = sqrt(fmax(0.0, 1.0 - z * z));
@@ -341,8 +342,8 @@ Vec sample_uniform_hemisphere(Vec normal) {
 	return sample_world;
 }
 
-Vec radiance_from_ray(Ray r, int depth); // forward declaration for recursion
-Vec radiance_from_ray(Ray r, int depth) {
+Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng); // forward declaration for recursion
+Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 	if (depth > MAX_DEPTH) { return (Vec){0, 0, 0}; }
 
 	HitInfo hit;
@@ -360,13 +361,13 @@ Vec radiance_from_ray(Ray r, int depth) {
 	case DIFFUSE: {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
 
-		Vec next_direction = sample_uniform_hemisphere(normal);
+		Vec next_direction = sample_uniform_hemisphere(normal, rng);
 		double cos_theta = vec_dot(normal, next_direction);
 		assert(cos_theta >= 0.0); // only upper hemisphere
 
 		Ray refl_ray = {hit.p, next_direction};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1);
+		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
 
 		// divide by pi for energy conservation 10.3.6
 		// pi is the projected solid angle over hemisphere 3.1.9
@@ -384,7 +385,8 @@ Vec radiance_from_ray(Ray r, int depth) {
 		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
 		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec radiance = vec_hadamard_prod(radiance_from_ray(refl_ray, depth + 1), hit_sphere->color);
+		Vec radiance =
+			vec_hadamard_prod(radiance_from_ray(refl_ray, depth + 1, rng), hit_sphere->color);
 		return radiance;
 	}
 	case REFRACTIVE: {
@@ -394,11 +396,11 @@ Vec radiance_from_ray(Ray r, int depth) {
 		double reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
 
-		if (reflectance > random_double()) { // do either reflection or refraction
+		if (reflectance > random_double(rng)) { // do either reflection or refraction
 			// reflection
 			Ray refl_ray = {hit.p, reflect(r.dir, normal)};
 			refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-			Vec reflection_radiance = radiance_from_ray(refl_ray, depth + 1);
+			Vec reflection_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
 			return reflection_radiance;
 		} else {
 			// refraction
@@ -409,7 +411,7 @@ Vec radiance_from_ray(Ray r, int depth) {
 			}
 			Ray refr_ray = {hit.p, refr_dir};
 			refr_ray.origin = vec_add(refr_ray.origin, vec_scale(normal, -SELF_OCCLUSION_DELTA));
-			Vec refraction_radiance = radiance_from_ray(refr_ray, depth + 1);
+			Vec refraction_radiance = radiance_from_ray(refr_ray, depth + 1, rng);
 			return refraction_radiance;
 		}
 	}
@@ -493,6 +495,7 @@ void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angl
 
 EMSCRIPTEN_KEEPALIVE
 void render_refine(unsigned int n_samples) {
+
 	const double aspect_ratio = (double)width / height;
 	const double fov_y = 30 * 3.141 / 180.0;
 	const double fov_scale = tan(fov_y / 2.0); // 5.1.4
@@ -516,9 +519,14 @@ void render_refine(unsigned int n_samples) {
 		// into thread-local tile buffers (with padding/ghost zones) and merge them once the tile is
 		// done.
 
-		// Seed with current sample count as state, fixed sequence
-		pcg32_srandom_r(&rng, sample_count, 54u);
+		// For multi-threading, we need a stable base sample count for this pass to ensure
+		// deterministic seeding independent of execution order.
+		// Note: We use sample_count as "total pixels rendered" to seed.
+		uint64_t base_seed = (uint64_t)sample_count;
 
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
 		// loop over pixels, calculate radiance
 		for (int y = 0; y < height; ++y) {
 			for (int x = 0; x < width; ++x) {
@@ -528,12 +536,18 @@ void render_refine(unsigned int n_samples) {
 					__asm__ __volatile__("nop");
 				}
 
+				// Thread-local RNG state
+				pcg32_random_t rng_state;
+				// Seed uniquely per pixel and per sample pass
+				uint64_t seed = base_seed + (uint64_t)y * width + x;
+				pcg32_srandom_r(&rng_state, seed, 54u);
+
 				// Sample splatting strategy:
 				// Pick a specific point on the continuous film plane within this pixel.
 				// We jitter by [-0.5, 0.5] to cover the pixel area evenly.
 				// TODO: Use a better more uniform distribution
-				double jitter_x = random_double() - 0.5;
-				double jitter_y = random_double() - 0.5;
+				double jitter_x = random_double(&rng_state) - 0.5;
+				double jitter_y = random_double(&rng_state) - 0.5;
 
 				double film_x = x + 0.5 + jitter_x;
 				double film_y = y + 0.5 + jitter_y;
@@ -549,7 +563,7 @@ void render_refine(unsigned int n_samples) {
 				Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 				Ray r = {camera_origin, dir};
-				Vec radiance = radiance_from_ray(r, 0);
+				Vec radiance = radiance_from_ray(r, 0, &rng_state);
 
 				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
 				// Determine the integer range of pixels where the pixel center (x + 0.5) falls
@@ -587,15 +601,34 @@ void render_refine(unsigned int n_samples) {
 							}
 
 							int index = ny * width + nx;
-							summed_weighted_radiance_buffer[index] =
-								vec_add(summed_weighted_radiance_buffer[index],
-										vec_scale(radiance, weight));
+							Vec weighted_rad = vec_scale(radiance, weight);
+
+							// clang-format off
+							#ifdef _OPENMP
+							// Atomics are required here because multiple threads may splat
+							// to the same neighbor pixel simultaneously.
+							#pragma omp atomic
+							summed_weighted_radiance_buffer[index].x += weighted_rad.x;
+							#pragma omp atomic
+							summed_weighted_radiance_buffer[index].y += weighted_rad.y;
+							#pragma omp atomic
+							summed_weighted_radiance_buffer[index].z += weighted_rad.z;
+
+							#pragma omp atomic
 							summed_weights_buffer[index] += weight;
+							#else
+							summed_weighted_radiance_buffer[index] =
+								vec_add(summed_weighted_radiance_buffer[index], weighted_rad);
+							summed_weights_buffer[index] += weight;
+							#endif
+							// clang-format on
 						}
 					}
 				}
-				sample_count += 1;
+				// We can't safely increment the global sample_count here in parallel
 			}
 		}
+		// Increment sample count by the number of pixels processed in this pass
+		sample_count += width * height;
 	}
 }

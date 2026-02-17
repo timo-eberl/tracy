@@ -20,6 +20,13 @@ zig build run-c -Doptimize=ReleaseFast -Dtarget=native
 
 # Build and run the Zig CLI example
 zig build run-zig -Doptimize=ReleaseFast -Dtarget=native
+```
+
+You can optionally specify those parameters:
+
+| Option                 | Functionality                        |
+| :--------------------- | :----------------------------------- |
+| `-Dmultithreaded=true` | Enables Multi-Threading using OpenMP |
 
 ## Testing
 
