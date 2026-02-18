@@ -4,20 +4,12 @@
 | Mode | Final RMSE | Total Time | Steps |
 |---|---|---|---|
 | **MT** | 1.5629 | 1.00s | 2 |
-| **ST** | 1.5629 | 3.10s | 2 |
+| **ST** | 1.5629 | 3.11s | 2 |
 
 
 ## Historical Trend
-```mermaid
-xychart-beta
-    title "Historical Performance (RMSE)"
-    x-axis ["b.89", "b.90", "b.92", "b.93"]
-    y-axis "RMSE" 0 --> 1.8755
-    line [1.5629, 1.5629, 1.5629, 1.5629]
-    line [1.5629, 1.5629, 1.5629, 1.5629]
-```
-
-> **Legend:** Line 1: **MT** | Line 2: **ST**
+## Historical Trend
+![Historical Trend](renderings/history_trend.png)
 
 ## Latest Render Gallery
 | MT | ST |
@@ -28,4 +20,4 @@ xychart-beta
 ![Convergence Plot](renderings/convergence.png)
 
 ---
-*Last updated: 2026-02-18T17:00:38.147188 (Commit: bde8508e)*
+*Last updated: 2026-02-18T17:16:25.360330 (Commit: 09caaa08)*
