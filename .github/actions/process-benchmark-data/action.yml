@@ -42,6 +42,11 @@ runs:
     - name: Update CSV and Dashboard
       shell: bash
       run: |
+        run: |
+          if [ ! -f "data-branch/latest_raw_log.txt" ]; then
+          echo "ERROR: Log file missing!"
+          exit 1
+          fi
         # Use the JSON we created in the main workflow
         python3 scripts/update_benchmark.py rmse_results.json data-branch/history.csv
         

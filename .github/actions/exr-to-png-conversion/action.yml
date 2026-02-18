@@ -5,11 +5,11 @@ inputs:
   input_path:
     description: 'Path to the source .exr file'
     required: true
-    default: 'tests/img/exr/zig_render/render_zig.exr'
+    default: 'tests/img/exr/zig_render/render_st.exr'
   output_path:
     description: 'Path where the .png should be saved'
     required: true
-    default: 'preview.png'
+    default: 'preview-st.png'
 
 runs:
   using: "composite"
