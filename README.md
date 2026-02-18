@@ -30,7 +30,7 @@ You can optionally specify those parameters:
 
 ## Testing
 
-This project uses Zig as a test runner to perform white-box testing on the C implementation. The tests are located in `tests/`.
+This project uses Zig as a test runner to perform white-box unit testing on the C implementation. The tests are located in `tests/`.
 
 ```bash
 # Run all unit tests
@@ -38,6 +38,14 @@ zig build test
 
 # Run tests and print a summary of passed/failed tests
 zig build test --summary all
+```
+
+## Mitsuba Reference
+
+`scene.xml` is a scene description for the Mitsuba 3 renderer that matches the scene in our renderer exactly. To render it install Mitsuba 3 and run:
+
+```bash
+mitsuba scene.xml
 ```
 
 ## Web Application
