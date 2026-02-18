@@ -10,7 +10,7 @@ const rmse = @import("metrics/rmse/compute_rmse.zig");
 const NUM_ITERATIONS = 10;
 
 // Updated writeScores signature
-fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, version: []const u8) !void {
+fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, variant: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = false });
     try file.seekFromEnd(0);
     defer file.close();
@@ -18,7 +18,7 @@ fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepa
     var bw = std.io.bufferedWriter(file.writer());
     const writer = bw.writer();
 
-    try writer.print("VERSION:{s}\n", .{version});
+    try writer.print("VARIANT:{s}\n", .{variant});
     for (scores, 0..) |s, i| {
         // Format: score,time_seconds
         try writer.print("{d:.4},{d:.6}\n", .{ s, timings[i] });
@@ -33,12 +33,12 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    const version_label = if (config.multithreaded) "mt" else "st";
+    const variant_label = if (config.multithreaded) "mt" else "st";
 
     // Dynamic output path based on mode
     const out_dir = "tests/img/exr/zig_render/";
     // We use std.fmt.allocPrint to create the filename dynamically
-    const out_filename = try std.fmt.allocPrint(allocator, "render_{s}.exr", .{version_label});
+    const out_filename = try std.fmt.allocPrint(allocator, "render_{s}.exr", .{variant_label});
     defer allocator.free(out_filename);
 
     const out_fp_slice = try std.fs.path.join(allocator, &.{ out_dir, out_filename });
@@ -59,7 +59,7 @@ pub fn main() !void {
     const focus_z = 0.0;
 
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("Rendering scene ({s}) at {d}x{d}...\n", .{ version_label, width, height });
+    try stdout.print("Rendering scene ({s}) at {d}x{d}...\n", .{ variant_label, width, height });
 
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
@@ -90,6 +90,6 @@ pub fn main() !void {
     }
 
     const log_fp = out_dir ++ "zig_render_log.txt";
-    try writeScores(scores, timings, log_fp, version_label);
+    try writeScores(scores, timings, log_fp, variant_label);
     try stdout.print("Done. Results appended to {s}\n", .{log_fp});
 }

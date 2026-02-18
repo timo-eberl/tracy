@@ -53,6 +53,8 @@ if os.path.exists(LOG_FILE_PATH):
         curr = None
         for line in f:
             line = line.strip()
+            if not line:
+                continue
             if line.startswith("VERSION:"):
                 curr, cumulative = line.split(":")[1].strip(), 0.0
             elif curr:
@@ -67,30 +69,58 @@ if os.path.exists(LOG_FILE_PATH):
 summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n"
 gallery_header, gallery_sep, gallery_imgs = "|", "|", "|"
 conv_lines, resampled = "", defaultdict(list)
-num_buckets = 10
+num_buckets = 12  # Increased buckets slightly for better resolution
 t_steps = [(total_max_time / (num_buckets - 1)) * i for i in range(num_buckets)]
 
 if convergence_raw:
     for mode in sorted(convergence_raw.keys()):
         pts = convergence_raw[mode]
-        for ts in t_steps:
-            last_r = pts[0][0]
-            for r, t in pts:
-                if t <= ts:
-                    last_r = r
-                else:
-                    break
-            resampled[mode].append(round(last_r, 4))
+        final_time = pts[-1][1]
 
-        summary_table += f"| **{mode.upper()}** | {pts[-1][0]:.4f} | {pts[-1][1]:.2f}s | {len(pts)} |\n"
+        for ts in t_steps:
+            # If the current bucket time is past the mode's final render time,
+            # we use None (which becomes null in JSON) to "stop" the line.
+            if ts > final_time + (total_max_time * 0.05):  # 5% grace margin
+                resampled[mode].append(None)
+            else:
+                current_best_r = pts[0][0]
+                for r, t in pts:
+                    if t <= ts:
+                        current_best_r = r
+                    else:
+                        break
+                resampled[mode].append(round(current_best_r, 4))
+
+        # Build Summary Table
+        final_p = pts[-1]
+        summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} |\n"
+
+        # Build Gallery/Mermaid lines
         gallery_header += f" {mode.upper()} |"
         gallery_sep += " :---: |"
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
+
+        # json.dumps converts None to null, which Mermaid understands
         conv_lines += f"    line {json.dumps(resampled[mode])}\n"
 
-x_axis_conv = "[" + ", ".join([f'"{round(t, 2)}s"' for t in t_steps]) + "]"
-conv_chart = f'```mermaid\nxychart-beta\n    title "Convergence"\n    x-axis {x_axis_conv}\n    y-axis "RMSE" 0 --> {max([max(v) for v in resampled.values()] or [1.0]) * 1.1:.4f}\n{conv_lines}```'
+x_axis_conv = "[" + ", ".join([f'"{round(t, 1)}s"' for t in t_steps]) + "]"
 
+# We use a max function that ignores the None values for the Y-axis calculation
+y_limit = (
+    max(
+        [max([v for v in series if v is not None]) for series in resampled.values()]
+        or [1.0]
+    )
+    * 1.1
+)
+
+conv_chart = f"""```mermaid
+xychart-beta
+    title "RMSE Convergence Over Time"
+    x-axis {x_axis_conv}
+    y-axis "RMSE" 0 --> {y_limit:.4f}
+{conv_lines}
+```"""
 # --- 4. Assemble ---
 with open(readme_path, "w") as f:
     f.write(
