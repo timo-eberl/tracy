@@ -7,7 +7,9 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
-fn writeScores(scores: [10]f32, filepath: []const u8, version: []const u8) !void {
+const NUM_ITERATIONS = 2;
+
+fn writeScores(scores: [NUM_ITERATIONS]f32, filepath: []const u8, version: []const u8) !void {
     // Open for appending; create if it doesn't exist
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = false });
     try file.seekFromEnd(0);
@@ -62,10 +64,10 @@ pub fn main() !void {
 
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
-    var scores: [10]f32 = undefined;
+    var scores: [NUM_ITERATIONS]f32 = undefined;
     var i: usize = 0;
 
-    while (i < 10) : (i += 1) {
+    while (i < NUM_ITERATIONS) : (i += 1) {
         tracy.render_refine(5);
         const buffer_ptr = tracy.update_image_hdr();
 

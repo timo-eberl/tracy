@@ -4,51 +4,54 @@ import os
 import json
 from collections import defaultdict
 
-# Paths
 LOG_FILE_PATH = "tests/img/exr/zig_render/zig_render_log.txt"
+csv_path, readme_path = sys.argv[1], sys.argv[2]
 
-# Usage: python generate_dashboard.py <csv_path> <readme_path>
-if len(sys.argv) < 3:
-    print("Usage: python generate_dashboard.py <csv_path> <readme_path>")
-    sys.exit(1)
-
-csv_path = sys.argv[1]
-readme_path = sys.argv[2]
-
-# --- 1. Read Historical CSV Data ---
-# We use a dictionary to group scores by their mode (suffix after the last dash)
-history_by_mode = defaultdict(list)
-all_versions = []  # To keep track of the X-axis (unique build versions)
-latest_date = "N/A"
+# --- 1. Read Historical CSV Data with Forward Fill ---
+history_map = defaultdict(lambda: defaultdict(lambda: None))
+unique_versions = []
+all_modes = set()
 
 if os.path.exists(csv_path):
-    try:
-        with open(csv_path, "r") as f:
-            rows = list(csv.DictReader(f))
-            if rows:
-                latest_date = rows[-1]["date"]
-                for row in rows:
-                    v_full = row["version"]
-                    # Extract mode (e.g., "0.1.0-mt" -> mode is "mt", base is "0.1.0")
-                    parts = v_full.rsplit("-", 1)
-                    base_v = parts[0]
-                    mode = parts[1] if len(parts) > 1 else "default"
+    with open(csv_path, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            ver = row["version"]
+            # Formatting build number for chart legibility
+            short_v = f"b.{ver.split('.')[-1]}" if "build" in ver else ver[-6:]
+            mode = row["mode"]
+            rmse = float(row["rmse"])
 
-                    # Clean up base version for X-axis labels
-                    short_v = (
-                        f"b.{base_v.split('.')[-1]}"
-                        if "build" in base_v
-                        else base_v[-6:]
-                    )
-                    if short_v not in all_versions:
-                        all_versions.append(short_v)
+            if short_v not in unique_versions:
+                unique_versions.append(short_v)
 
-                    history_by_mode[mode].append(float(row["rmse"]))
+            all_modes.add(mode)
+            history_map[short_v][mode] = rmse
 
-    except Exception as e:
-        print(f"Error reading CSV: {e}")
+# 2. Build aligned lists with Forward Fill
+window_versions = unique_versions[-20:]
+trend_lines_md = ""
+all_vals = []
 
-# --- 2. Read Current Render Convergence Log (Multi-Mode) ---
+last_known_rmse = {mode: 0.0 for mode in all_modes}
+
+for mode in sorted(all_modes):
+    mode_series = []
+    for v in window_versions:
+        current_val = history_map[v][mode]
+
+        if current_val is not None:
+            last_known_rmse[mode] = current_val
+            mode_series.append(current_val)
+            all_vals.append(current_val)
+        else:
+            # Use the last known value for this mode
+            mode_series.append(last_known_rmse[mode])
+            if last_known_rmse[mode] > 0:
+                all_vals.append(last_known_rmse[mode])
+
+    if any(val > 0 for val in mode_series):
+        trend_lines_md += f"    line {json.dumps(mode_series)}\n"  # --- 2. Read Current Render Convergence Log (Multi-Mode) ---
 convergence_data = {}
 if os.path.exists(LOG_FILE_PATH):
     try:
