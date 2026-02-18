@@ -27,7 +27,7 @@ try:
             if not line:
                 continue
 
-            if line.startswith("VERSION:"):
+            if line.startswith("VARIANT:"):
                 # Save previous run before switching
                 if current_mode and current_scores:
                     runs_data.append(
@@ -62,6 +62,7 @@ try:
             )
 
     with open(output_path, "w") as f:
+        print(f"CREATED LOG: {runs_data}")
         json.dump(runs_data, f, indent=2)
 except Exception as e:
     print(f"Error: {e}")
