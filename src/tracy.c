@@ -310,7 +310,8 @@ void initialize_buffers() {
 
 // 1D Box Filter
 double box_1d(double x) {
-	return (fabs(x) < 0.5) ? 1.0 : 0.0;
+	// using <= instead of < ensures that pixels exactly on pixel boudary are not discarded
+	return (fabs(x) <= 0.5) ? 1.0 : 0.0;
 }
 
 // 1D Mitchell-Netravali filter function with B=1/3, C=1/3.
