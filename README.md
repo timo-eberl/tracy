@@ -1,0 +1,24 @@
+# Benchmark
+## Summary
+| Mode | Final RMSE | Total Time | Steps |
+|---|---|---|---|
+
+## Trend
+```mermaid
+xychart-beta
+    title "Trend"
+    x-axis []
+    y-axis "RMSE" 0 --> 1.2000
+```
+## Gallery
+|
+|
+|
+## Convergence
+```mermaid
+xychart-beta
+    title "RMSE Convergence Over Time"
+    x-axis ["0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s", "0.0s"]
+    y-axis "RMSE" 0 --> 1.1000
+
+```
