@@ -73,57 +73,38 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // luminous flux: (1739 lm/sr) * (4pi sr) = ~21850 lm
 // convert to radiant flux (172 lm/W for a fluorescent tube): ~127 W
 
-// Emissive light: visible surface is probably around 1 m^2, so 21.5 W flux correspond to
+// Emissive light: visible surface is 1 m^2, so 21.5 W flux correspond to
 // 21.5 W/m^2 radiosity
 
 // room dimensions: (3,2.4,4)
 
-// Keep aligned: Tabular data for scene definition
+// clang-format off
 Primitive scene[] = {
-	// Left
-	{.type = SHAPE_SPHERE,
-	 .color = {0.75, 0.25, 0.25},
-	 .material = DIFFUSE,
-	 .geo.sphere = {.center = {-1e4 - 1.5, 1.2, 0}, .radius = 1.0e4}},
-	// Right
-	{.type = SHAPE_SPHERE,
-	 .color = {0.25, 0.25, 0.75},
-	 .material = DIFFUSE,
-	 .geo.sphere = {.center = {+1e4 + 1.5, 1.2, 0}, .radius = 1.0e4}},
-	// Back
-	{.type = SHAPE_SPHERE,
-	 .color = {0.75, 0.75, 0.75},
-	 .material = DIFFUSE,
-	 .geo.sphere = {.center = {0, 1.2, -1e4 - 2}, .radius = 1.0e4}},
-	// Bottom
-	{.type = SHAPE_SPHERE,
-	 .color = {0.75, 0.75, 0.75},
-	 .material = DIFFUSE,
-	 .geo.sphere = {.center = {0, -1e4, 0}, .radius = 1.0e4}},
-	// Top
-	{.type = SHAPE_SPHERE,
-	 .color = {0.75, 0.75, 0.75},
-	 .material = DIFFUSE,
-	 .geo.sphere = {.center = {0, 1e4 + 2.4, 0}, .radius = 1.0e4}},
+	// Left Wall (x = -1.5)
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}}},
+	// Right Wall (x = 1.5)
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}}},
+	// Back Wall (z = -2.0)
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}}},
+	// Bottom (y = 0.0)
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {1.5, 0, 2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {1.5, 0, -2.0}}},
+	// Top (y = 2.4)
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}}},
 	// Mirror Sphere
-	{.type = SHAPE_SPHERE,
-	 .color = {1.00, 1.00, 1.00},
-	 .material = MIRROR,
-	 .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
+	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
 	// Glass Sphere
-	{.type = SHAPE_SPHERE,
-	 .color = {1.50, 0.00, 0.00},
-	 .material = REFRACTIVE,
-	 .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
-	// Area Light
-	{.type = SHAPE_SPHERE,
-	 .color = {5 * 21.5, 5 * 21.5, 5 * 21.5},
-	 .material = EMISSIVE,
-	 .geo.sphere = {.center = {0, 62.3979, 0}, .radius = 60.0}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
+	// Area Light (1x1m Rect)
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {-0.5, 2.399, -0.5}}},
 };
 int num_primitives = sizeof(scene) / sizeof(Primitive);
 // clang-format on
-int num_spheres = sizeof(scene) / sizeof(Sphere);
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

@@ -23,7 +23,7 @@
         </film>
 
         <sampler type="independent">
-            <integer name="sample_count" value="8192"/>
+            <integer name="sample_count" value="64"/>
         </sampler>
     </sensor>
     
@@ -49,47 +49,59 @@
         <rgb name="specular_transmittance" value="1.0, 1.0, 1.0"/>
     </bsdf>
 
-    <!-- Left Wall: Center (-10001.5, 1.2, 0) -->
-    <shape type="sphere">
+    <!-- 
+      STANDARD CORNELL BOX WALLS 
+      Room Size: 3m Wide (x), 2.4m High (y), 4m Deep (z)
+    -->
+
+    <!-- Left Wall (Red): x = -1.5 -->
+    <shape type="rectangle">
         <transform name="to_world">
-            <scale value="10000"/>
-            <translate x="-10001.5" y="1.2" z="0"/>
+            <!-- Scale X=Depth(2.0->4m), Scale Y=Height(1.2->2.4m) -->
+            <scale value="2.0, 1.2, 1.0"/>
+            <rotate y="1" angle="90"/>
+            <translate x="-1.5" y="1.2" z="0.0"/>
         </transform>
         <ref id="mat_red"/>
     </shape>
 
-    <!-- Right Wall: Center (10001.5, 1.2, 0) -->
-    <shape type="sphere">
+    <!-- Right Wall (Blue): x = 1.5 -->
+    <shape type="rectangle">
         <transform name="to_world">
-            <scale value="10000"/>
-            <translate x="10001.5" y="1.2" z="0"/>
+            <scale value="2.0, 1.2, 1.0"/>
+            <rotate y="1" angle="-90"/>
+            <translate x="1.5" y="1.2" z="0.0"/>
         </transform>
         <ref id="mat_blue"/>
     </shape>
 
-    <!-- Back Wall: Center (0, 1.2, -10002) -->
-    <shape type="sphere">
+    <!-- Back Wall (Gray): z = -2.0 -->
+    <shape type="rectangle">
         <transform name="to_world">
-            <scale value="10000"/>
-            <translate x="0" y="1.2" z="-10002.0"/>
+            <!-- Scale X=Width(1.5->3m), Scale Y=Height(1.2->2.4m) -->
+            <scale value="1.5, 1.2, 1.0"/>
+            <translate x="0" y="1.2" z="-2.0"/>
         </transform>
         <ref id="mat_gray"/>
     </shape>
 
-    <!-- Floor: Center (0, -10000, 0) -->
-    <shape type="sphere">
+    <!-- Floor (Gray): y = 0.0 -->
+    <shape type="rectangle">
         <transform name="to_world">
-            <scale value="10000"/>
-            <translate x="0" y="-10000.0" z="0"/>
+            <!-- Scale X=Width(1.5->3m), Scale Y=Depth(2.0->4m) -->
+            <scale value="1.5, 2.0, 1.0"/>
+            <rotate x="1" angle="-90"/>
+            <translate x="0" y="0.0" z="0.0"/>
         </transform>
         <ref id="mat_gray"/>
     </shape>
 
-    <!-- Ceiling: Center (0, 10002.4, 0) -->
-    <shape type="sphere">
+    <!-- Ceiling (Gray): y = 2.4 -->
+    <shape type="rectangle">
         <transform name="to_world">
-            <scale value="10000"/>
-            <translate x="0" y="10002.4" z="0"/>
+            <scale value="1.5, 2.0, 1.0"/>
+            <rotate x="1" angle="90"/>
+            <translate x="0" y="2.4" z="0.0"/>
         </transform>
         <ref id="mat_gray"/>
     </shape>
@@ -112,13 +124,13 @@
     </shape>
 
     <!-- Light -->
-    <shape type="disk">
+    <shape type="rectangle">
         <transform name="to_world">
-            <scale value="0.502"/>
             <!-- 
-               Position: Just below the ceiling (2.4) to avoid Z-fighting.
-               Rotate: -90 degrees around X to face downwards.
+               Size: 1.0 x 1.0 (Area 1.0)
+               Scale: 1.0 / 2 = 0.5 
             -->
+            <scale value="0.5"/>
             <rotate x="1" angle="90"/>
             <translate x="0" y="2.399" z="0"/>
         </transform>
