@@ -11,10 +11,10 @@
 ```mermaid
 xychart-beta
     title "Historical Performance (RMSE)"
-    x-axis ["b.89", "b.90", "b.92"]
+    x-axis ["b.89", "b.90", "b.92", "b.93"]
     y-axis "RMSE" 0 --> 1.8755
-    line [1.5629, 1.5629, 1.5629]
-    line [1.5629, 1.5629, 1.5629]
+    line [1.5629, 1.5629, 1.5629, 1.5629]
+    line [1.5629, 1.5629, 1.5629, 1.5629]
 ```
 
 > **Legend:** Line 1: **MT** | Line 2: **ST**
@@ -28,4 +28,4 @@ xychart-beta
 ![Convergence Plot](renderings/convergence.png)
 
 ---
-*Last updated: 2026-02-18T16:55:10.512570 (Commit: 7936fd67)*
+*Last updated: 2026-02-18T17:00:38.147188 (Commit: bde8508e)*
