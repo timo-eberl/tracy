@@ -57,7 +57,7 @@ def generate_convergence_plot(log_path, output_path):
     if all_rmse_values:
         plt.ylim(top=max(all_rmse_values) * 1.1)
 
-    plt.title("Convergence Comparison: RMSE vs Time", fontsize=12)
+    plt.title("Convergence", fontsize=12)
     plt.xlabel("Cumulative Time (seconds)")
     plt.ylabel("RMSE")
     plt.legend(loc='lower left', frameon=True, facecolor='white', framealpha=0.8)
