@@ -1,6 +1,16 @@
 name: 'EXR to PNG Conversion'
 description: 'Sets up Python and converts the rendered EXR to a PNG preview'
 
+inputs:
+  input_path:
+    description: 'Path to the source .exr file'
+    required: true
+    default: 'tests/img/exr/zig_render/render_st.exr'
+  output_path:
+    description: 'Path where the .png should be saved'
+    required: true
+    default: 'preview-st.png'
+
 runs:
   using: "composite"
   steps:
@@ -15,4 +25,5 @@ runs:
 
     - name: Convert EXR to PNG
       shell: bash
-      run: python3 exr_to_png.py
+      # We pass the inputs directly to the python script as arguments
+      run: python3 exr_to_png.py "${{ inputs.input_path }}" "${{ inputs.output_path }}"

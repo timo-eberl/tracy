@@ -79,22 +79,38 @@ jobs:
       #     rmse-bench zig build run-zig -Doptimize=ReleaseSafe
       #
 
-      # Run Test & Capture Output
-      # set volumes so that we don't have to rebuild upon code change
-      - name: Render and Benchmark
+      - name: Render and Benchmark ST
         run: |
-          # RAW_SCORE=$(docker run --rm rmse-bench zig build rmse_run)
+          rm -f tests/img/exr/zig_render/*
           docker run --rm \
           -v $(pwd):/app \
           -v ~/.cache/zig:/root/.cache/zig \
-          -w /app \
-          rmse-bench zig build run-render-bench --summary none -Doptimize=Debug
-          python3 scripts/create_log.py rmse_results.txt
-          
-          cat rmse_results.txt
+          -w /app rmse-bench \
+          zig build run-render-bench \
+          -Doptimize=ReleaseFast -Dmultithreaded=false
 
-      - name: Generate Preview Image
+      - name: Render and Benchmark MT
+        run: |
+          docker run --rm \
+          -v $(pwd):/app \
+          -v ~/.cache/zig:/root/.cache/zig \
+          -w /app rmse-bench zig \
+          build run-render-bench \
+          -Doptimize=ReleaseFast -Dmultithreaded=true
+          python3 scripts/create_log.py rmse_results.json
+
+      - name: Generate ST Preview
         uses: ./.github/actions/exr-to-png-conversion
+        with:
+          # We can now do this in one block or separate ones
+          input_path: 'tests/img/exr/zig_render/render_st.exr'
+          output_path: 'preview-st.png'
+
+      - name: Generate MT Preview
+        uses: ./.github/actions/exr-to-png-conversion
+        with:
+          input_path: 'tests/img/exr/zig_render/render_mt.exr'
+          output_path: 'preview-mt.png'
 
       - name: Upload All Benchmark Assets
         if: always()
@@ -102,16 +118,18 @@ jobs:
         with:
           name: full-assets-${{ env.bench_version }}
           path: |
-            rmse_results.txt
-            tests/img/exr/zig_render/render_zig.exr
-            preview.png
-          retention-days: 7    
+            rmse_results.json
+            tests/img/exr/zig_render/zig_render_log.txt
+            preview-*.png
+          retention-days: 7 
 
       - name: Deploy to Benchmarks Branch
         if: success()
         uses: ./.github/actions/process-benchmark-data
         with:
           bench_version: ${{ env.bench_version }}
+          modes: "st mt"
+
 
   # --- JOB 2: DEPLOY (Web/WASM) ---
   deploy:

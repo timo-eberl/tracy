@@ -1,134 +1,96 @@
 import sys
 import csv
 import os
-import json
+from collections import defaultdict
 
-# Paths
-LOG_FILE_PATH = "tests/img/exr/zig_render/zig_render_log.txt"
-
-# Usage: python generate_dashboard.py <csv_path> <readme_path>
+# --- Configuration & Args ---
 if len(sys.argv) < 3:
-    print("Usage: python generate_dashboard.py <csv_path> <readme_path>")
+    print("Usage: python generate_dashboard.py <csv_path> <readme_path> [log_path]")
     sys.exit(1)
 
 csv_path = sys.argv[1]
 readme_path = sys.argv[2]
+LOG_FILE_PATH = (
+    sys.argv[3] if len(sys.argv) > 3 else "tests/img/exr/zig_render/zig_render_log.txt"
+)
 
-# --- 1. Read Historical CSV Data ---
-versions, rmse_values, dates = [], [], []
-latest_ver, latest_date, latest_rmse = "N/A", "N/A", "N/A"
+# --- 1. Read History ---
+history_map = defaultdict(lambda: defaultdict(lambda: None))
+unique_versions, all_modes_historical = [], set()
+latest_date = "N/A"
 
 if os.path.exists(csv_path):
-    try:
-        with open(csv_path, "r") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            if rows:
-                latest_ver = rows[-1]["version"]
-                latest_date = rows[-1]["date"]
-                latest_rmse = rows[-1]["rmse"]
+    with open(csv_path, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                v, m, r = row["version"], row["mode"], float(row["rmse"])
+                short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
+                if short_v not in unique_versions:
+                    unique_versions.append(short_v)
+                all_modes_historical.add(m)
+                history_map[short_v][m] = r
+                latest_date = row["date"]
+            except (ValueError, KeyError):
+                continue
 
-                for row in rows[-20:]:
-                    v = row["version"]
-                    short_ver = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
-                    versions.append(short_ver)
-                    rmse_values.append(float(row["rmse"]))
-                    dates.append(row["date"])
-    except Exception as e:
-        print(f"Error reading CSV: {e}")
+# --- 2. Historical Trend Graph (Mermaid) ---
+trend_chart = "![Historical Trend](renderings/history_trend.png)"
 
-# --- 2. Read Current Render Convergence Log (Dynamic Steps) ---
-convergence_rmse = []
+# --- 3. Table & Gallery Parsing ---
+# We still need to parse the log to fill out the Summary Table data
+convergence_raw = defaultdict(list)
 if os.path.exists(LOG_FILE_PATH):
-    try:
-        with open(LOG_FILE_PATH, "r") as f:
-            # Filters out empty lines and converts all numeric lines to floats
-            for line in f:
-                clean_line = line.strip()
-                if clean_line:
-                    try:
-                        convergence_rmse.append(float(clean_line))
-                    except ValueError:
-                        continue
-    except Exception as e:
-        print(f"Error reading convergence log: {e}")
+    with open(LOG_FILE_PATH, "r") as f:
+        curr = None
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("VARIANT:") or line.startswith("VERSION:"):
+                curr, cumulative = line.split(":")[1].strip(), 0.0
+            elif curr:
+                try:
+                    r, t = map(float, line.split(","))
+                    cumulative += t
+                    convergence_raw[curr].append((r, cumulative))
+                except:
+                    continue
 
-# --- 3. Generate Mermaid Blocks ---
-fence = "```"
+summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n"
+gallery_header, gallery_sep, gallery_imgs = "|", "|", "|"
 
-# Historical Trend Graph
-if not versions:
-    trend_graph = "No benchmark data available yet."
+if convergence_raw:
+    for mode in sorted(convergence_raw.keys()):
+        pts = convergence_raw[mode]
+        final_p = pts[-1]
+        summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} |\n"
+        gallery_header += f" {mode.upper()} |"
+        gallery_sep += " :---: |"
+        gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
 else:
-    y_max_trend = max(rmse_values) * 1.2
-    trend_graph = f"""{fence}mermaid
-xychart-beta
-    title "RMSE Trend"
-    x-axis {json.dumps(versions)}
-    y-axis "RMSE" 0 --> {y_max_trend:.4f}
-    line {rmse_values}
-{fence}"""
+    summary_table = "*No summary data available.*"
 
-# Convergence Graph (Dynamic X-Axis)
-if not convergence_rmse:
-    convergence_graph = "*No convergence data found for the latest render.*"
-else:
-    num_steps = len(convergence_rmse)
-    # WICHTIG: Mermaid benötigt doppelte Anführungszeichen für Strings auf der X-Achse
-    # Wir konvertieren die Liste manuell in einen String mit doppelten Anführungszeichen
-    steps_x_labels = "[" + ", ".join([f'"{i + 1}"' for i in range(num_steps)]) + "]"
+conv_chart_html = "![Convergence Plot](renderings/convergence.png)"
 
-    y_max_conv = max(convergence_rmse) * 1.1
+# --- 4. Assemble Final README ---
+with open(readme_path, "w") as f:
+    f.write(f"""# Path Tracer Benchmark Dashboard
 
-    convergence_graph = f"""{fence}mermaid
----
-config:
-    theme: base
-    themeVariables:
-        xyChart:
-            plotColorPalette: "#e67e22"
----
-xychart-beta
-    title "Convergence Rate"
-    x-axis {steps_x_labels}
-    y-axis "RMSE" 0 --> {y_max_conv:.4f}
-    line {convergence_rmse}
-{fence}"""
+## Summary
+{summary_table}
 
-# --- 4. Assemble README ---
-markdown_content = f"""
-# Benchmark Dashboard
+## Historical Trend
+{trend_chart}
 
-This dashboard tracks the image quality performance (RMSE) of the renderer.
+## Latest Render Gallery
+{gallery_header if convergence_raw else ""}
+{gallery_sep if convergence_raw else ""}
+{gallery_imgs if convergence_raw else ""}
 
-| Metric | Latest Value |
-|--------|--------------|
-| **Version** | `{latest_ver}` |
-| **Date** | {latest_date} |
-| **Final RMSE** | **{latest_rmse}** |
-
-## Performance Trend
-{trend_graph}
-
-## Latest Render
-![Latest Render](renderings/latest.png)
-
-### Convergence Progress
-{convergence_graph}
-
-> This graph shows how the error decreased across {len(convergence_rmse)} rendering steps.
+## Convergence Comparison
+{conv_chart_html}
 
 ---
-*Last updated by GitHub Actions on {latest_date}.*
-"""
-
-# Write to File
-try:
-    with open(readme_path, "w") as f:
-        f.write(markdown_content)
-    print(
-        f"Successfully generated dashboard at {readme_path} with {len(convergence_rmse)} steps."
-    )
-except Exception as e:
-    print(f"Error writing README: {e}")
-    sys.exit(1)
+*Last updated: {latest_date} (Commit: {os.environ.get("GITHUB_SHA", "local")[:8]})*
+""")

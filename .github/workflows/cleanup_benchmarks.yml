@@ -1,0 +1,52 @@
+name: Manual Benchmarks Cleanup
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Benchmark Branch
+        uses: actions/checkout@v4
+        with:
+          ref: benchmarks
+          # We need full history to ensure we are modifying the existing branch
+          fetch-depth: 0
+
+      - name: Delete Files but Keep Structure
+        shell: bash
+        run: |
+          echo "Current branch state:"
+          ls -R
+
+          # Find all files (not directories) and delete them
+          # We exclude the .git directory to keep the repository logic intact
+          find . -type f -not -path '*/.*' -delete
+
+          # Git does not track empty directories. 
+          # To keep the structure, we place a .gitkeep in every folder.
+          find . -type d -not -path '*/.*' -not -path '.' -exec touch {}/.gitkeep \;
+
+          echo "Remaining structure:"
+          ls -R
+
+      - name: Commit and Push Reset
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Add all changes (deletions and new .gitkeep files)
+          git add -A
+          
+          # Only commit if there are actually changes to avoid workflow failure
+          if git diff --staged --quiet; then
+            echo "No files to delete."
+          else
+            git commit -m "Cleanup: Resetting benchmark data (kept directory structure)"
+            git push origin benchmarks
+          fi
