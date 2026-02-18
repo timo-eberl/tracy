@@ -1,29 +1,43 @@
-# Benchmark
-## Summary
-| Mode | Final RMSE | Total Time | Steps |
-|---|---|---|---|
-| **MT** | 0.6796 | 67.37s | 10 |
-| **ST** | 0.6796 | 203.28s | 10 |
 
-## Trend
+# Benchmark Dashboard
+
+This dashboard tracks the image quality performance (RMSE) of the renderer.
+
+| Metric | Latest Value |
+|--------|--------------|
+| **Version** | `0.1.0-build.68` |
+| **Date** | 2026-02-18T14:19:21.377041 |
+| **Final RMSE** | **54e7e1aa** |
+
+## Performance Trend
 ```mermaid
 xychart-beta
-    title "Trend"
-    x-axis ["b.66", "b.67"]
+    title "RMSE Trend"
+    x-axis ["b.66", "b.66", "b.67", "b.67", "b.68"]
     y-axis "RMSE" 0 --> 1.7257
-    line [1.4381, 0.6796]
-    line [1.4381, 0.6796]
+    line [1.4381, 1.4381, 0.6796, 0.6796]
 ```
-## Gallery
-| MT | ST |
-| :---: | :---: |
-| ![ mt ](renderings/latest-mt.png) | ![ st ](renderings/latest-st.png) |
-## Convergence
+
+## Latest Render
+![Latest Render](renderings/latest.png)
+
+### Convergence Progress
 ```mermaid
+---
+config:
+    theme: base
+    themeVariables:
+        xyChart:
+            plotColorPalette: "#e67e22"
+---
 xychart-beta
-    title "Convergence"
-    x-axis ["0.0s", "22.59s", "45.17s", "67.76s", "90.34s", "112.93s", "135.52s", "158.1s", "180.69s", "203.28s"]
-    y-axis "RMSE" 0 --> 2.2307
-    line [2.0279, 1.185, 0.8561, 0.6796, 0.6796, 0.6796, 0.6796, 0.6796, 0.6796, 0.6796]
-    line [2.0279, 2.0279, 1.4381, 1.185, 1.0336, 0.9306, 0.8561, 0.7964, 0.7495, 0.6796]
+    title "Convergence Rate"
+    x-axis ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+    y-axis "RMSE" 0 --> 2.4341
+    line [2.2128, 1.5629, 1.2813, 1.1091, 0.9916, 0.9047, 0.8368, 0.7829, 0.7385, 0.7009]
 ```
+
+> This graph shows how the error decreased across 10 rendering steps.
+
+---
+*Last updated by GitHub Actions on 2026-02-18T14:19:21.377041.*
