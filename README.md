@@ -5,17 +5,17 @@ This dashboard tracks the image quality performance (RMSE) of the renderer.
 
 | Metric | Latest Value |
 |--------|--------------|
-| **Version** | `0.1.0-build.54` |
-| **Date** | 2026-02-18T02:33:39.821868 |
+| **Version** | `0.1.0-build.55` |
+| **Date** | 2026-02-18T02:40:42.172437 |
 | **Final RMSE** | **2.0441** |
 
 ## Performance Trend
 ```mermaid
 xychart-beta
     title "RMSE Trend"
-    x-axis ["b.32", "b.33", "b.34", "b.35", "b.36", "b.37", "b.39", "b.40", "b.41", "b.42", "b.43", "b.45", "b.44", "b.48", "b.49", "b.50", "b.51", "b.52", "b.53", "b.54"]
+    x-axis ["b.33", "b.34", "b.35", "b.36", "b.37", "b.39", "b.40", "b.41", "b.42", "b.43", "b.45", "b.44", "b.48", "b.49", "b.50", "b.51", "b.52", "b.53", "b.54", "b.55"]
     y-axis "RMSE" 0 --> 2.4529
-    line [0.2549, 0.4864, 0.0098, 0.4489, 0.7142, 0.2079, 0.1763, 0.8557, 0.7071, 0.749, 0.5226, 0.677836, 0.677984, 0.678, 0.678, 0.678, 0.6778, 0.6796, 0.6796, 2.0441]
+    line [0.4864, 0.0098, 0.4489, 0.7142, 0.2079, 0.1763, 0.8557, 0.7071, 0.749, 0.5226, 0.677836, 0.677984, 0.678, 0.678, 0.678, 0.6778, 0.6796, 0.6796, 2.0441, 2.0441]
 ```
 
 ## Latest Render
@@ -40,4 +40,4 @@ xychart-beta
 > This graph shows how the error decreased across 10 rendering steps.
 
 ---
-*Last updated by GitHub Actions on 2026-02-18T02:33:39.821868.*
+*Last updated by GitHub Actions on 2026-02-18T02:40:42.172437.*
