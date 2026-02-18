@@ -79,3 +79,22 @@ test "fresnel: 45 degree approximation" {
     // Allow slightly looser tolerance for the power approximation steps
     try testing.expectApproxEqAbs(@as(f64, 0.04207), result, 0.0001);
 }
+
+test "fresnel: total internal reflection (inside 45 degrees)" {
+    // Scenario: Ray is inside glass (n=1.5) hitting surface at 45 degrees.
+    // Critical angle is asin(1/1.5) = 41.8 degrees.
+    // Since 45 > 41.8, we must have Total Internal Reflection (1.0).
+    //
+    // A buggy implementation using cos(incident) (cos 45 = 0.707) will
+    // return a low value (approx 0.05) instead of 1.0.
+
+    const inv_sqrt2 = 1.0 / std.math.sqrt(2.0);
+    const incident = c.Vec{ .x = inv_sqrt2, .y = inv_sqrt2, .z = 0 }; // 45 deg Up/Right
+    const normal = c.Vec{ .x = 0, .y = 1, .z = 0 }; // Up
+    const ior = 1.5;
+    const is_inside = true;
+
+    const result = c.fresnel(incident, normal, is_inside, ior);
+
+    try testing.expectApproxEqAbs(@as(f64, 1.0), result, epsilon);
+}
