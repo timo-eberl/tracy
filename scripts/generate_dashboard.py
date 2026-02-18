@@ -35,7 +35,7 @@ if os.path.exists(csv_path):
                 continue
 
 # --- 2. Historical Trend Graph (Mermaid) ---
-trend_chart = "## Historical Trend\n![Historical Trend](renderings/history_trend.png)"
+trend_chart = "![Historical Trend](renderings/history_trend.png)"
 
 # --- 3. Table & Gallery Parsing ---
 # We still need to parse the log to fill out the Summary Table data
@@ -71,9 +71,7 @@ if convergence_raw:
 else:
     summary_table = "*No summary data available.*"
 
-conv_chart_html = (
-    "## Convergence Comparison\n![Convergence Plot](renderings/convergence.png)"
-)
+conv_chart_html = "![Convergence Plot](renderings/convergence.png)"
 
 # --- 4. Assemble Final README ---
 with open(readme_path, "w") as f:
@@ -90,6 +88,7 @@ with open(readme_path, "w") as f:
 {gallery_sep if convergence_raw else ""}
 {gallery_imgs if convergence_raw else ""}
 
+## Convergence Comparison
 {conv_chart_html}
 
 ---
