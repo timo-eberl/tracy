@@ -28,7 +28,7 @@ try:
             if not line:
                 continue
 
-            if line.startswith("VERSION:"):
+            if line.startswith("VARIANT:"):
                 # Save previous run before switching
                 if current_mode and current_scores:
                     runs_data.append(
