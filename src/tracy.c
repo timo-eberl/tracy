@@ -90,11 +90,11 @@ Primitive scene[] = {
 	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}}},
 	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}}},
 	// Bottom (y = 0.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {1.5, 0, 2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {1.5, 0, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}}},
 	// Top (y = 2.4)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}}},
 	// Mirror Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
 	// Glass Sphere
@@ -441,8 +441,9 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		return radiance;
 	}
 	case DIFFUSE: {
-		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
+		if (hit.inside) return (Vec){0}; // If inside, return 0
 
+		Vec normal = hit.n;
 		Vec next_direction = sample_uniform_hemisphere(normal, rng);
 		double cos_theta = vec_dot(normal, next_direction);
 		assert(cos_theta >= 0.0); // only upper hemisphere
