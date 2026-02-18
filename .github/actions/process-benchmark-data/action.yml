@@ -36,7 +36,7 @@ runs:
         cp -f tests/img/exr/zig_render/zig_render_log.txt data-branch/logs/${{ inputs.bench_version }}.log
 
         # 2. Generate BOTH Plots (Log, CSV, OutputDir)
-        python3 scripts/generate_plots.py data-branch/latest_raw_log.txt data-branch/history.csv data-branch/renderings/
+        python3 scripts/generate_plots.py data-branch/latest_raw_log.txt data-branch/history.csv data-branch/renderings/ 30
 
         # 3. Handle Preview Images
         for mode in ${{ inputs.modes }}; do

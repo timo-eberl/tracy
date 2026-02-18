@@ -3,17 +3,23 @@ import csv
 import os
 import matplotlib
 
-matplotlib.use("Agg")  # Force non-interactive backend for headless CI
+matplotlib.use("Agg")  # Headless mode for CI
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
 # --- Global Style ---
 plt.style.use("ggplot")
-COLORS = {"st": "#3498db", "mt": "#e74c3c"}
+# Use a standard categorical color palette (Tab10 provides 10 distinct colors)
+COLOR_CYCLE = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+
+def get_color(index):
+    """Returns a color from the cycle based on index."""
+    return COLOR_CYCLE[index % len(COLOR_CYCLE)]
 
 
 def generate_convergence_plot(log_path, output_path):
-    """Generates the RMSE vs Time plot for the current run."""
+    """Generates the RMSE vs Time plot for an arbitrary number of variants."""
     if not os.path.exists(log_path):
         print(f"Log not found: {log_path}")
         return
@@ -29,7 +35,8 @@ def generate_convergence_plot(log_path, output_path):
                 continue
             if line.startswith("VARIANT:"):
                 current_variant = line.split(":")[1].strip().lower()
-                data[current_variant] = {"rmse": [], "time": []}
+                if current_variant not in data:
+                    data[current_variant] = {"rmse": [], "time": []}
             elif current_variant and "," in line:
                 try:
                     rmse, time = map(float, line.split(","))
@@ -45,14 +52,16 @@ def generate_convergence_plot(log_path, output_path):
                     continue
 
     plt.figure(figsize=(10, 5))
-    for variant, results in data.items():
+
+    # Plot each detected mode with a unique color from the cycle
+    for i, (variant, results) in enumerate(sorted(data.items())):
         if not results["time"]:
             continue
         plt.plot(
             results["time"],
             results["rmse"],
-            label=f"Current {variant.upper()}",
-            color=COLORS.get(variant),
+            label=variant.upper(),
+            color=get_color(i),
             marker="o",
             markersize=4,
             linewidth=2,
@@ -63,23 +72,22 @@ def generate_convergence_plot(log_path, output_path):
     if all_rmse_values:
         plt.ylim(top=max(all_rmse_values) * 1.1)
 
-    plt.title("Convergence Comparison: RMSE vs Time", fontsize=12)
+    plt.title("Convergence", fontsize=12)
     plt.xlabel("Cumulative Time (seconds)")
     plt.ylabel("RMSE")
-    plt.legend()
+    plt.legend(loc="lower left", frameon=True, facecolor="white", framealpha=0.8)
+
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
     plt.close()
-    print(f"Convergence plot saved to {output_path}")
 
 
-def generate_trend_plot(csv_path, output_path):
-    """Generates the Historical RMSE Trend plot from the CSV data."""
+def generate_trend_plot(csv_path, output_path, max_versions=20):
+    """Generates the Historical RMSE Trend plot for all modes found in CSV."""
     if not os.path.exists(csv_path):
         print(f"CSV not found: {csv_path}")
         return
 
-    # Data structure: data[mode][version] = rmse
     data = defaultdict(dict)
     versions = []
 
@@ -89,29 +97,31 @@ def generate_trend_plot(csv_path, output_path):
             v = row["version"]
             m = row["mode"].lower()
             r = float(row["rmse"])
-            # Create a short version label for the X-axis
             short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
             if short_v not in versions:
                 versions.append(short_v)
             data[m][short_v] = r
 
-    # Focus on the last 20 builds
-    window_versions = versions[-20:]
+    window_versions = versions[-max_versions:] if max_versions > 0 else versions
 
     plt.figure(figsize=(10, 5))
-    for mode in sorted(data.keys()):
-        # Gather points for this mode, handle missing data points if any
+
+    # Iterate through all modes found in the CSV history
+    for i, mode in enumerate(sorted(data.keys())):
         y_values = [data[mode].get(v) for v in window_versions]
 
-        # Filter out None values for plotting to avoid line breaks
-        plot_x = [i for i, val in enumerate(y_values) if val is not None]
-        plot_y = [val for val in y_values if val is not None]
+        # Identify indices where we actually have data points
+        plot_indices = [idx for idx, val in enumerate(y_values) if val is not None]
+        plot_values = [val for val in y_values if val is not None]
+
+        if not plot_values:
+            continue
 
         plt.plot(
-            plot_x,
-            plot_y,
+            plot_indices,
+            plot_values,
             label=mode.upper(),
-            color=COLORS.get(mode),
+            color=get_color(i),
             marker="s",
             markersize=5,
             linewidth=2,
@@ -119,24 +129,34 @@ def generate_trend_plot(csv_path, output_path):
 
     plt.xticks(range(len(window_versions)), window_versions, rotation=45)
     plt.ylim(bottom=0)
-    plt.title("Historical Performance Trend", fontsize=12)
+    plt.title(
+        f"Historical Performance Trend (Last {len(window_versions)} builds)",
+        fontsize=12,
+    )
     plt.xlabel("Build Version")
-    plt.ylabel("Final RMSE")
-    plt.legend()
+    plt.ylabel("RMSE")
+    plt.legend(loc="lower left", frameon=True, facecolor="white", framealpha=0.8)
+
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
     plt.close()
-    print(f"Trend plot saved to {output_path}")
 
 
 if __name__ == "__main__":
-    # Expecting: python generate_plots.py <log_path> <csv_path> <renderings_dir>
     if len(sys.argv) < 4:
-        print("Usage: python generate_plots.py <log_path> <csv_path> <out_dir>")
+        print(
+            "Usage: python generate_plots.py <log_path> <csv_path> <out_dir> [num_versions]"
+        )
         sys.exit(1)
 
     log_in, csv_in, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+    num_v = int(sys.argv[4]) if len(sys.argv) > 4 else 20
+
     os.makedirs(out_dir, exist_ok=True)
 
     generate_convergence_plot(log_in, os.path.join(out_dir, "convergence.png"))
-    generate_trend_plot(csv_in, os.path.join(out_dir, "history_trend.png"))
+    generate_trend_plot(
+        csv_in, os.path.join(out_dir, "history_trend.png"), max_versions=num_v
+    )
+
+    print(f"Success: Plots generated in {out_dir}")
