@@ -42,10 +42,10 @@ zig build test --summary all
 
 ## Mitsuba Reference
 
-`scene.xml` is a scene description for the Mitsuba 3 renderer that matches the scene in our renderer exactly. To render it install Mitsuba 3 and run:
+`mitsuba_scene/scene.xml` is a scene description for the Mitsuba 3 renderer that matches the scene in our renderer exactly. To render it install Mitsuba 3 and run:
 
 ```bash
-mitsuba scene.xml
+mitsuba mitsuba_scene/scene.xml
 ```
 
 ## Web Application

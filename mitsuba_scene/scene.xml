@@ -49,6 +49,10 @@
         <rgb name="specular_transmittance" value="1.0, 1.0, 1.0"/>
     </bsdf>
 
+    <bsdf type="diffuse" id="mat_shield">
+        <rgb name="reflectance" value="0.1, 0.1, 0.1"/>
+    </bsdf>
+
     <!-- 
       STANDARD CORNELL BOX WALLS 
       Room Size: 3m Wide (x), 2.4m High (y), 4m Deep (z)
@@ -139,5 +143,13 @@
             <rgb name="radiance" value="34.2183, 34.2183, 34.2183"/>
         </emitter>
     </shape>
-
+    
+    <shape type="obj">
+        <string name="filename" value="lightshield.obj"/>
+        <bsdf type="twosided">
+            <ref id="mat_shield"/>
+        </bsdf>
+        <!-- Use face normals to keep the shield edges sharp -->
+        <boolean name="face_normals" value="true"/>
+    </shape>
 </scene>

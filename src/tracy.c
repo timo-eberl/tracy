@@ -102,6 +102,19 @@ Primitive scene[] = {
 	// Area Light (1x1m Rect)
 	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}}},
 	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}}},
+	// Light Shield - 4 Sides Angled 45 Degree
+	// Side 1: Front
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}, true}},
+	// Side 2: Right
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}, true}},
+	// Side 3: Back
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}, true}},
+	// Side 4: Left
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}, true}},
 };
 int num_primitives = sizeof(scene) / sizeof(Primitive);
 // clang-format on
