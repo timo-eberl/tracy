@@ -100,8 +100,8 @@ Primitive scene[] = {
 	// Glass Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
 	// Area Light (1x1m Rect)
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {-0.5, 2.399, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}}},
 };
 int num_primitives = sizeof(scene) / sizeof(Primitive);
 // clang-format on
@@ -310,7 +310,9 @@ void initialize_buffers() {
 
 // 1D Box Filter
 double box_1d(double x) {
-	return (fabs(x) < 0.5) ? 1.0 : 0.0;
+	// half-open interval [-radius, radius). Ensures pixels on a boundary are not used for two
+	// pixels, although in praxis this doesn't make any difference.
+	return (x >= -BOX_RADIUS && x < BOX_RADIUS) ? 1.0 : 0.0;
 }
 
 // 1D Mitchell-Netravali filter function with B=1/3, C=1/3.
@@ -432,6 +434,8 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	switch (hit_prim->material) {
 	case EMISSIVE: {
+		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
+
 		Vec radiosity = hit_prim->color;
 		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
 		return radiance;
@@ -651,8 +655,9 @@ void render_refine(unsigned int n_samples) {
 				int min_ny = (int)ceil(film_y - 0.5 - filter_radius);
 				int max_ny = (int)floor(film_y - 0.5 + filter_radius) + 1;
 
-				// with box filtering only the original pixel should be covered
-				if (filter_type == FILTER_BOX) {
+				// with box filtering only the original pixel should be covered (at least with
+				// radius 0.5 or lower)
+				if (filter_type == FILTER_BOX && BOX_RADIUS <= 0.5) {
 					assert(min_nx == x && max_nx == x + 1 && min_ny == y && max_ny == y + 1);
 				}
 
