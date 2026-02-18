@@ -205,8 +205,52 @@ bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
 	}
 }
 
-bool intersect_triangle(Ray r, Triangle t, HitInfo* hit) {
-	return false; // TODO: Implement triangle intersection
+// ray-triangle intersection using Möller–Trumbore algorithm
+bool intersect_triangle(Ray r, Triangle tri, HitInfo* hit) {
+	const double EPSILON = 0.0000001;
+	Vec edge1 = vec_sub(tri.v1, tri.v0);
+	Vec edge2 = vec_sub(tri.v2, tri.v0);
+	Vec h = vec_cross(r.dir, edge2);
+	double a = vec_dot(edge1, h);
+
+	// Check if ray is parallel to the triangle
+	// Note: We perform double-sided intersection here.
+	if (a > -EPSILON && a < EPSILON) { return false; }
+
+	double f = 1.0 / a;
+	Vec s = vec_sub(r.origin, tri.v0);
+	double u = f * vec_dot(s, h);
+
+	if (u < 0.0 || u > 1.0) { return false; }
+
+	Vec q = vec_cross(s, edge1);
+	double v = f * vec_dot(r.dir, q);
+
+	if (v < 0.0 || u + v > 1.0) { return false; }
+
+	double t = f * vec_dot(edge2, q);
+
+	// Check if intersection is in front of the camera
+	if (t > EPSILON) {
+		hit->t = t;
+		hit->p = vec_add(r.origin, vec_scale(r.dir, t));
+
+		// Calculate geometric normal
+		Vec n = vec_normalize(vec_cross(edge1, edge2));
+
+		// Check orientation to set 'inside' flag correctly
+		// If normal and ray point in the same direction, we are exiting the object (inside)
+		if (vec_dot(r.dir, n) > 0.0) {
+			hit->inside = true;
+			hit->n = n;
+		} else {
+			hit->inside = false;
+			hit->n = n;
+		}
+		return true;
+	}
+
+	return false;
 }
 
 bool intersect_scene(Ray r, HitInfo* closest_hit, Primitive** hit_primitive) {
