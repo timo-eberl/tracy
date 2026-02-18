@@ -39,13 +39,23 @@
 // allow one line typedefs
 typedef struct { double x, y, z; } Vec;
 typedef struct { Vec origin; Vec dir; } Ray;
-typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
+
 // color is treated differently depending on the material type
 // DIFFUSE: perfect lambertian diffuse, color=albedo
 // EMISSIVE: only emission, color=radiosity (W/m^2)
 // MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
 // REFRACTIVE: reflection and refraction, color.x=ior
-typedef struct { Vec center; double radius; Vec color; MaterialType type; } Sphere;
+typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
+// Geometry Data Structures
+typedef struct { Vec center; double radius; } Sphere;
+typedef struct { Vec v0, v1, v2; } Triangle;
+typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
+// The generic Scene Object
+typedef struct {
+	ShapeType type; Vec color; MaterialType material;
+	union { Sphere sphere; Triangle triangle; } geo;
+} Primitive;
+
 // t: distance, p: point, n: normal, inside: flag
 typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
 typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } FilterType;
@@ -68,18 +78,50 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 
 // room dimensions: (3,2.4,4)
 
-// clang-format off
-// KEEP ALIGNED: Tabular data for scene definition
-Sphere scene[] = { // center, radius, color, type
-	{{-1e4-1.5,	 1.2,	 0},  1.0e4, {0.75, 0.25, 0.25}, DIFFUSE}, // Left
-	{{+1e4+1.5,	 1.2,	 0},  1.0e4, {0.25, 0.25, 0.75}, DIFFUSE}, // Right
-	{{	   0,	 1.2,-1e4-2}, 1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Back
-	{{	   0,	-1e4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Bottom
-	{{	   0,1e4+2.4,	 0},  1.0e4, {0.75, 0.75, 0.75}, DIFFUSE}, // Top
-	{{	-0.7,	 0.5,  -0.6},	0.5, {1.00, 1.00, 1.00}, MIRROR}, // Mirror Sphere
-	{{	 0.7,	 0.5,   0.6},	0.5, {1.50, 0.00, 0.00}, REFRACTIVE}, // Glass Sphere
-	{{	   0,62.3979,	 0},   60.0, {5*21.5, 5*21.5, 5*21.5}, EMISSIVE}, // Area Light
+// Keep aligned: Tabular data for scene definition
+Primitive scene[] = {
+	// Left
+	{.type = SHAPE_SPHERE,
+	 .color = {0.75, 0.25, 0.25},
+	 .material = DIFFUSE,
+	 .geo.sphere = {.center = {-1e4 - 1.5, 1.2, 0}, .radius = 1.0e4}},
+	// Right
+	{.type = SHAPE_SPHERE,
+	 .color = {0.25, 0.25, 0.75},
+	 .material = DIFFUSE,
+	 .geo.sphere = {.center = {+1e4 + 1.5, 1.2, 0}, .radius = 1.0e4}},
+	// Back
+	{.type = SHAPE_SPHERE,
+	 .color = {0.75, 0.75, 0.75},
+	 .material = DIFFUSE,
+	 .geo.sphere = {.center = {0, 1.2, -1e4 - 2}, .radius = 1.0e4}},
+	// Bottom
+	{.type = SHAPE_SPHERE,
+	 .color = {0.75, 0.75, 0.75},
+	 .material = DIFFUSE,
+	 .geo.sphere = {.center = {0, -1e4, 0}, .radius = 1.0e4}},
+	// Top
+	{.type = SHAPE_SPHERE,
+	 .color = {0.75, 0.75, 0.75},
+	 .material = DIFFUSE,
+	 .geo.sphere = {.center = {0, 1e4 + 2.4, 0}, .radius = 1.0e4}},
+	// Mirror Sphere
+	{.type = SHAPE_SPHERE,
+	 .color = {1.00, 1.00, 1.00},
+	 .material = MIRROR,
+	 .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
+	// Glass Sphere
+	{.type = SHAPE_SPHERE,
+	 .color = {1.50, 0.00, 0.00},
+	 .material = REFRACTIVE,
+	 .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
+	// Area Light
+	{.type = SHAPE_SPHERE,
+	 .color = {5 * 21.5, 5 * 21.5, 5 * 21.5},
+	 .material = EMISSIVE,
+	 .geo.sphere = {.center = {0, 62.3979, 0}, .radius = 60.0}},
 };
+int num_primitives = sizeof(scene) / sizeof(Primitive);
 // clang-format on
 int num_spheres = sizeof(scene) / sizeof(Sphere);
 
@@ -163,21 +205,32 @@ bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
 	}
 }
 
-bool intersect_scene(Ray r, HitInfo* closest_hit, Sphere** hit_sphere) {
-	closest_hit->t = INFINITY;
-	*hit_sphere = NULL;
+bool intersect_triangle(Ray r, Triangle t, HitInfo* hit) {
+	return false; // TODO: Implement triangle intersection
+}
 
-	for (int i = 0; i < num_spheres; ++i) {
+bool intersect_scene(Ray r, HitInfo* closest_hit, Primitive** hit_primitive) {
+	closest_hit->t = INFINITY;
+	*hit_primitive = NULL;
+
+	for (int i = 0; i < num_primitives; ++i) {
 		HitInfo current_hit;
-		if (intersect_sphere(r, scene[i], &current_hit)) {
-			if (current_hit.t < closest_hit->t) {
-				*closest_hit = current_hit;
-				*hit_sphere = &scene[i];
-			}
+		bool hit = false;
+
+		switch (scene[i].type) {
+		case SHAPE_SPHERE: hit = intersect_sphere(r, scene[i].geo.sphere, &current_hit); break;
+		case SHAPE_TRIANGLE:
+			hit = intersect_triangle(r, scene[i].geo.triangle, &current_hit);
+			break;
+		}
+
+		if (hit && current_hit.t < closest_hit->t) {
+			*closest_hit = current_hit;
+			*hit_primitive = &scene[i];
 		}
 	}
 
-	return (*hit_sphere);
+	return (*hit_primitive != NULL);
 }
 
 // srgb response curve (4.1.9)
@@ -347,14 +400,14 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 	if (depth > MAX_DEPTH) { return (Vec){0, 0, 0}; }
 
 	HitInfo hit;
-	Sphere* hit_sphere = NULL;
-	bool did_hit = intersect_scene(r, &hit, &hit_sphere);
+	Primitive* hit_prim = NULL;
+	bool did_hit = intersect_scene(r, &hit, &hit_prim);
 
 	if (!did_hit) { return (Vec){0, 0, 0}; }
 
-	switch (hit_sphere->type) {
+	switch (hit_prim->material) {
 	case EMISSIVE: {
-		Vec radiosity = hit_sphere->color;
+		Vec radiosity = hit_prim->color;
 		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
 		return radiance;
 	}
@@ -371,7 +424,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 		// divide by pi for energy conservation 10.3.6
 		// pi is the projected solid angle over hemisphere 3.1.9
-		Vec lambertian_brdf = vec_scale(hit_sphere->color, 1.0 / M_PI);
+		Vec lambertian_brdf = vec_scale(hit_prim->color, 1.0 / M_PI);
 		// brdf * radiance * cos(theta)
 		Vec radiance = vec_scale(vec_hadamard_prod(lambertian_brdf, incoming_radiance), cos_theta);
 		// we now calculated the expected value, but because we integrate over the hemisphere
@@ -386,11 +439,11 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec radiance =
-			vec_hadamard_prod(radiance_from_ray(refl_ray, depth + 1, rng), hit_sphere->color);
+			vec_hadamard_prod(radiance_from_ray(refl_ray, depth + 1, rng), hit_prim->color);
 		return radiance;
 	}
 	case REFRACTIVE: {
-		double ior = hit_sphere->color.x;
+		double ior = hit_prim->color.x;
 		double eta = hit.inside ? ior : 1.0 / ior;
 		// Calculate how much light reflects using the Fresnel term.
 		double reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
