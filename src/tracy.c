@@ -100,8 +100,8 @@ Primitive scene[] = {
 	// Glass Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
 	// Area Light (1x1m Rect)
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {-0.5, 2.399, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}}},
 };
 int num_primitives = sizeof(scene) / sizeof(Primitive);
 // clang-format on
@@ -432,6 +432,8 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	switch (hit_prim->material) {
 	case EMISSIVE: {
+		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
+
 		Vec radiosity = hit_prim->color;
 		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
 		return radiance;
