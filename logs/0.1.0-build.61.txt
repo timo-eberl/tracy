@@ -1,0 +1,14 @@
+[
+  {
+    "version": "0.1.0-build.61-st",
+    "rmse_value": 1.4381,
+    "timestamp": "2026-02-18T13:00:32.361251",
+    "commit": "06c57923"
+  },
+  {
+    "version": "0.1.0-build.61-mt",
+    "rmse_value": 1.4381,
+    "timestamp": "2026-02-18T13:00:32.361251",
+    "commit": "06c57923"
+  }
+]
