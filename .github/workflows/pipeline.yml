@@ -97,9 +97,9 @@ jobs:
           -w /app rmse-bench zig \
           build run-render-bench \
           -Doptimize=ReleaseFast -Dmultithreaded=true
-          python3 scripts/create_log.py rmse_results.txt
+          python3 scripts/create_log.py rmse_results.json
 
-      - name: Generate Previews
+      - name: Generate ST Preview
         uses: ./.github/actions/exr-to-png-conversion
         with:
           # We can now do this in one block or separate ones
@@ -118,10 +118,10 @@ jobs:
         with:
           name: full-assets-${{ env.bench_version }}
           path: |
-            rmse_results.txt
-            tests/img/exr/zig_render/render_zig.exr
+            rmse_results.json
+            tests/img/exr/zig_render/zig_render_log.txt
             preview-*.png
-          retention-days: 7  
+          retention-days: 7 
 
       - name: Deploy to Benchmarks Branch
         if: success()

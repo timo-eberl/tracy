@@ -1,15 +1,4 @@
 name: 'Process Benchmark Data'
-description: 'Handles checkout, conversion, and dynamic mode processing'
-
-inputs:
-  bench_version:
-    description: 'The version string'
-    required: true
-  modes:
-    description: 'Space-separated list of modes (e.g., "st mt")'
-    required: true
-    default: 'st mt'
-
 runs:
   using: "composite"
   steps:
@@ -23,38 +12,35 @@ runs:
     - name: Integrate Data and Renderings
       shell: bash
       run: |
-        # Ensure directories exist
         mkdir -p data-branch/logs
         mkdir -p data-branch/renderings
 
-        # Archive the combined results for this version
-        cp rmse_results.txt data-branch/logs/${{ inputs.bench_version }}.txt
+        # Archive the RAW log for convergence parsing later
+        # We MUST move this into data-branch so scripts can see it
+        cp tests/img/exr/zig_render/zig_render_log.txt data-branch/latest_raw_log.txt
+        cp tests/img/exr/zig_render/zig_render_log.txt data-branch/logs/${{ inputs.bench_version }}.log
 
-        # Process each mode dynamically
+        # Handle images
         for mode in ${{ inputs.modes }}; do
-          echo "Processing mode: $mode"
-          
-          # Move specific previews to the benchmark branch
-          # Assumes the pipeline named them 'preview-$mode.png'
           if [ -f "preview-$mode.png" ]; then
             cp "preview-$mode.png" "data-branch/renderings/latest-$mode.png"
             cp "preview-$mode.png" "data-branch/renderings/${{ inputs.bench_version }}-$mode.png"
           fi
         done
 
-        # Handle a fallback 'latest.png' for the main repo view
-        # We take the last mode in the list as the 'latest' primary image
+        # Fallback image
         LAST_MODE=$(echo "${{ inputs.modes }}" | awk '{print $NF}')
         cp "preview-$LAST_MODE.png" "data-branch/renderings/latest.png"
 
     - name: Update CSV and Dashboard
       shell: bash
       run: |
-        # Update the historical CSV
-        python3 scripts/update_benchmark.py rmse_results.txt data-branch/history.csv
+        # Use the JSON we created in the main workflow
+        python3 scripts/update_benchmark.py rmse_results.json data-branch/history.csv
         
-        # Generate the dynamic dashboard
-        python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md
+        # Override the hardcoded path in dashboard script by passing it
+        # (Assuming you update generate_dashboard.py to accept this path)
+        python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md data-branch/latest_raw_log.txt
 
     - name: Commit and Push
       shell: bash
@@ -63,6 +49,5 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add .
-        # Avoid failing if no changes (though unlikely with new benchmarks)
-        git commit -m "Benchmark Update: ${{ inputs.bench_version }}" || echo "No changes to commit"
+        git commit -m "Benchmark: ${{ inputs.bench_version }}" || echo "No changes"
         git push origin HEAD:benchmarks

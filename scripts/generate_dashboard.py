@@ -4,7 +4,9 @@ import os
 import json
 from collections import defaultdict
 
-LOG_FILE_PATH = "tests/img/exr/zig_render/zig_render_log.txt"
+LOG_FILE_PATH = (
+    sys.argv[3] if len(sys.argv) > 3 else "tests/img/exr/zig_render/zig_render_log.txt"
+)
 csv_path, readme_path = sys.argv[1], sys.argv[2]
 
 # --- 1. Read History ---
