@@ -81,7 +81,7 @@ jobs:
 
       - name: Render and Benchmark ST
         run: |
-          rm -f tests/img/exr/zig_render/zig_render_log.txt
+          rm -f tests/img/exr/zig_render/*
           docker run --rm \
           -v $(pwd):/app \
           -v ~/.cache/zig:/root/.cache/zig \

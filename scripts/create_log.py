@@ -62,6 +62,7 @@ try:
             )
 
     with open(output_path, "w") as f:
+        print(f"CREATED LOG: {runs_data}")
         json.dump(runs_data, f, indent=2)
 except Exception as e:
     print(f"Error: {e}")
