@@ -40,9 +40,10 @@ pub fn main() !void {
     const out_filename = try std.fmt.allocPrint(allocator, "render_{s}.exr", .{version_label});
     defer allocator.free(out_filename);
 
-    const out_fp = try std.fs.path.join(allocator, &.{ out_dir, out_filename });
+    const out_fp_slice = try std.fs.path.join(allocator, &.{ out_dir, out_filename });
+    defer allocator.free(out_fp_slice);
+    const out_fp = try allocator.dupeZ(u8, out_fp_slice);
     defer allocator.free(out_fp);
-
     try std.fs.cwd().makePath(out_dir);
 
     const width: i32 = 640;
