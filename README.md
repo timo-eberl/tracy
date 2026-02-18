@@ -12,10 +12,10 @@
 ```mermaid
 xychart-beta
     title "RMSE Trend per Mode (Forward Filled)"
-    x-axis ["b.61"]
+    x-axis ["b.61", "b.62"]
     y-axis "RMSE" 0 --> 1.7257
-    line [1.4381]
-    line [1.4381]
+    line [1.4381, 1.4381]
+    line [1.4381, 1.4381]
 ```
 
 ## Latest Render Gallery
@@ -35,4 +35,4 @@ xychart-beta
 ```
 
 ---
-*Last updated: 2026-02-18T13:00:32.361251*
+*Last updated: 2026-02-18T13:09:46.086690*
