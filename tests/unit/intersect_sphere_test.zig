@@ -14,8 +14,6 @@ fn createSphere(x: f64, y: f64, z: f64, r: f64) c.Sphere {
     return c.Sphere{
         .center = .{ .x = x, .y = y, .z = z },
         .radius = r,
-        .color = .{ .x = 1.0, .y = 1.0, .z = 1.0 }, // Color irrelevant for intersection
-        .type = c.DIFFUSE, // Type irrelevant for intersection geometry
     };
 }
 
