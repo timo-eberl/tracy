@@ -5,7 +5,6 @@ import json
 from collections import defaultdict
 
 # --- Configuration & Args ---
-# Usage: python generate_dashboard.py <csv_path> <readme_path> [log_path]
 if len(sys.argv) < 3:
     print("Usage: python generate_dashboard.py <csv_path> <readme_path> [log_path]")
     sys.exit(1)
@@ -27,12 +26,9 @@ if os.path.exists(csv_path):
         for row in reader:
             try:
                 v, m, r = row["version"], row["mode"], float(row["rmse"])
-                # Extract short version for X-axis (e.g., build.77 -> b.77)
                 short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
-
                 if short_v not in unique_versions:
                     unique_versions.append(short_v)
-
                 all_modes_historical.add(m)
                 history_map[short_v][m] = r
                 latest_date = row["date"]
@@ -48,8 +44,6 @@ if unique_versions:
 
     for m in sorted(all_modes_historical):
         series = []
-
-        # Find first non-null value in the window to prevent leading null errors
         first_val = None
         for v in window_versions:
             if history_map[v][m] is not None:
@@ -62,7 +56,6 @@ if unique_versions:
         last_known_val = first_val
         for v in window_versions:
             val = history_map[v][m]
-            # Forward fill: use actual value or the last known good value
             current_entry = val if val is not None else last_known_val
             series.append(round(current_entry, 4))
             all_h_vals.append(current_entry)
@@ -78,8 +71,8 @@ if unique_versions:
             [f"Line {i + 1}: **{name}**" for i, name in enumerate(plotted_modes)]
         )
 
-        # Use single string to avoid Mermaid parsing Legend text as code
-        trend_chart = f'```mermaid\nxychart-beta\n    title "Historical Performance (RMSE)"\n    x-axis {x_axis_trend}\n    y-axis "RMSE" 0 --> {y_max_t:.4f}\n{trend_lines}```\n> **Legend:** {legend_labels}'
+        # NOTE: Closing backticks happen BEFORE the legend text
+        trend_chart = f'```mermaid\nxychart-beta\n    title "Historical Performance (RMSE)"\n    x-axis {x_axis_trend}\n    y-axis "RMSE" 0 --> {y_max_t:.4f}\n{trend_lines}```\n\n> **Legend:** {legend_labels}'
 
 # --- 3. Convergence & Table Parsing ---
 convergence_raw = defaultdict(list)
@@ -114,26 +107,25 @@ if convergence_raw:
     for mode in sorted(convergence_raw.keys()):
         pts = convergence_raw[mode]
         final_time = pts[-1][1]
-        final_rmse = pts[-1][0]
+        final_val = pts[-1][0]
 
         mode_series = []
         for ts in t_steps:
             if ts > final_time:
-                # Forward fill the line after completion to avoid Mermaid 'null' error
-                mode_series.append(round(final_rmse, 4))
+                # Forward fill: use final value instead of null
+                mode_series.append(round(final_val, 4))
             else:
-                current_best_r = pts[0][0]
+                current_r = pts[0][0]
                 for r, t in pts:
                     if t <= ts:
-                        current_best_r = r
+                        current_r = r
                     else:
                         break
-                mode_series.append(round(current_best_r, 4))
+                mode_series.append(round(current_r, 4))
 
         conv_lines += f"    line {json.dumps(mode_series)}\n"
         plotted_conv_modes.append(mode.upper())
 
-        # Build UI Elements
         final_p = pts[-1]
         summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} |\n"
         gallery_header += f" {mode.upper()} |"
@@ -141,13 +133,12 @@ if convergence_raw:
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
 
     x_axis_conv = "[" + ", ".join([f'"{round(t, 1)}s"' for t in t_steps]) + "]"
-    # Scale Y axis based on historical data for better context
     y_limit = max(all_h_vals or [1.0]) * 1.1
 
     conv_legend = " | ".join(
         [f"Line {i + 1}: **{m}**" for i, m in enumerate(plotted_conv_modes)]
     )
-    conv_chart = f'```mermaid\nxychart-beta\n    title "RMSE Convergence Over Time"\n    x-axis {x_axis_conv}\n    y-axis "RMSE" 0 --> {y_limit:.4f}\n{conv_lines}```\n> **Legend:** {conv_legend}'
+    conv_chart = f'```mermaid\nxychart-beta\n    title "RMSE Convergence Over Time"\n    x-axis {x_axis_conv}\n    y-axis "RMSE" 0 --> {y_limit:.4f}\n{conv_lines}```\n\n> **Legend:** {conv_legend}'
 else:
     conv_chart = "*No convergence data available for this run.*"
 
@@ -172,5 +163,3 @@ with open(readme_path, "w") as f:
 ---
 *Last updated: {latest_date} (Commit: {os.environ.get("GITHUB_SHA", "local")[:8]})*
 """)
-
-print(f"Successfully generated dashboard at {readme_path}")
