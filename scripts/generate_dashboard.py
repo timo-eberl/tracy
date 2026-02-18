@@ -1,7 +1,6 @@
 import sys
 import csv
 import os
-import json
 from collections import defaultdict
 
 # --- Configuration & Args ---
@@ -36,43 +35,7 @@ if os.path.exists(csv_path):
                 continue
 
 # --- 2. Historical Trend Graph (Mermaid) ---
-trend_chart = "*No historical data available yet.*"
-if unique_versions:
-    window_versions = unique_versions[-20:]
-    trend_lines, all_h_vals = "", []
-    plotted_modes = []
-
-    for m in sorted(all_modes_historical):
-        series = []
-        first_val = None
-        for v in window_versions:
-            if history_map[v][m] is not None:
-                first_val = history_map[v][m]
-                break
-
-        if first_val is None:
-            continue
-
-        last_known_val = first_val
-        for v in window_versions:
-            val = history_map[v][m]
-            current_entry = val if val is not None else last_known_val
-            series.append(round(current_entry, 4))
-            all_h_vals.append(current_entry)
-            last_known_val = current_entry
-
-        trend_lines += f"    line {json.dumps(series)}\n"
-        plotted_modes.append(m.upper())
-
-    if trend_lines:
-        x_axis_trend = "[" + ", ".join([f'"{v}"' for v in window_versions]) + "]"
-        y_max_t = max(all_h_vals or [1.0]) * 1.2
-        legend_labels = " | ".join(
-            [f"Line {i + 1}: **{name}**" for i, name in enumerate(plotted_modes)]
-        )
-
-        trend_chart = f'```mermaid\nxychart-beta\n    title "Historical Performance (RMSE)"\n    x-axis {x_axis_trend}\n    y-axis "RMSE" 0 --> {y_max_t:.4f}\n{trend_lines}```\n\n> **Legend:** {legend_labels}'
-
+trend_chart = "## Historical Trend\n![Historical Trend](renderings/history_trend.png)"
 
 # --- 3. Table & Gallery Parsing ---
 # We still need to parse the log to fill out the Summary Table data
