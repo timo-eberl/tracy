@@ -1,9 +1,19 @@
 import sys
-import matplotlib.pyplot as plt
+import csv
 import os
+import matplotlib
+
+matplotlib.use("Agg")  # Force non-interactive backend for headless CI
+import matplotlib.pyplot as plt
+from collections import defaultdict
+
+# --- Global Style ---
+plt.style.use("ggplot")
+COLORS = {"st": "#3498db", "mt": "#e74c3c"}
 
 
-def generate_plots(log_path, output_path):
+def generate_convergence_plot(log_path, output_path):
+    """Generates the RMSE vs Time plot for the current run."""
     if not os.path.exists(log_path):
         print(f"Log not found: {log_path}")
         return
@@ -12,76 +22,121 @@ def generate_plots(log_path, output_path):
     current_variant = None
     all_rmse_values = []
 
-    # Parse the raw log
     with open(log_path, "r") as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
             if line.startswith("VARIANT:"):
-                current_variant = line.split(":")[1].strip()
+                current_variant = line.split(":")[1].strip().lower()
                 data[current_variant] = {"rmse": [], "time": []}
             elif current_variant and "," in line:
                 try:
                     rmse, time = map(float, line.split(","))
-                    # Cumulative time calculation
                     prev_time = (
                         data[current_variant]["time"][-1]
                         if data[current_variant]["time"]
                         else 0
                     )
-                    current_cumulative = prev_time + time
-
                     data[current_variant]["rmse"].append(rmse)
-                    data[current_variant]["time"].append(current_cumulative)
-
+                    data[current_variant]["time"].append(prev_time + time)
                     all_rmse_values.append(rmse)
                 except ValueError:
                     continue
 
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    plt.style.use("ggplot")
-
-    # Consistent color mapping
-    colors = {"st": "#3498db", "mt": "#e74c3c"}
-
+    plt.figure(figsize=(10, 5))
     for variant, results in data.items():
         if not results["time"]:
             continue
-
-        # Plotting raw data points only (no T=0 injection)
         plt.plot(
             results["time"],
             results["rmse"],
-            label=variant.upper(),
-            color=colors.get(variant, None),
+            label=f"Current {variant.upper()}",
+            color=COLORS.get(variant),
             marker="o",
             markersize=4,
             linewidth=2,
         )
 
-    # --- Axis Limits ---
-    # We still start the axis view at 0, but the lines will start at their first data point
     plt.xlim(left=0)
     plt.ylim(bottom=0)
-
     if all_rmse_values:
         plt.ylim(top=max(all_rmse_values) * 1.1)
 
-    plt.title("Convergence Comparison: RMSE vs Time", fontsize=14)
-    plt.xlabel("Cumulative Time (seconds)", fontsize=12)
-    plt.ylabel("RMSE (Lower is Better)", fontsize=12)
-    plt.grid(True, linestyle="--", alpha=0.7)
+    plt.title("Convergence Comparison: RMSE vs Time", fontsize=12)
+    plt.xlabel("Cumulative Time (seconds)")
+    plt.ylabel("RMSE")
     plt.legend()
-
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
-    print(f"Plot saved to {output_path}")
+    plt.close()
+    print(f"Convergence plot saved to {output_path}")
+
+
+def generate_trend_plot(csv_path, output_path):
+    """Generates the Historical RMSE Trend plot from the CSV data."""
+    if not os.path.exists(csv_path):
+        print(f"CSV not found: {csv_path}")
+        return
+
+    # Data structure: data[mode][version] = rmse
+    data = defaultdict(dict)
+    versions = []
+
+    with open(csv_path, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            v = row["version"]
+            m = row["mode"].lower()
+            r = float(row["rmse"])
+            # Create a short version label for the X-axis
+            short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
+            if short_v not in versions:
+                versions.append(short_v)
+            data[m][short_v] = r
+
+    # Focus on the last 20 builds
+    window_versions = versions[-20:]
+
+    plt.figure(figsize=(10, 5))
+    for mode in sorted(data.keys()):
+        # Gather points for this mode, handle missing data points if any
+        y_values = [data[mode].get(v) for v in window_versions]
+
+        # Filter out None values for plotting to avoid line breaks
+        plot_x = [i for i, val in enumerate(y_values) if val is not None]
+        plot_y = [val for val in y_values if val is not None]
+
+        plt.plot(
+            plot_x,
+            plot_y,
+            label=mode.upper(),
+            color=COLORS.get(mode),
+            marker="s",
+            markersize=5,
+            linewidth=2,
+        )
+
+    plt.xticks(range(len(window_versions)), window_versions, rotation=45)
+    plt.ylim(bottom=0)
+    plt.title("Historical Performance Trend", fontsize=12)
+    plt.xlabel("Build Version")
+    plt.ylabel("Final RMSE")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
+    print(f"Trend plot saved to {output_path}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python generate_plots.py <log_file> <output_png>")
+    # Expecting: python generate_plots.py <log_path> <csv_path> <renderings_dir>
+    if len(sys.argv) < 4:
+        print("Usage: python generate_plots.py <log_path> <csv_path> <out_dir>")
         sys.exit(1)
-    generate_plots(sys.argv[1], sys.argv[2])
+
+    log_in, csv_in, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+    os.makedirs(out_dir, exist_ok=True)
+
+    generate_convergence_plot(log_in, os.path.join(out_dir, "convergence.png"))
+    generate_trend_plot(csv_in, os.path.join(out_dir, "history_trend.png"))
