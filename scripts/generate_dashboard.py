@@ -35,7 +35,7 @@ if os.path.exists(csv_path):
             except (ValueError, KeyError):
                 continue
 
-# --- 2. Historical Trend Graph ---
+# --- 2. Historical Trend Graph (Mermaid) ---
 trend_chart = "*No historical data available yet.*"
 if unique_versions:
     window_versions = unique_versions[-20:]
@@ -71,13 +71,12 @@ if unique_versions:
             [f"Line {i + 1}: **{name}**" for i, name in enumerate(plotted_modes)]
         )
 
-        # NOTE: Closing backticks happen BEFORE the legend text
         trend_chart = f'```mermaid\nxychart-beta\n    title "Historical Performance (RMSE)"\n    x-axis {x_axis_trend}\n    y-axis "RMSE" 0 --> {y_max_t:.4f}\n{trend_lines}```\n\n> **Legend:** {legend_labels}'
 
-# --- 3. Convergence & Table Parsing ---
-convergence_raw = defaultdict(list)
-total_max_time = 0.0
 
+# --- 3. Table & Gallery Parsing ---
+# We still need to parse the log to fill out the Summary Table data
+convergence_raw = defaultdict(list)
 if os.path.exists(LOG_FILE_PATH):
     with open(LOG_FILE_PATH, "r") as f:
         curr = None
@@ -92,62 +91,33 @@ if os.path.exists(LOG_FILE_PATH):
                     r, t = map(float, line.split(","))
                     cumulative += t
                     convergence_raw[curr].append((r, cumulative))
-                    total_max_time = max(total_max_time, cumulative)
                 except:
                     continue
 
 summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n"
 gallery_header, gallery_sep, gallery_imgs = "|", "|", "|"
-conv_lines = ""
-num_buckets = 12
-t_steps = [(total_max_time / (num_buckets - 1)) * i for i in range(num_buckets)]
-plotted_conv_modes = []
 
 if convergence_raw:
     for mode in sorted(convergence_raw.keys()):
         pts = convergence_raw[mode]
-        final_time = pts[-1][1]
-        final_val = pts[-1][0]
-
-        mode_series = []
-        for ts in t_steps:
-            if ts > final_time:
-                # Forward fill: use final value instead of null
-                mode_series.append(round(final_val, 4))
-            else:
-                current_r = pts[0][0]
-                for r, t in pts:
-                    if t <= ts:
-                        current_r = r
-                    else:
-                        break
-                mode_series.append(round(current_r, 4))
-
-        conv_lines += f"    line {json.dumps(mode_series)}\n"
-        plotted_conv_modes.append(mode.upper())
-
         final_p = pts[-1]
         summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} |\n"
         gallery_header += f" {mode.upper()} |"
         gallery_sep += " :---: |"
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
-
-    x_axis_conv = "[" + ", ".join([f'"{round(t, 1)}s"' for t in t_steps]) + "]"
-    y_limit = max(all_h_vals or [1.0]) * 1.1
-
-    conv_legend = " | ".join(
-        [f"Line {i + 1}: **{m}**" for i, m in enumerate(plotted_conv_modes)]
-    )
-    conv_chart = f'```mermaid\nxychart-beta\n    title "RMSE Convergence Over Time"\n    x-axis {x_axis_conv}\n    y-axis "RMSE" 0 --> {y_limit:.4f}\n{conv_lines}```\n\n> **Legend:** {conv_legend}'
 else:
-    conv_chart = "*No convergence data available for this run.*"
+    summary_table = "*No summary data available.*"
+
+conv_chart_html = (
+    "## Convergence Comparison\n![Convergence Plot](renderings/convergence.png)"
+)
 
 # --- 4. Assemble Final README ---
 with open(readme_path, "w") as f:
     f.write(f"""# Path Tracer Benchmark Dashboard
 
 ## Summary
-{summary_table if convergence_raw else "*No summary data available.*"}
+{summary_table}
 
 ## Historical Trend
 {trend_chart}
@@ -157,8 +127,7 @@ with open(readme_path, "w") as f:
 {gallery_sep if convergence_raw else ""}
 {gallery_imgs if convergence_raw else ""}
 
-## Convergence Comparison
-{conv_chart}
+{conv_chart_html}
 
 ---
 *Last updated: {latest_date} (Commit: {os.environ.get("GITHUB_SHA", "local")[:8]})*
