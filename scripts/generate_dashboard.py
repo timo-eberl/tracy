@@ -4,165 +4,95 @@ import os
 import json
 from collections import defaultdict
 
-# --- Configuration ---
 LOG_FILE_PATH = "tests/img/exr/zig_render/zig_render_log.txt"
+csv_path, readme_path = sys.argv[1], sys.argv[2]
 
-if len(sys.argv) < 3:
-    print("Usage: python generate_dashboard.py <csv_path> <readme_path>")
-    sys.exit(1)
-
-csv_path = sys.argv[1]
-readme_path = sys.argv[2]
-
-# --- 1. Read Historical CSV Data ---
+# --- 1. Read History ---
 history_map = defaultdict(lambda: defaultdict(lambda: None))
-unique_versions = []
-all_modes_historical = set()
+unique_versions, all_modes_historical = [], set()
 latest_date = "N/A"
 
 if os.path.exists(csv_path):
-    try:
-        with open(csv_path, "r") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                ver = row["version"]
-                short_v = f"b.{ver.split('.')[-1]}" if "build" in ver else ver[-6:]
-                mode = row["mode"]
-                rmse = float(row["rmse"])
-                latest_date = row["date"]
+    with open(csv_path, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            v, m, r = row["version"], row["mode"], float(row["rmse"])
+            short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
+            if short_v not in unique_versions:
+                unique_versions.append(short_v)
+            all_modes_historical.add(m)
+            history_map[short_v][m] = r
+            latest_date = row["date"]
 
-                if short_v not in unique_versions:
-                    unique_versions.append(short_v)
-
-                all_modes_historical.add(mode)
-                history_map[short_v][mode] = rmse
-    except Exception as e:
-        print(f"Error reading CSV: {e}")
-
-# --- 2. Build Historical Trend with Forward Fill ---
+# --- 2. Historical Graph ---
 window_versions = unique_versions[-20:]
-trend_lines_md = ""
-all_history_vals = []
-last_known_rmse = {mode: None for mode in all_modes_historical}
+trend_lines, all_h_vals = "", []
+last_val = {m: None for m in all_modes_historical}
 
-for mode in sorted(all_modes_historical):
-    mode_series = []
+for m in sorted(all_modes_historical):
+    series = []
     for v in window_versions:
-        current_val = history_map[v][mode]
-        if current_val is not None:
-            last_known_rmse[mode] = current_val
-            mode_series.append(current_val)
-            all_history_vals.append(current_val)
-        else:
-            fill_val = last_known_rmse[mode]
-            mode_series.append(fill_val)
-            if fill_val is not None:
-                all_history_vals.append(fill_val)
+        val = history_map[v][m] if history_map[v][m] is not None else last_val[m]
+        series.append(val)
+        if val is not None:
+            all_h_vals.append(val)
+            last_val[m] = val
+    if any(s is not None for s in series):
+        trend_lines += f"    line {json.dumps(series)}\n"
 
-    if any(val is not None for val in mode_series):
-        trend_lines_md += f"    line {json.dumps(mode_series)}\n"
+x_axis_trend = "[" + ", ".join([f'"{v}"' for v in window_versions]) + "]"
+y_max_t = max(all_h_vals or [1.0]) * 1.2
+trend_chart = f'```mermaid\nxychart-beta\n    title "Trend"\n    x-axis {x_axis_trend}\n    y-axis "RMSE" 0 --> {y_max_t:.4f}\n{trend_lines}```'
 
-trend_chart = "No historical data available."
-if window_versions:
-    y_max_trend = max(all_history_vals or [1.0]) * 1.2
-    trend_chart = f'```mermaid\nxychart-beta\n    title "Historical Trend (Forward Filled)"\n    x-axis {json.dumps(window_versions)}\n    y-axis "RMSE" 0 --> {y_max_trend:.4f}\n{trend_lines_md}```'
-
-# --- 3. Parse Convergence Log (Current Run) ---
+# --- 3. Convergence & Table ---
 convergence_raw = defaultdict(list)
 total_max_time = 0.0
 
 if os.path.exists(LOG_FILE_PATH):
-    try:
-        with open(LOG_FILE_PATH, "r") as f:
-            curr_mode = None
-            for line in f:
-                line = line.strip()
-                if not line:
+    with open(LOG_FILE_PATH, "r") as f:
+        curr = None
+        for line in f:
+            line = line.strip()
+            if line.startswith("VERSION:"):
+                curr, cumulative = line.split(":")[1].strip(), 0.0
+            elif curr:
+                try:
+                    r, t = map(float, line.split(","))
+                    cumulative += t
+                    convergence_raw[curr].append((r, cumulative))
+                    total_max_time = max(total_max_time, cumulative)
+                except:
                     continue
-                if line.startswith("VERSION:"):
-                    curr_mode = line.split(":", 1)[1].strip()
-                    cumulative = 0.0
-                elif curr_mode:
-                    try:
-                        rmse_val, step_time = map(float, line.split(","))
-                        cumulative += step_time
-                        convergence_raw[curr_mode].append((rmse_val, cumulative))
-                        total_max_time = max(total_max_time, cumulative)
-                    except ValueError:
-                        continue
-    except Exception as e:
-        print(f"Error reading log: {e}")
 
-# --- 4. Resample Convergence for Mermaid Alignment ---
-conv_chart = "No convergence data."
-summary_table = "| Mode | Final RMSE | Total Time |\n|---|---|---|\n"
-gallery_header = "|"
-gallery_sep = "|"
-gallery_imgs = "|"
+summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n"
+gallery_header, gallery_sep, gallery_imgs = "|", "|", "|"
+conv_lines, resampled = "", defaultdict(list)
+num_buckets = 10
+t_steps = [(total_max_time / (num_buckets - 1)) * i for i in range(num_buckets)]
 
 if convergence_raw:
-    num_buckets = 10
-    time_steps = [(total_max_time / (num_buckets - 1)) * i for i in range(num_buckets)]
-    resampled_data = defaultdict(list)
-
     for mode in sorted(convergence_raw.keys()):
-        points = convergence_raw[mode]
-        # Resampling logic
-        for t in time_steps:
-            last_rmse = points[0][0]
-            for p_rmse, p_time in points:
-                if p_time <= t:
-                    last_rmse = p_rmse
+        pts = convergence_raw[mode]
+        for ts in t_steps:
+            last_r = pts[0][0]
+            for r, t in pts:
+                if t <= ts:
+                    last_r = r
                 else:
                     break
-            resampled_data[mode].append(round(last_rmse, 4))
+            resampled[mode].append(round(last_r, 4))
 
-        # Populate Table and Gallery
-        final_p = points[-1]
-        summary_table += (
-            f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s |\n"
-        )
+        summary_table += f"| **{mode.upper()}** | {pts[-1][0]:.4f} | {pts[-1][1]:.2f}s | {len(pts)} |\n"
         gallery_header += f" {mode.upper()} |"
         gallery_sep += " :---: |"
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
+        conv_lines += f"    line {json.dumps(resampled[mode])}\n"
 
-    # Build Mermaid Lines
-    mermaid_conv_lines = ""
-    for mode in sorted(resampled_data.keys()):
-        mermaid_conv_lines += f"    line {json.dumps(resampled_data[mode])}\n"
+x_axis_conv = "[" + ", ".join([f'"{round(t, 2)}s"' for t in t_steps]) + "]"
+conv_chart = f'```mermaid\nxychart-beta\n    title "Convergence"\n    x-axis {x_axis_conv}\n    y-axis "RMSE" 0 --> {max([max(v) for v in resampled.values()] or [1.0]) * 1.1:.4f}\n{conv_lines}```'
 
-    x_labels = [f'"{round(t, 2)}s"' for t in time_steps]
-    max_val_conv = max([max(v) for v in resampled_data.values()] or [1.0])
-
-    conv_chart = f"""```mermaid
-xychart-beta
-    title "RMSE vs Time (Resampled)"
-    x-axis {json.dumps(x_labels if "x_axis_labels" in locals() else x_labels)}
-    y-axis "RMSE" 0 --> {max_val_conv * 1.1:.4f}
-{mermaid_conv_lines}
-```"""
-
-# --- 5. Assemble README ---
-markdown_content = f"""
-# Path Tracer Benchmark Dashboard
-
-## Latest Run Summary
-{summary_table}
-
-## Historical Performance (Per Mode)
-{trend_chart}
-
-## Latest Render Gallery
-{gallery_header}
-{gallery_sep}
-{gallery_imgs}
-
-## Convergence Comparison (Time-based)
-{conv_chart}
-
----
-*Last updated: {latest_date}*
-"""
-
+# --- 4. Assemble ---
 with open(readme_path, "w") as f:
-    f.write(markdown_content)
+    f.write(
+        f"# Benchmark\n## Summary\n{summary_table}\n## Trend\n{trend_chart}\n## Gallery\n{gallery_header}\n{gallery_sep}\n{gallery_imgs}\n## Convergence\n{conv_chart}"
+    )

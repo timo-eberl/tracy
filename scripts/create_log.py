@@ -11,7 +11,6 @@ if len(sys.argv) < 2:
 
 output_path = sys.argv[1]
 
-# Pipeline Metadata
 base_version = os.environ.get("bench_version", "0.0.0-unknown")
 commit_sha = os.environ.get("GITHUB_SHA", "local-dev")[:8]
 timestamp = datetime.now().isoformat()
@@ -25,33 +24,38 @@ try:
 
         for line in f:
             line = line.strip()
+            if not line:
+                continue
 
-            # Start of a new version block
             if line.startswith("VERSION:"):
-                # If we were already tracking a run, save its FINAL score before switching
+                # Save previous run before switching
                 if current_mode and current_scores:
                     runs_data.append(
                         {
                             "version": f"{base_version}-{current_mode}",
-                            "rmse_value": current_scores[-1],  # The 10th/Final score
+                            "rmse_value": current_scores[-1],
+                            "iterations": len(current_scores),  # Count based on entries
                             "timestamp": timestamp,
                             "commit": commit_sha,
                         }
                     )
-                current_mode = line.split(":", 1)[1]
+                current_mode = line.split(":", 1)[1].strip()
                 current_scores = []
-            elif line:
+            else:
                 try:
-                    current_scores.append(float(line))
-                except ValueError:
+                    # Zig log format: score,time
+                    parts = line.split(",")
+                    current_scores.append(float(parts[0]))
+                except (ValueError, IndexError):
                     continue
 
-        # Catch the very last run in the file
+        # Catch the last run
         if current_mode and current_scores:
             runs_data.append(
                 {
                     "version": f"{base_version}-{current_mode}",
                     "rmse_value": current_scores[-1],
+                    "iterations": len(current_scores),
                     "timestamp": timestamp,
                     "commit": commit_sha,
                 }
@@ -59,8 +63,6 @@ try:
 
     with open(output_path, "w") as f:
         json.dump(runs_data, f, indent=2)
-    print(f"Logged final RMSE for {len(runs_data)} runs.")
-
-except FileNotFoundError:
-    print(f"Error: Log file not found at {LOG_FILE_PATH}")
+except Exception as e:
+    print(f"Error: {e}")
     sys.exit(1)

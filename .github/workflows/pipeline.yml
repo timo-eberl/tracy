@@ -86,7 +86,8 @@ jobs:
           -v $(pwd):/app \
           -v ~/.cache/zig:/root/.cache/zig \
           -w /app rmse-bench \
-          zig build run-render-bench -Dmultithreaded=false
+          zig build run-render-bench \
+          -Doptimize=Debug -Dmultithreaded=false
 
       - name: Render and Benchmark MT
         run: |
@@ -94,7 +95,8 @@ jobs:
           -v $(pwd):/app \
           -v ~/.cache/zig:/root/.cache/zig \
           -w /app rmse-bench zig \
-          build run-render-bench -Dmultithreaded=true
+          build run-render-bench \
+          -Doptimize=Debug -Dmultithreaded=true
           python3 scripts/create_log.py rmse_results.txt
 
       - name: Generate Previews
