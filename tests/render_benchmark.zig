@@ -77,7 +77,9 @@ pub fn main() !void {
         timings[i] = @as(f64, @floatFromInt(end_time - start_time)) / std.time.ns_per_s;
 
         const buffer_ptr = tracy.update_image_hdr();
-
+        if (buffer_ptr[0] == 0.0) {
+            try stdout.print("WARNING: HDR Buffer is empty at start!\n", .{});
+        }
         var err_msg: [*c]const u8 = null;
         const ret = tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, width, height, &err_msg);
 
