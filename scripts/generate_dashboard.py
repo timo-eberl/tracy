@@ -81,60 +81,59 @@ xychart-beta
     y-axis "RMSE" 0 --> {y_max_trend:.4f}
 {trend_lines_md}```"""
 
-# --- 3. Parse Convergence (Latest Render) (Requirement #4) ---
-convergence_data = {}
+# --- 3. Parse Convergence with Time ---
+convergence_data = defaultdict(list)  # Stores (rmse, cumulative_time)
 if os.path.exists(LOG_FILE_PATH):
     try:
         with open(LOG_FILE_PATH, "r") as f:
             curr_mode = None
             for line in f:
                 line = line.strip()
+                if not line:
+                    continue
                 if line.startswith("VERSION:"):
-                    curr_mode = line.split(":")[1]
+                    curr_mode = line.split(":", 1)[1].strip()
                     convergence_data[curr_mode] = []
-                elif line and curr_mode:
+                    cumulative_time = 0.0
+                elif curr_mode:
                     try:
-                        convergence_data[curr_mode].append(float(line))
+                        rmse_val, step_time = map(float, line.split(","))
+                        cumulative_time += step_time
+                        convergence_data[curr_mode].append((rmse_val, cumulative_time))
                     except ValueError:
                         continue
     except Exception as e:
-        print(f"Error reading convergence log: {e}")
+        print(f"Error reading log: {e}")
 
-conv_chart = "No convergence data found."
-print(convergence_data)
+# Build the Graph
+conv_chart = "No data."
 if convergence_data:
-    max_steps = max(len(s) for s in convergence_data.values())
-    max_val_conv = max([max(s) for s in convergence_data.values() if s] or [1.0])
-    steps_x = "[" + ", ".join([f'"{i + 1}"' for i in range(max_steps)]) + "]"
+    # To compare them on the same axis, we need a unified set of X-axis labels
+    # We'll use a representative set of time markers or just show the actual timestamps
+    mermaid_lines = ""
+    all_times = []
 
-    mermaid_conv_lines = ""
-    for mode, scores in convergence_data.items():
-        mermaid_conv_lines += f"    line {json.dumps(scores)}\n"
+    for mode in sorted(convergence_data.keys()):
+        points = convergence_data[mode]
+        rmses = [p[0] for p in points]
+        times = [p[1] for p in points]
+        all_times.extend(times)
+        mermaid_lines += f"    line {json.dumps(rmses)}\n"
+
+    # We use the time of the longest run to set the X-axis scale
+    max_time = max(all_times) if all_times else 1.0
+    # Create 10 time-based buckets for the X-axis labels
+    x_labels = [f'"{round((max_time / 9) * i, 2)}s"' for i in range(10)]
 
     conv_chart = f"""```mermaid
 xychart-beta
-    title "Convergence Rate (Current Run)"
-    x-axis {steps_x}
-    y-axis "RMSE" 0 --> {max_val_conv * 1.1:.4f}
-{mermaid_conv_lines}
+    title "RMSE vs Cumulative Time (Seconds)"
+    x-axis [{", ".join(x_labels)}]
+    y-axis "RMSE" 0 --> {max(max(p[0] for p in s) for s in convergence_data.values()) * 1.1:.4f}
+{mermaid_lines}
 ```"""
-
-# --- 4. Summary Table & Gallery (Requirement #1 & #3) ---
-summary_table = "| Mode | Final RMSE |\n|---|---|\n"
-gallery_header = "|"
-gallery_sep = "|"
-gallery_imgs = "|"
-
-# Sort modes for consistent display (ST then MT)
-for mode in sorted(convergence_data.keys()):
-    scores = convergence_data[mode]
-    if scores:
-        summary_table += f"| **{mode.upper()}** | {scores[-1]:.4f} |\n"
-        gallery_header += f" {mode.upper()} |"
-        gallery_sep += " :---: |"
-        gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
-
 # --- 5. Assemble README ---
+
 markdown_content = f"""
 # Path Tracer Benchmark Dashboard
 

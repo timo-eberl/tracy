@@ -9,8 +9,8 @@ const rmse = @import("metrics/rmse/compute_rmse.zig");
 
 const NUM_ITERATIONS = 2;
 
-fn writeScores(scores: [NUM_ITERATIONS]f32, filepath: []const u8, version: []const u8) !void {
-    // Open for appending; create if it doesn't exist
+// Updated writeScores signature
+fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, version: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = false });
     try file.seekFromEnd(0);
     defer file.close();
@@ -18,12 +18,11 @@ fn writeScores(scores: [NUM_ITERATIONS]f32, filepath: []const u8, version: []con
     var bw = std.io.bufferedWriter(file.writer());
     const writer = bw.writer();
 
-    // Header identifies this specific run's configuration
     try writer.print("VERSION:{s}\n", .{version});
-    for (scores) |s| {
-        try writer.print("{d:.4}\n", .{s});
+    for (scores, 0..) |s, i| {
+        // Format: score,time_seconds
+        try writer.print("{d:.4},{d:.6}\n", .{ s, timings[i] });
     }
-    // Double newline helps the Python parser identify the end of a run
     try writer.print("\n", .{});
     try bw.flush();
 }
@@ -65,10 +64,18 @@ pub fn main() !void {
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
     var scores: [NUM_ITERATIONS]f32 = undefined;
+    var timings: [NUM_ITERATIONS]f64 = undefined;
     var i: usize = 0;
 
+    var timer = try std.time.Timer.start();
+
     while (i < NUM_ITERATIONS) : (i += 1) {
+        const start_time = timer.read();
         tracy.render_refine(5);
+        const end_time = timer.read();
+        // Duration in seconds for this specific step
+        timings[i] = @as(f64, @floatFromInt(end_time - start_time)) / std.time.ns_per_s;
+
         const buffer_ptr = tracy.update_image_hdr();
 
         var err_msg: [*c]const u8 = null;
@@ -83,6 +90,6 @@ pub fn main() !void {
     }
 
     const log_fp = out_dir ++ "zig_render_log.txt";
-    try writeScores(scores, log_fp, version_label);
+    try writeScores(scores, timings, log_fp, version_label);
     try stdout.print("Done. Results appended to {s}\n", .{log_fp});
 }
