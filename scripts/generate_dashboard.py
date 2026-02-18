@@ -4,36 +4,51 @@ import os
 import json
 from collections import defaultdict
 
+# --- Configuration ---
 LOG_FILE_PATH = "tests/img/exr/zig_render/zig_render_log.txt"
-csv_path, readme_path = sys.argv[1], sys.argv[2]
 
-# --- 1. Read Historical CSV Data with Forward Fill ---
+# Usage: python generate_dashboard.py <csv_path> <readme_path>
+if len(sys.argv) < 3:
+    print("Usage: python generate_dashboard.py <csv_path> <readme_path>")
+    sys.exit(1)
+
+csv_path = sys.argv[1]
+readme_path = sys.argv[2]
+
+# --- 1. Read Historical CSV Data ---
+# history_map[short_version][mode] = rmse
 history_map = defaultdict(lambda: defaultdict(lambda: None))
-unique_versions = []
+all_versions_raw = []
 all_modes = set()
+latest_date = "N/A"
 
 if os.path.exists(csv_path):
-    with open(csv_path, "r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            ver = row["version"]
-            # Formatting build number for chart legibility
-            short_v = f"b.{ver.split('.')[-1]}" if "build" in ver else ver[-6:]
-            mode = row["mode"]
-            rmse = float(row["rmse"])
+    try:
+        with open(csv_path, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                ver = row["version"]
+                # Format build number for chart legibility (e.g., 0.0.1-build.5 -> b.5)
+                short_v = f"b.{ver.split('.')[-1]}" if "build" in ver else ver[-6:]
+                mode = row["mode"]
+                rmse = float(row["rmse"])
+                latest_date = row["date"]
 
-            if short_v not in unique_versions:
-                unique_versions.append(short_v)
+                if short_v not in all_versions_raw:
+                    all_versions_raw.append(short_v)
 
-            all_modes.add(mode)
-            history_map[short_v][mode] = rmse
+                all_modes.add(mode)
+                history_map[short_v][mode] = rmse
+    except Exception as e:
+        print(f"Error reading CSV: {e}")
 
-# 2. Build aligned lists with Forward Fill
-window_versions = unique_versions[-20:]
+# --- 2. Build aligned lists with Forward Fill (Requirement #2) ---
+window_versions = all_versions_raw[-20:]  # Show last 20 unique build versions
 trend_lines_md = ""
-all_vals = []
+all_history_vals = []
 
-last_known_rmse = {mode: 0.0 for mode in all_modes}
+# Tracker for Forward Fill: keeps the last seen value for each mode
+last_known_rmse = {mode: None for mode in all_modes}
 
 for mode in sorted(all_modes):
     mode_series = []
@@ -43,15 +58,30 @@ for mode in sorted(all_modes):
         if current_val is not None:
             last_known_rmse[mode] = current_val
             mode_series.append(current_val)
-            all_vals.append(current_val)
+            all_history_vals.append(current_val)
         else:
-            # Use the last known value for this mode
-            mode_series.append(last_known_rmse[mode])
-            if last_known_rmse[mode] > 0:
-                all_vals.append(last_known_rmse[mode])
+            # Carry over the previous value (Forward Fill)
+            fill_val = last_known_rmse[mode]
+            mode_series.append(fill_val)
+            if fill_val is not None:
+                all_history_vals.append(fill_val)
 
-    if any(val > 0 for val in mode_series):
-        trend_lines_md += f"    line {json.dumps(mode_series)}\n"  # --- 2. Read Current Render Convergence Log (Multi-Mode) ---
+    # Only plot if we have at least one numeric value in the series
+    if any(val is not None for val in mode_series):
+        # json.dumps converts None to null, which Mermaid handles as gaps
+        trend_lines_md += f"    line {json.dumps(mode_series)}\n"
+
+trend_chart = "No historical data available."
+if window_versions:
+    y_max_trend = max(all_history_vals or [1.0]) * 1.2
+    trend_chart = f"""```mermaid
+xychart-beta
+    title "RMSE Trend per Mode (Forward Filled)"
+    x-axis {json.dumps(window_versions)}
+    y-axis "RMSE" 0 --> {y_max_trend:.4f}
+{trend_lines_md}```"""
+
+# --- 3. Parse Convergence (Latest Render) (Requirement #4) ---
 convergence_data = {}
 if os.path.exists(LOG_FILE_PATH):
     try:
@@ -70,60 +100,37 @@ if os.path.exists(LOG_FILE_PATH):
     except Exception as e:
         print(f"Error reading convergence log: {e}")
 
-# --- 3. Generate Mermaid Blocks ---
-fence = "```"
-
-# A. Historical Trend Graph (One line per mode)
-trend_lines = ""
-all_history_vals = []
-for mode, vals in history_by_mode.items():
-    # Only plot if we have data points
-    if vals:
-        trend_lines += f"    line {json.dumps(vals[-20:])} \n"  # Show last 20 per mode
-        all_history_vals.extend(vals[-20:])
-
-trend_chart = "No historical data."
-if all_versions:
-    y_max = max(all_history_vals or [1.0]) * 1.2
-    trend_chart = f"""{fence}mermaid
-xychart-beta
-    title "RMSE Trend per Mode"
-    x-axis {json.dumps(all_versions[-20:])}
-    y-axis "RMSE" 0 --> {y_max:.4f}
-{trend_lines}
-{fence}"""
-
-# B. Convergence Graph (One line per mode in current run)
-conv_chart = "No convergence data."
+conv_chart = "No convergence data found."
 if convergence_data:
     max_steps = max(len(s) for s in convergence_data.values())
-    max_val = max([max(s) for s in convergence_data.values() if s] or [1.0])
+    max_val_conv = max([max(s) for s in convergence_data.values() if s] or [1.0])
     steps_x = "[" + ", ".join([f'"{i + 1}"' for i in range(max_steps)]) + "]"
 
-    mermaid_lines = ""
+    mermaid_conv_lines = ""
     for mode, scores in convergence_data.items():
-        mermaid_lines += f"    line {json.dumps(scores)}\n"
+        mermaid_conv_lines += f"    line {json.dumps(scores)}\n"
 
-    conv_chart = f"""{fence}mermaid
+    conv_chart = f"""```mermaid
 xychart-beta
-    title "Convergence Rate (Latest Run)"
+    title "Convergence Rate (Current Run)"
     x-axis {steps_x}
-    y-axis "RMSE" 0 --> {max_val * 1.1:.4f}
-{mermaid_lines}
-{fence}"""
+    y-axis "RMSE" 0 --> {max_val_conv * 1.1:.4f}
+{mermaid_conv_lines}
+```"""
 
-# --- 4. Dynamic Gallery and Summary Table ---
+# --- 4. Summary Table & Gallery (Requirement #1 & #3) ---
 summary_table = "| Mode | Final RMSE |\n|---|---|\n"
 gallery_header = "|"
 gallery_sep = "|"
 gallery_imgs = "|"
 
-for mode, scores in convergence_data.items():
+# Sort modes for consistent display (ST then MT)
+for mode in sorted(convergence_data.keys()):
+    scores = convergence_data[mode]
     if scores:
         summary_table += f"| **{mode.upper()}** | {scores[-1]:.4f} |\n"
         gallery_header += f" {mode.upper()} |"
         gallery_sep += " :---: |"
-        # Assumes images are named 'latest-{mode}.png'
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
 
 # --- 5. Assemble README ---
@@ -152,7 +159,7 @@ markdown_content = f"""
 try:
     with open(readme_path, "w") as f:
         f.write(markdown_content)
-    print(f"Dashboard generated with {len(convergence_data)} modes.")
+    print("Dashboard generated successfully.")
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"Error writing README: {e}")
     sys.exit(1)

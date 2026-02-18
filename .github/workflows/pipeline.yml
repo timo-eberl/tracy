@@ -82,11 +82,19 @@ jobs:
       - name: Render and Benchmark ST
         run: |
           rm -f tests/img/exr/zig_render/zig_render_log.txt
-          docker run --rm -v $(pwd):/app -w /app rmse-bench zig build run-render-bench -Dmultithreaded=false
+          docker run --rm \
+          -v $(pwd):/app \
+          -v ~/.cache/zig:/root/.cache/zig \
+          -w /app rmse-bench \
+          zig build run-render-bench -Dmultithreaded=false
 
       - name: Render and Benchmark MT
         run: |
-          docker run --rm -v $(pwd):/app -w /app rmse-bench zig build run-render-bench -Dmultithreaded=true
+          docker run --rm \
+          -v $(pwd):/app \
+          -v ~/.cache/zig:/root/.cache/zig \
+          -w /app rmse-bench zig \
+          build run-render-bench -Dmultithreaded=true
           python3 scripts/create_log.py rmse_results.txt
 
       - name: Generate Previews
