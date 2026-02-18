@@ -222,8 +222,13 @@ bool intersect_triangle(Ray r, Triangle tri, HitInfo* hit) {
 		// Check orientation to set 'inside' flag correctly
 		// If normal and ray point in the same direction, we are exiting the object (inside)
 		if (vec_dot(r.dir, n) > 0.0) {
-			hit->inside = true;
-			hit->n = n;
+			if (tri.two_sided) {
+				hit->inside = false;
+				hit->n = vec_scale(n, -1.0);
+			} else {
+				hit->inside = true;
+				hit->n = n;
+			}
 		} else {
 			hit->inside = false;
 			hit->n = n;
