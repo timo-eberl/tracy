@@ -310,8 +310,9 @@ void initialize_buffers() {
 
 // 1D Box Filter
 double box_1d(double x) {
-	// using <= instead of < ensures that pixels exactly on pixel boudary are not discarded
-	return (fabs(x) <= 0.5) ? 1.0 : 0.0;
+	// half-open interval [-radius, radius). Ensures pixels on a boundary are not used for two
+	// pixels, although in praxis this doesn't make any difference.
+	return (x >= -BOX_RADIUS && x < BOX_RADIUS) ? 1.0 : 0.0;
 }
 
 // 1D Mitchell-Netravali filter function with B=1/3, C=1/3.
@@ -654,8 +655,9 @@ void render_refine(unsigned int n_samples) {
 				int min_ny = (int)ceil(film_y - 0.5 - filter_radius);
 				int max_ny = (int)floor(film_y - 0.5 + filter_radius) + 1;
 
-				// with box filtering only the original pixel should be covered
-				if (filter_type == FILTER_BOX) {
+				// with box filtering only the original pixel should be covered (at least with
+				// radius 0.5 or lower)
+				if (filter_type == FILTER_BOX && BOX_RADIUS <= 0.5) {
 					assert(min_nx == x && max_nx == x + 1 && min_ny == y && max_ny == y + 1);
 				}
 
