@@ -48,7 +48,7 @@ typedef struct { Vec origin; Vec dir; } Ray;
 typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // Geometry Data Structures
 typedef struct { Vec center; double radius; } Sphere;
-typedef struct { Vec v0, v1, v2; } Triangle;
+typedef struct { Vec v0, v1, v2; bool two_sided } Triangle;
 typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
 // The generic Scene Object
 typedef struct {
