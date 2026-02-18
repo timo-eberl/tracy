@@ -313,7 +313,7 @@ pub fn build(b: *std.Build) void {
 
     // --- UNIT TESTS ---
     const test_mod = b.createModule(.{
-        .root_source_file = b.path("tests/all_tests.zig"),
+        .root_source_file = b.path("tests/unit_tests.zig"),
         .target = native_target,
         .optimize = optimize,
         .link_libc = true,
