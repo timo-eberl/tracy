@@ -1,6 +1,0 @@
-{
-  "version": "0.1.0-build.51",
-  "rmse_value": 0.6778,
-  "timestamp": "2026-02-17T17:00:44.977856",
-  "commit": "6f5cf293"
-}
