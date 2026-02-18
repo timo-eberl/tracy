@@ -42,7 +42,6 @@ runs:
     - name: Update CSV and Dashboard
       shell: bash
       run: |
-        run: |
           if [ ! -f "data-branch/latest_raw_log.txt" ]; then
           echo "ERROR: Log file missing!"
           exit 1
