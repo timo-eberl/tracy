@@ -357,7 +357,7 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 	Ray shadow_ray = {surf_pos, light_direction};
 	shadow_ray.origin = vec_add(shadow_ray.origin, vec_scale(surf_normal, SELF_OCCLUSION_DELTA));
 	HitInfo shadow_ray_hit;
-	bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Sphere*){NULL});
+	bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Primitive*){NULL});
 	if (is_in_shadow) { // check if occluder is further away than light source
 		double hit_dist_sq = shadow_ray_hit.t * shadow_ray_hit.t;
 		double light_dist_sq = vec_length_squared(vec_sub(light_pos, shadow_ray.origin));
