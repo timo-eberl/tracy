@@ -1,4 +1,11 @@
 name: 'Process Benchmark Data'
+description: 'Updates the orphan benchmark branch with new scores'
+inputs: 
+  bench_version:
+    required: true
+  modes:
+    required: true
+    default: 'st mt'
 runs:
   using: "composite"
   steps:
