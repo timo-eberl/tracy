@@ -7,7 +7,7 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
-const NUM_ITERATIONS = 2;
+const NUM_ITERATIONS = 10;
 
 // Updated writeScores signature
 fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, version: []const u8) !void {
