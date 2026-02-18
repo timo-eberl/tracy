@@ -101,6 +101,7 @@ if os.path.exists(LOG_FILE_PATH):
         print(f"Error reading convergence log: {e}")
 
 conv_chart = "No convergence data found."
+print(convergence_data)
 if convergence_data:
     max_steps = max(len(s) for s in convergence_data.values())
     max_val_conv = max([max(s) for s in convergence_data.values() if s] or [1.0])
