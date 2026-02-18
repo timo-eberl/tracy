@@ -44,33 +44,59 @@ trend_chart = "*No historical data available yet.*"
 if unique_versions:
     window_versions = unique_versions[-20:]
     trend_lines, all_h_vals = "", []
-    last_val = {m: None for m in all_modes_historical}
+
+    # We'll keep track of the modes we actually plot to build a legend
+    plotted_modes = []
 
     for m in sorted(all_modes_historical):
         series = []
-        for v in window_versions:
-            # Forward Fill logic: use current or carry over last known
-            val = history_map[v][m] if history_map[v][m] is not None else last_val[m]
-            series.append(val)
-            if val is not None:
-                all_h_vals.append(val)
-                last_val[m] = val
+        last_known_val = None
 
-        if any(s is not None for s in series):
-            trend_lines += f"    line {json.dumps(series)}\n"
+        # First pass: find the very first non-None value to handle leading Nones
+        # (Mermaid needs a number to start the line)
+        first_val = None
+        for v in window_versions:
+            if history_map[v][m] is not None:
+                first_val = history_map[v][m]
+                break
+
+        if first_val is None:
+            continue  # Skip mode if it has no data in this window
+
+        for v in window_versions:
+            val = history_map[v][m]
+            if val is not None:
+                last_known_val = val
+
+            # Forward fill: use current, else last known, else the first found value
+            current_entry = (
+                val
+                if val is not None
+                else (last_known_val if last_known_val is not None else first_val)
+            )
+            series.append(round(current_entry, 4))
+            all_h_vals.append(current_entry)
+
+        trend_lines += f"    line {json.dumps(series)}\n"
+        plotted_modes.append(m.upper())
 
     if trend_lines:
-        # Mermaid Formatting Fix: Manual string list construction for X-axis
         x_axis_trend = "[" + ", ".join([f'"{v}"' for v in window_versions]) + "]"
         y_max_t = max(all_h_vals or [1.0]) * 1.2
+
+        # Create a manual legend string
+        legend_labels = " | ".join(
+            [f"Line {i + 1}: **{name}**" for i, name in enumerate(plotted_modes)]
+        )
+
         trend_chart = f"""```mermaid
 xychart-beta
     title "Historical Performance (RMSE)"
     x-axis {x_axis_trend}
     y-axis "RMSE" 0 --> {y_max_t:.4f}
 {trend_lines}
-```"""
 
+    Legend: {legend_labels}"""
 # --- 3. Convergence & Table Parsing ---
 convergence_raw = defaultdict(list)
 total_max_time = 0.0
