@@ -11,7 +11,6 @@ def generate_plots(log_path, output_path):
     data = {}
     current_variant = None
     all_rmse_values = []
-    max_time = 0
 
     # Parse the raw log
     with open(log_path, "r") as f:
@@ -25,7 +24,7 @@ def generate_plots(log_path, output_path):
             elif current_variant and "," in line:
                 try:
                     rmse, time = map(float, line.split(","))
-                    # Convert relative step time to cumulative time
+                    # Cumulative time calculation
                     prev_time = (
                         data[current_variant]["time"][-1]
                         if data[current_variant]["time"]
@@ -37,8 +36,6 @@ def generate_plots(log_path, output_path):
                     data[current_variant]["time"].append(current_cumulative)
 
                     all_rmse_values.append(rmse)
-                    if current_cumulative > max_time:
-                        max_time = current_cumulative
                 except ValueError:
                     continue
 
@@ -46,20 +43,17 @@ def generate_plots(log_path, output_path):
     plt.figure(figsize=(10, 6))
     plt.style.use("ggplot")
 
+    # Consistent color mapping
     colors = {"st": "#3498db", "mt": "#e74c3c"}
 
     for variant, results in data.items():
         if not results["time"]:
             continue
 
-        # Adding a starting point at T=0 with the first RMSE value
-        # to ensure the line starts exactly at the Y-axis
-        times = [0] + results["time"]
-        rmses = [results["rmse"][0]] + results["rmse"]
-
+        # Plotting raw data points only (no T=0 injection)
         plt.plot(
-            times,
-            rmses,
+            results["time"],
+            results["rmse"],
             label=variant.upper(),
             color=colors.get(variant, None),
             marker="o",
@@ -67,11 +61,11 @@ def generate_plots(log_path, output_path):
             linewidth=2,
         )
 
-    # --- Force Axes to Start at 0 ---
-    plt.xlim(left=0)  # X starts at 0
-    plt.ylim(bottom=0)  # Y starts at 0
+    # --- Axis Limits ---
+    # We still start the axis view at 0, but the lines will start at their first data point
+    plt.xlim(left=0)
+    plt.ylim(bottom=0)
 
-    # Optional: Add 10% headroom so the line isn't touching the top border
     if all_rmse_values:
         plt.ylim(top=max(all_rmse_values) * 1.1)
 
