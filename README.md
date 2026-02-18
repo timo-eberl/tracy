@@ -7,8 +7,10 @@
 ```mermaid
 xychart-beta
     title "Trend"
-    x-axis []
-    y-axis "RMSE" 0 --> 1.2000
+    x-axis ["b.76"]
+    y-axis "RMSE" 0 --> 1.8818
+    line [1.5682]
+    line [1.5682]
 ```
 ## Gallery
 |
