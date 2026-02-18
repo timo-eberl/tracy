@@ -19,6 +19,7 @@ runs_data = []
 
 try:
     with open(LOG_FILE_PATH, "r") as f:
+        print(f.read())
         current_mode = None
         current_scores = []
 
