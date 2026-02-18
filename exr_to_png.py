@@ -2,55 +2,44 @@ import mitsuba as mi
 import numpy as np
 from PIL import Image
 import os
+import sys
 
 # Set mitsuba variant
 mi.set_variant("scalar_rgb")
 
+# --- Argument Parsing ---
+if len(sys.argv) < 3:
+    print("Usage: python exr_to_png.py <input_exr_path> <output_png_path>")
+    sys.exit(1)
 
-# Define the path used by the Zig renderer
-INPUT_PATH = "tests/img/exr/zig_render/render_zig.exr"
-OUTPUT_PATH = "preview.png"
+input_path = sys.argv[1]
+output_path = sys.argv[2]
 
-if not os.path.exists(INPUT_PATH):
-    print(
-        f"Error: {INPUT_PATH} not found. Ensure the Zig renderer has finished at least one step."
-    )
-    exit(1)
+if not os.path.exists(input_path):
+    print(f"Error: {input_path} not found.")
+    sys.exit(1)
 
-# Load the HDR EXR
+# --- Processing ---
 try:
-    bitmap = mi.Bitmap(INPUT_PATH)
-    pixels_all = np.array(bitmap)
-    pixels_rgb = pixels_all[:, :, 0:3]  # Drop Alpha channel if present
-except Exception as e:
-    print(f"Failed to load EXR: {e}")
-    exit(1)
+    # Load the HDR EXR
+    bitmap = mi.Bitmap(input_path)
+    pixels_rgb = np.array(bitmap)[:, :, 0:3]  # Drop Alpha channel if present
 
-# DEBUG: Log raw values for a specific pixel
-# Note: Using [150, 320] consistent with your previous snippet
-target_raw = pixels_rgb[150, 320]
-print(f"RAW HDR Value at (320, 150): {target_raw}")
+    # DEBUG: Log raw values for a specific pixel
+    target_raw = pixels_rgb[150, 320]
+    print(f"RAW HDR Value at (320, 150): {target_raw}")
 
-# Tone Mapping: Clip high intensity (HDR) to 1.0 (LDR)
-pixels_clamped = np.clip(pixels_rgb, 0.0, 1.0)
+    # Tone Mapping: Clamp 0-1, Scale to 255, and cast to 8-bit
+    # We clip twice to ensure floating point math doesn't cause overflow wraps
+    pixels_8bit = (np.clip(pixels_rgb, 0.0, 1.0) * 255.0).clip(0, 255).astype(np.uint8)
 
-# 4. Scale to 8-bit range (0.0 - 255.0)
-pixels_scaled = pixels_clamped * 255.0
+    print(f"FINAL 8-bit Value:           {pixels_8bit[150, 320]}")
 
-# We ensure the value is strictly between 0.0 and 255.0 BEFORE casting.
-# This prevents floating point overflow (e.g., 255.00001) wrapping to 0.
-pixels_safe = np.clip(pixels_scaled, 0.0, 255.0)
-
-# cast to 8-bit unsigned integers
-pixels_8bit = pixels_safe.astype(np.uint8)
-
-print(f"FINAL 8-bit Value:           {pixels_8bit[150, 320]}")
-
-# save png
-try:
+    # Save PNG
     img = Image.fromarray(pixels_8bit, "RGB")
-    img.save(OUTPUT_PATH)
-    print(f"Successfully converted {INPUT_PATH} to {OUTPUT_PATH}")
+    img.save(output_path)
+    print(f"Successfully converted {input_path} to {output_path}")
+
 except Exception as e:
-    print(f"Error saving image: {e}")
-    exit(1)
+    print(f"Operation failed: {e}")
+    sys.exit(1)

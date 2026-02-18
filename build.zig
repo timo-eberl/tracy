@@ -293,6 +293,11 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
+    // so that the program knows about the multithreaded flag
+    const options = b.addOptions();
+    options.addOption(bool, "multithreaded", use_openmp);
+    render_bench_exe.root_module.addOptions("config", options);
+
     render_bench_exe.want_lto = use_lto;
 
     configure_openmp.apply(render_bench_exe, use_openmp, b);
