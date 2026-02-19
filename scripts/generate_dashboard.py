@@ -63,6 +63,7 @@ summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n
 gallery_header = "| Reference |"
 gallery_sep = "| :---: |"
 gallery_imgs = "| ![Reference](renderings/reference.png) |"
+gallery_diffs = "| |"
 
 if convergence_raw:
     for mode in sorted(convergence_raw.keys()):
@@ -72,6 +73,7 @@ if convergence_raw:
         gallery_header += f" {mode.upper()} |"
         gallery_sep += " :---: |"
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
+        gallery_diffs += f" ![ Diff {mode} ](renderings/latest-diff-{mode}.png) |"
 else:
     summary_table = "*No summary data available.*"
 
@@ -91,6 +93,7 @@ with open(readme_path, "w") as f:
 {gallery_header if convergence_raw else ""}
 {gallery_sep if convergence_raw else ""}
 {gallery_imgs if convergence_raw else ""}
+{gallery_diffs if convergence_raw else ""}
 
 ## Convergence Comparison
 {conv_chart_html}
