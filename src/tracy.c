@@ -453,7 +453,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 	switch (hit_prim->material) {
 	case EMISSIVE: {
 		Vec radiosity = hit_prim->color;
-		Vec radiance = vec_scale(radiosity, 1.0 / (4.0 * M_PI));
+		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
 		return radiance;
 	}
 	case DIFFUSE: {
