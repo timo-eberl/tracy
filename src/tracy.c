@@ -26,7 +26,8 @@
 #define MITCHELL_RADIUS 2.0
 #define BOX_RADIUS 0.5
 
-#define MAX_DEPTH 4
+#define MAX_DEPTH 5
+#define RR_START_DEPTH 2 // Roussian Roulette starts after some samples
 
 // If true, reinhard tonemapping and srgb conversion will be used. Otherwise raw (clamped) data will
 // be written.
@@ -144,6 +145,9 @@ Vec vec_cross(Vec a, Vec b) {
 		a.z * b.x - a.x * b.z,
 		a.x * b.y - a.y * b.x,
 	};
+}
+double vec_max_component(Vec v) {
+	return fmax(v.x, fmax(v.y, v.z));
 }
 
 // The image buffer will be allocated on demand.
@@ -461,9 +465,16 @@ Vec sample_cosine_hemisphere(Vec normal, pcg32_random_t* rng) {
 	return sample_world;
 }
 
+float clamp_survival_probability(float probability) {
+	// Clamp probability to ensure we don't divide by zero or kill too aggressively
+	if (probability < 0.1) return 0.1;
+	if (probability > 0.95) return 0.95;
+	return probability;
+}
+
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng); // forward declaration for recursion
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
-	if (depth > MAX_DEPTH) { return (Vec){0, 0, 0}; }
+	if (depth + 1 > MAX_DEPTH) { return (Vec){0, 0, 0}; }
 
 	HitInfo hit;
 	Primitive* hit_prim = NULL;
@@ -483,27 +494,52 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		if (hit.inside) return (Vec){0}; // If inside, return 0
 
 		Vec normal = hit.n;
+
+		double survival_prob = 1.0; // Default to 100% survival
+		// Russian Roulette
+		if (depth >= RR_START_DEPTH) {
+			// Probability is based on how 'bright' the surface is.
+			// Darker surfaces are more likely to terminate.
+			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
+			// Terminate based on survival probability
+			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
+		}
+
 		Vec next_direction = sample_cosine_hemisphere(normal, rng);
 
 		Ray refl_ray = {hit.p, next_direction};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
 
+		// russian roulette bias correction: scale the albedo by the inverse probability to
+		// compensate for killed rays.
+		Vec effective_albedo = vec_scale(hit_prim->color, 1.0 / survival_prob);
+
 		// The PDF is (cos_theta / PI).
 		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
 		// Result: (Li * (Color / PI) * cos_theta) / (cos_theta / PI) == Li * Color
-		Vec radiance = vec_hadamard_prod(hit_prim->color, incoming_radiance);
-		return radiance;
+		return vec_hadamard_prod(effective_albedo, incoming_radiance);
 	}
 	case MIRROR: {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
+
+		double survival_prob = 1.0;
+		// Russian Roulette
+		if (depth >= RR_START_DEPTH) {
+			// Mirrors are usually bright, but if it's a dark mirror, we might kill it
+			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
+			// Terminate based on survival probability
+			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
+		}
+
 		// we don't implement a perfect mirror as a brdf
 		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
 		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec radiance =
-			vec_hadamard_prod(radiance_from_ray(refl_ray, depth + 1, rng), hit_prim->color);
-		return radiance;
+		Vec incoming = radiance_from_ray(refl_ray, depth + 1, rng);
+		// russian roulette bias correction
+		Vec effective_reflectance = vec_scale(hit_prim->color, 1.0 / survival_prob);
+		return vec_hadamard_prod(incoming, effective_reflectance);
 	}
 	case REFRACTIVE: {
 		double ior = hit_prim->color.x;
