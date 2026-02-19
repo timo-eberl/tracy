@@ -27,7 +27,7 @@ self.onmessage = async (event) => {
 	);
 
 	if (command === 'renderFast') {
-		Module._render_refine(2);
+		Module._render_refine(1);
 		const bufferPtr = Module._update_image_ldr();
 		self.postMessage({
 			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true

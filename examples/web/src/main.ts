@@ -125,7 +125,7 @@ async function drawFull() {
 			distance: camera.distance,
 			focusPoint: camera.focusPoint
 		},
-		samplesPerPixel: 50
+		samplesPerPixel: 30
 	});
 
 	const endTime = performance.now();
