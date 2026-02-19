@@ -452,6 +452,8 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	switch (hit_prim->material) {
 	case EMISSIVE: {
+		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
+
 		Vec radiosity = hit_prim->color;
 		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
 		return radiance;
