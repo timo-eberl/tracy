@@ -121,6 +121,9 @@ jobs:
 
       - name: Generate Diff Images
         run: |
+          # Fix permissions: Docker presumable created these files as root
+          sudo chown -R $USER tests/img/exr/zig_render
+
           # Install extra dependency for diff_exr.py (others installed by exr-to-png-conversion)
           pip install opencv-python
 
