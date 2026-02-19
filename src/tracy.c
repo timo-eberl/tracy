@@ -371,7 +371,13 @@ double fresnel(Vec incident, Vec normal, bool is_inside, double ior) {
 	double R0 = ((1.0 - ior) / (1.0 + ior)) * ((1.0 - ior) / (1.0 + ior));
 	double cos_i = -vec_dot(incident, normal);
 	// If we're inside the medium, use the correct IOR for the calculation
-	if (is_inside) cos_i = -cos_i; // This can happen if ray is inside the sphere
+	if (is_inside) {
+		cos_i = -cos_i; // This can happen if ray is inside the sphere
+		// We must use the transmitted angle for Schlick when going from Denser -> Rarer
+		double sin2_t = ior * ior * (1.0 - cos_i * cos_i);
+		if (sin2_t > 1.0) return 1.0; // Total Internal Reflection
+		cos_i = sqrt(1.0 - sin2_t);
+	}
 
 	return R0 + (1 - R0) * pow(1 - cos_i, 5);
 }
