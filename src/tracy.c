@@ -391,7 +391,7 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 // Calculates the refraction direction using Snell's Law from 11.2.9
 // Also handles Total Internal Reflection.
 Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
-	double cos_i = -vec_dot(incident, normal);
+	double cos_i = vec_dot(incident, normal);
 	assert(cos_i > 0.0);
 
 	double k = 1 - eta * eta * (1 - cos_i * cos_i);
@@ -452,10 +452,8 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	switch (hit_prim->material) {
 	case EMISSIVE: {
-		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
-
 		Vec radiosity = hit_prim->color;
-		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
+		Vec radiance = vec_scale(radiosity, 1.0 / (4.0 * M_PI));
 		return radiance;
 	}
 	case DIFFUSE: {
