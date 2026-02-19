@@ -3,8 +3,8 @@
 ## Summary
 | Mode | Final RMSE | Total Time | Steps |
 |---|---|---|---|
-| **MT** | 0.1520 | 67.71s | 100 |
-| **ST** | 0.1520 | 208.34s | 100 |
+| **MT** | 0.1587 | 56.82s | 100 |
+| **ST** | 0.1587 | 160.14s | 100 |
 
 
 ## Historical Trend
@@ -20,4 +20,4 @@
 ![Convergence Plot](renderings/convergence.png)
 
 ---
-*Last updated: 2026-02-19T02:49:05.716524 (Commit: 0e5653b5)*
+*Last updated: 2026-02-19T03:36:10.895582 (Commit: 4ac2b9cd)*
