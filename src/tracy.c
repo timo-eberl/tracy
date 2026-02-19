@@ -26,8 +26,7 @@
 #define MITCHELL_RADIUS 2.0
 #define BOX_RADIUS 0.5
 
-#define MAX_DEPTH 5
-#define RR_START_DEPTH 2 // Roussian Roulette starts after some samples
+#define MAX_DEPTH 4
 
 // If true, reinhard tonemapping and srgb conversion will be used. Otherwise raw (clamped) data will
 // be written.
@@ -145,9 +144,6 @@ Vec vec_cross(Vec a, Vec b) {
 		a.z * b.x - a.x * b.z,
 		a.x * b.y - a.y * b.x,
 	};
-}
-double vec_max_component(Vec v) {
-	return fmax(v.x, fmax(v.y, v.z));
 }
 
 // The image buffer will be allocated on demand.
@@ -371,13 +367,7 @@ double fresnel(Vec incident, Vec normal, bool is_inside, double ior) {
 	double R0 = ((1.0 - ior) / (1.0 + ior)) * ((1.0 - ior) / (1.0 + ior));
 	double cos_i = -vec_dot(incident, normal);
 	// If we're inside the medium, use the correct IOR for the calculation
-	if (is_inside) {
-		cos_i = -cos_i; // This can happen if ray is inside the sphere
-		// We must use the transmitted angle for Schlick when going from Denser -> Rarer
-		double sin2_t = ior * ior * (1.0 - cos_i * cos_i);
-		if (sin2_t > 1.0) return 1.0; // Total Internal Reflection
-		cos_i = sqrt(1.0 - sin2_t);
-	}
+	if (is_inside) cos_i = -cos_i; // This can happen if ray is inside the sphere
 
 	return R0 + (1 - R0) * pow(1 - cos_i, 5);
 }
@@ -401,7 +391,7 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 // Calculates the refraction direction using Snell's Law from 11.2.9
 // Also handles Total Internal Reflection.
 Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
-	double cos_i = -vec_dot(incident, normal);
+	double cos_i = vec_dot(incident, normal);
 	assert(cos_i > 0.0);
 
 	double k = 1 - eta * eta * (1 - cos_i * cos_i);
@@ -450,37 +440,9 @@ Vec sample_uniform_hemisphere(Vec normal, pcg32_random_t* rng) {
 	return sample_world;
 }
 
-// random direction on hemisphere proportional to cosine-weighted solid angle
-Vec sample_cosine_hemisphere(Vec normal, pcg32_random_t* rng) {
-	double r1 = random_double(rng);
-	double r2 = random_double(rng);
-
-	// Uniformly sample a disk
-	double r = sqrt(r1);
-	double phi = 2.0 * M_PI * r2;
-
-	// Project disk to hemisphere (z = sqrt(1 - r^2))
-	// In local space, z is the cosine of the angle with the normal
-	Vec sample_local = {r * cos(phi), r * sin(phi), sqrt(fmax(0.0, 1.0 - r1))};
-	Vec u, v, w; // local coordinate system
-	create_orthonormal_basis(normal, &u, &v, &w);
-	// local -> world
-	Vec sample_world = vec_add(vec_add(vec_scale(u, sample_local.x), vec_scale(v, sample_local.y)),
-							   vec_scale(w, sample_local.z));
-
-	return sample_world;
-}
-
-float clamp_survival_probability(float probability) {
-	// Clamp probability to ensure we don't divide by zero or kill too aggressively
-	if (probability < 0.1) return 0.1;
-	if (probability > 0.95) return 0.95;
-	return probability;
-}
-
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng); // forward declaration for recursion
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
-	if (depth + 1 > MAX_DEPTH) { return (Vec){0, 0, 0}; }
+	if (depth > MAX_DEPTH) { return (Vec){0, 0, 0}; }
 
 	HitInfo hit;
 	Primitive* hit_prim = NULL;
@@ -490,62 +452,41 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	switch (hit_prim->material) {
 	case EMISSIVE: {
-		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
-
 		Vec radiosity = hit_prim->color;
-		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
+		Vec radiance = vec_scale(radiosity, 1.0 / (4.0 * M_PI));
 		return radiance;
 	}
 	case DIFFUSE: {
 		if (hit.inside) return (Vec){0}; // If inside, return 0
 
 		Vec normal = hit.n;
-
-		double survival_prob = 1.0; // Default to 100% survival
-		// Russian Roulette
-		if (depth >= RR_START_DEPTH) {
-			// Probability is based on how 'bright' the surface is.
-			// Darker surfaces are more likely to terminate.
-			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
-			// Terminate based on survival probability
-			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
-		}
-
-		Vec next_direction = sample_cosine_hemisphere(normal, rng);
+		Vec next_direction = sample_uniform_hemisphere(normal, rng);
+		double cos_theta = vec_dot(normal, next_direction);
+		assert(cos_theta >= 0.0); // only upper hemisphere
 
 		Ray refl_ray = {hit.p, next_direction};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
 
-		// russian roulette bias correction: scale the albedo by the inverse probability to
-		// compensate for killed rays.
-		Vec effective_albedo = vec_scale(hit_prim->color, 1.0 / survival_prob);
-
-		// The PDF is (cos_theta / PI).
-		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
-		// Result: (Li * (Color / PI) * cos_theta) / (cos_theta / PI) == Li * Color
-		return vec_hadamard_prod(effective_albedo, incoming_radiance);
+		// divide by pi for energy conservation 10.3.6
+		// pi is the projected solid angle over hemisphere 3.1.9
+		Vec lambertian_brdf = vec_scale(hit_prim->color, 1.0 / M_PI);
+		// brdf * radiance * cos(theta)
+		Vec radiance = vec_scale(vec_hadamard_prod(lambertian_brdf, incoming_radiance), cos_theta);
+		// we now calculated the expected value, but because we integrate over the hemisphere
+		// we still need to multiply with 2 pi (8.3.3)
+		radiance = vec_scale(radiance, 2 * M_PI);
+		return radiance;
 	}
 	case MIRROR: {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
-
-		double survival_prob = 1.0;
-		// Russian Roulette
-		if (depth >= RR_START_DEPTH) {
-			// Mirrors are usually bright, but if it's a dark mirror, we might kill it
-			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
-			// Terminate based on survival probability
-			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
-		}
-
 		// we don't implement a perfect mirror as a brdf
 		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
 		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec incoming = radiance_from_ray(refl_ray, depth + 1, rng);
-		// russian roulette bias correction
-		Vec effective_reflectance = vec_scale(hit_prim->color, 1.0 / survival_prob);
-		return vec_hadamard_prod(incoming, effective_reflectance);
+		Vec radiance =
+			vec_hadamard_prod(radiance_from_ray(refl_ray, depth + 1, rng), hit_prim->color);
+		return radiance;
 	}
 	case REFRACTIVE: {
 		double ior = hit_prim->color.x;
