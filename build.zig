@@ -10,6 +10,10 @@ pub fn build(b: *std.Build) void {
 
     // --- OPTIONS ---
     const use_openmp = b.option(bool, "multithreaded", "Enable OpenMP support") orelse false;
+    const use_cos_sampling = b.option(bool, "cossampling", "Enable Cosine Weighted Sampling") orelse false;
+
+    const tracy_flags = if (use_cos_sampling) &[_][]const u8{ "-std=c11", "-DCOS_SAMPLING" } else &[_][]const u8{"-std=c11"};
+    const wasm_flags = if (use_cos_sampling) &[_][]const u8{ "-std=c11", "-D__EMSCRIPTEN__", "-DCOS_SAMPLING" } else &[_][]const u8{ "-std=c11", "-D__EMSCRIPTEN__" };
 
     // PCG Configuration
     const pcg_include = b.path("dependencies/pcg-c/include");
@@ -42,7 +46,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
-    tracy_mod.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = &.{"-std=c11"} });
+    tracy_mod.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = tracy_flags });
     tracy_mod.addIncludePath(b.path("include"));
     tracy_mod.addIncludePath(pcg_include);
     for (pcg_sources) |src| tracy_mod.addCSourceFile(.{ .file = b.path(src) });
@@ -56,35 +60,26 @@ pub fn build(b: *std.Build) void {
 
     // --- HELPER FOR OPENMP ---
     const configure_openmp = struct {
-        fn apply(step: *std.Build.Step.Compile, enabled: bool, b_ptr: *std.Build) void {
-            if (enabled) {
-                // link openmp statically because linux distros don't ship the clang version
-                // also the OS might select an incompatible version
-                // (eg fedora 42 will compile with clang 20 but use /usr/lib64/llvm18/lib/libomp.so when running)
-                // libomp.a was compiled on Ubuntu 22.04 with llvmorg-20.1.8 to hopefully be somewhat compatible
+        fn apply(step: *std.Build.Step.Compile, enabled: bool, cos_enabled: bool, b_ptr: *std.Build) void {
+            const flags = if (enabled)
+                if (cos_enabled) &[_][]const u8{ "-std=c11", "-fopenmp", "-D_OPENMP", "-DCOS_SAMPLING" } else &[_][]const u8{ "-std=c11", "-fopenmp", "-D_OPENMP" }
+            else if (cos_enabled) &[_][]const u8{ "-std=c11", "-DCOS_SAMPLING" } else &[_][]const u8{"-std=c11"};
 
-                // Compile 'tracy.c' with OpenMP flags
-                // -fopenmp is required for the preprocessor to handle #pragma omp
+            if (enabled) {
                 step.root_module.addCSourceFile(.{
                     .file = step.root_module.owner.path("src/tracy.c"),
-                    .flags = &.{ "-std=c11", "-fopenmp", "-D_OPENMP" },
+                    .flags = flags,
                 });
 
-                // 2. Add Include Path for omp.h
                 step.addIncludePath(b_ptr.path("dependencies/omp"));
-
-                // 3. Link the Static Library
                 step.addObjectFile(b_ptr.path("dependencies/omp/libomp.a"));
-
-                // 4. Link Runtime Dependencies
                 step.linkSystemLibrary("pthread");
                 step.linkSystemLibrary("dl");
                 step.linkSystemLibrary("m");
             } else {
-                // Default single-threaded compilation
                 step.root_module.addCSourceFile(.{
                     .file = step.root_module.owner.path("src/tracy.c"),
-                    .flags = &.{"-std=c11"},
+                    .flags = flags,
                 });
             }
         }
@@ -110,7 +105,7 @@ pub fn build(b: *std.Build) void {
     c_exe.want_lto = use_lto;
     c_exe.root_module.addCSourceFile(.{ .file = b.path("examples/c_render/main.c") });
 
-    configure_openmp.apply(c_exe, use_openmp, b);
+    configure_openmp.apply(c_exe, use_openmp, use_cos_sampling, b);
 
     c_exe.root_module.addIncludePath(b.path("include"));
     c_exe.root_module.addIncludePath(pcg_include);
@@ -132,7 +127,7 @@ pub fn build(b: *std.Build) void {
     });
     zig_exe.want_lto = use_lto;
 
-    configure_openmp.apply(zig_exe, use_openmp, b);
+    configure_openmp.apply(zig_exe, use_openmp, use_cos_sampling, b);
 
     zig_exe.root_module.addIncludePath(b.path("include"));
     zig_exe.root_module.addIncludePath(pcg_include);
@@ -170,7 +165,7 @@ pub fn build(b: *std.Build) void {
             .target = wasm_target,
         });
 
-        wasm_mod.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = &.{ "-std=c11", "-D__EMSCRIPTEN__" } });
+        wasm_mod.addCSourceFile(.{ .file = b.path("src/tracy.c"), .flags = wasm_flags });
 
         wasm_mod.addIncludePath(include_dir);
         wasm_mod.addIncludePath(pcg_include);
@@ -300,7 +295,7 @@ pub fn build(b: *std.Build) void {
 
     render_bench_exe.want_lto = use_lto;
 
-    configure_openmp.apply(render_bench_exe, use_openmp, b);
+    configure_openmp.apply(render_bench_exe, use_openmp, use_cos_sampling, b);
 
     render_bench_exe.root_module.addIncludePath(b.path("include"));
     render_bench_exe.root_module.addIncludePath(pcg_include);

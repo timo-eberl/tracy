@@ -28,9 +28,9 @@ You can optionally specify those parameters:
 | :--------------------- | :----------------------------------- |
 | `-Dmultithreaded=true` | Enables Multi-Threading using OpenMP |
 
-## Testing
+## Unit Testing
 
-This project uses Zig as a test runner to perform white-box unit testing on the C implementation. The tests are located in `tests/`.
+This project uses Zig as a test runner to perform white-box unit testing on the C implementation. The unit tests are located in `tests/unit`.
 
 ```bash
 # Run all unit tests
@@ -38,6 +38,14 @@ zig build test
 
 # Run tests and print a summary of passed/failed tests
 zig build test --summary all
+```
+
+## Performance Testing
+
+The render benchmark runs multiple rendering iterations, saves the images as exr, computes the RMSE (root mean square error) after each iteration and prints them to console.
+
+```bash
+zig build run-render-bench -Doptimize=ReleaseFast -Dtarget=native
 ```
 
 ## Mitsuba Reference
