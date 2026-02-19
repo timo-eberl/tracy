@@ -57,14 +57,14 @@ if os.path.exists(LOG_FILE_PATH):
                 except:
                     continue
 
-summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n"
+summary_table = "| Mode | Final RMSE | Total Time | Steps | Reference |\n|---|---|---|---|---|\n"
 gallery_header, gallery_sep, gallery_imgs = "|", "|", "|"
 
 if convergence_raw:
     for mode in sorted(convergence_raw.keys()):
         pts = convergence_raw[mode]
         final_p = pts[-1]
-        summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} |\n"
+        summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} | ![Reference](renderings/reference.png) |\n"
         gallery_header += f" {mode.upper()} |"
         gallery_sep += " :---: |"
         gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"

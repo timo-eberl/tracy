@@ -112,6 +112,13 @@ jobs:
           input_path: 'tests/img/exr/zig_render/render_mt.exr'
           output_path: 'preview-mt.png'
 
+      # Convert the static reference image
+      - name: Generate Reference Preview
+        uses: ./.github/actions/exr-to-png-conversion
+        with:
+          input_path: 'tests/img/exr/reference.exr'
+          output_path: 'preview-reference.png'
+
       - name: Upload All Benchmark Assets
         if: always()
         uses: actions/upload-artifact@v4

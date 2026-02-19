@@ -48,6 +48,11 @@ runs:
           fi
         done
 
+        # Copy Reference Image to a fixed path
+        if [ -f "preview-reference.png" ]; then
+          cp "preview-reference.png" "data-branch/renderings/reference.png"
+        fi
+
     - name: Update CSV and Dashboard
       shell: bash
       run: |
