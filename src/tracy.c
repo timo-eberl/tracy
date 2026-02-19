@@ -440,6 +440,27 @@ Vec sample_uniform_hemisphere(Vec normal, pcg32_random_t* rng) {
 	return sample_world;
 }
 
+// random direction on hemisphere proportional to cosine-weighted solid angle
+Vec sample_cosine_hemisphere(Vec normal, pcg32_random_t* rng) {
+	double r1 = random_double(rng);
+	double r2 = random_double(rng);
+
+	// Uniformly sample a disk
+	double r = sqrt(r1);
+	double phi = 2.0 * M_PI * r2;
+
+	// Project disk to hemisphere (z = sqrt(1 - r^2))
+	// In local space, z is the cosine of the angle with the normal
+	Vec sample_local = {r * cos(phi), r * sin(phi), sqrt(fmax(0.0, 1.0 - r1))};
+	Vec u, v, w; // local coordinate system
+	create_orthonormal_basis(normal, &u, &v, &w);
+	// local -> world
+	Vec sample_world = vec_add(vec_add(vec_scale(u, sample_local.x), vec_scale(v, sample_local.y)),
+							   vec_scale(w, sample_local.z));
+
+	return sample_world;
+}
+
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng); // forward declaration for recursion
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 	if (depth > MAX_DEPTH) { return (Vec){0, 0, 0}; }
@@ -462,22 +483,16 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		if (hit.inside) return (Vec){0}; // If inside, return 0
 
 		Vec normal = hit.n;
-		Vec next_direction = sample_uniform_hemisphere(normal, rng);
-		double cos_theta = vec_dot(normal, next_direction);
-		assert(cos_theta >= 0.0); // only upper hemisphere
+		Vec next_direction = sample_cosine_hemisphere(normal, rng);
 
 		Ray refl_ray = {hit.p, next_direction};
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
 
-		// divide by pi for energy conservation 10.3.6
-		// pi is the projected solid angle over hemisphere 3.1.9
-		Vec lambertian_brdf = vec_scale(hit_prim->color, 1.0 / M_PI);
-		// brdf * radiance * cos(theta)
-		Vec radiance = vec_scale(vec_hadamard_prod(lambertian_brdf, incoming_radiance), cos_theta);
-		// we now calculated the expected value, but because we integrate over the hemisphere
-		// we still need to multiply with 2 pi (8.3.3)
-		radiance = vec_scale(radiance, 2 * M_PI);
+		// The PDF is (cos_theta / PI).
+		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
+		// Result: (Li * (Color / PI) * cos_theta) / (cos_theta / PI) == Li * Color
+		Vec radiance = vec_hadamard_prod(hit_prim->color, incoming_radiance);
 		return radiance;
 	}
 	case MIRROR: {
