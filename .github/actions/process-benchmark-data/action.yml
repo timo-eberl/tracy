@@ -35,29 +35,32 @@ runs:
         cp -f tests/img/exr/zig_render/zig_render_log.txt data-branch/latest_raw_log.txt
         cp -f tests/img/exr/zig_render/zig_render_log.txt data-branch/logs/${{ inputs.bench_version }}.log
 
-        # 2. Generate BOTH Plots (Log, CSV, OutputDir)
+        # 2. Update History CSV (needs to happen before generating plots)
+        # We must update the CSV *before* generating plots so the trend graph includes this run.
+        python3 scripts/update_benchmark.py rmse_results.json data-branch/history.csv
+
+        # 3. Generate BOTH Plots (Log, CSV, OutputDir)
+        # Now data-branch/history.csv contains the latest data
         python3 scripts/generate_plots.py data-branch/latest_raw_log.txt data-branch/history.csv data-branch/renderings/ 30
 
-        # 3. Handle Preview Images
+        # 4. Handle Preview Images
         for mode in ${{ inputs.modes }}; do
           if [ -f "preview-$mode.png" ]; then
             cp "preview-$mode.png" "data-branch/renderings/latest-$mode.png"
             cp "preview-$mode.png" "data-branch/renderings/${{ inputs.bench_version }}-$mode.png"
-            # Set this as the general 'latest' image
             cp "preview-$mode.png" "data-branch/renderings/latest.png"
           fi
         done
 
-        # Copy Reference Image to a fixed path
+        # 4. Copy Reference Image to a fixed path
         if [ -f "preview-reference.png" ]; then
           cp "preview-reference.png" "data-branch/renderings/reference.png"
         fi
 
-    - name: Update CSV and Dashboard
+    - name: Update Dashboard
       shell: bash
       run: |
-        # Ensure we are passing paths relative to the runner root
-        python3 scripts/update_benchmark.py rmse_results.json data-branch/history.csv
+        # Update Benchmark removed from here as it is now done in the previous step
         python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md data-branch/latest_raw_log.txt
 
     - name: Commit and Push
