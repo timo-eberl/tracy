@@ -1,11 +1,4 @@
 name: 'Process Benchmark Data'
-description: 'Updates the orphan benchmark branch with new scores, plots, and a directory of renderings'
-
-inputs: 
-  bench_version:
-    description: 'The version/build string for the current run'
-    required: true
-
 runs:
   using: "composite"
   steps:
@@ -16,42 +9,44 @@ runs:
         path: data-branch
         fetch-depth: 0
 
-    - name: Setup Python & Dependencies
+    - name: Setup Python
       shell: bash
-      run: |
-        python3 -m pip install matplotlib
+      run: python3 -m pip install matplotlib
 
     - name: Integrate Data and Renderings
       shell: bash
       run: |
-        mkdir -p data-branch/logs
-        mkdir -p data-branch/renderings
+        # define paths clearly to avoid "cannot stat" errors
+        SRC_DIR="${{ github.workspace }}/tests/img/exr"
+        DEST_DIR="${{ github.workspace }}/data-branch"
+
+        mkdir -p $DEST_DIR/logs
+        mkdir -p $DEST_DIR/renderings
         
-        # Update History CSV (using the JSON generated from multiple files)
-        python3 scripts/update_benchmark.py rmse_results.json data-branch/history.csv
+        # update history csv
+        python3 scripts/update_benchmark.py rmse_results.json $DEST_DIR/history.csv
 
-        # Sync all new renderings (Previews and Diffs)
-        # We copy everything from our preview folders into the data branch.
-        # Filenames like 'render_st_CornellBox.png' are preserved.
-        
-        cp -v tests/img/exr/previews/*.png data-branch/renderings/
-        cp -v tests/img/exr/diffs/*.png data-branch/renderings/
+        # copy renderings using absolute paths and force-overwrite
+        # we add || true so the script doesn't crash if a folder is empty
+        cp -v $SRC_DIR/previews/*.png $DEST_DIR/renderings/ || true
+        cp -v $SRC_DIR/diffs/*.png $DEST_DIR/renderings/ || true
 
-        # Create 'Latest' symlinks or copies for the dashboard
-        for img in tests/img/exr/previews/*.png; do
-          base=$(basename "$img")
-          cp "$img" "data-branch/renderings/latest-$base"
-        done
+        # loop through previews specifically to create the 'latest' links
+        # we check if files exist first to prevent the 'cannot stat' crash
+        if ls $SRC_DIR/previews/*.png 1> /dev/null 2>&1; then
+          for img in $SRC_DIR/previews/*.png; do
+            base=$(basename "$img")
+            cp "$img" "$DEST_DIR/renderings/latest-$base"
+          done
+        fi
 
-        # Generate Plots
-        # We pass the history.csv to generate the trend lines
-        python3 scripts/generate_plots.py data-branch/history.csv data-branch/renderings/ 30
+        # generate plots - updated to point to the correct log directory
+        python3 scripts/generate_plots.py $SRC_DIR/zig_render/ $DEST_DIR/history.csv $DEST_DIR/renderings/ 30
 
     - name: Update Dashboard
       shell: bash
       run: |
-        # Generate the README/Dashboard using the updated history
-        python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md
+        python3 scripts/generate_dashboard.py ${{ github.workspace }}/data-branch/history.csv ${{ github.workspace }}/data-branch/README.md
 
     - name: Commit and Push
       shell: bash
@@ -60,5 +55,5 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add .
-        git commit -m "Benchmark: ${{ inputs.bench_version }}" || echo "No changes to commit"
+        git commit -m "Benchmark Update" || echo "no changes"
         git push origin HEAD:benchmarks
