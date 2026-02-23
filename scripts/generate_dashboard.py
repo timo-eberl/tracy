@@ -3,101 +3,85 @@ import csv
 import os
 from collections import defaultdict
 
-# --- Configuration & Args ---
+# human-like comments in lower-case only
+# args: <csv_path> <readme_path>
 if len(sys.argv) < 3:
-    print("Usage: python generate_dashboard.py <csv_path> <readme_path> [log_path]")
+    print("usage: python generate_dashboard.py <csv_path> <readme_path>")
     sys.exit(1)
 
 csv_path = sys.argv[1]
 readme_path = sys.argv[2]
-LOG_FILE_PATH = (
-    sys.argv[3] if len(sys.argv) > 3 else "tests/img/exr/zig_render/zig_render_log.txt"
-)
 
-# --- 1. Read History ---
-history_map = defaultdict(lambda: defaultdict(lambda: None))
-unique_versions, all_modes_historical = [], set()
-latest_date = "N/A"
+# 1. parse the history csv
+# we pull the latest data to know which scenes actually exist
+latest_entries = {}
+latest_date = "n/a"
 
 if os.path.exists(csv_path):
     with open(csv_path, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            try:
-                v, m, r = row["version"], row["mode"], float(row["rmse"])
-                short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
-                if short_v not in unique_versions:
-                    unique_versions.append(short_v)
-                all_modes_historical.add(m)
-                history_map[short_v][m] = r
-                latest_date = row["date"]
-            except (ValueError, KeyError):
-                continue
+            latest_date = row.get("date", "n/a")
+            s, v = row["scene"], row["variant"]
+            latest_entries[(s, v)] = row
 
-# --- 2. Historical Trend Graph (Mermaid) ---
-trend_chart = "![Historical Trend](renderings/history_trend.png)"
+# group by scene
+scenes = defaultdict(list)
+for (s, v), data in latest_entries.items():
+    scenes[s].append(data)
 
-# --- 3. Table & Gallery Parsing ---
-# We still need to parse the log to fill out the Summary Table data
-convergence_raw = defaultdict(list)
-if os.path.exists(LOG_FILE_PATH):
-    with open(LOG_FILE_PATH, "r") as f:
-        curr = None
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("VARIANT:") or line.startswith("VERSION:"):
-                curr, cumulative = line.split(":")[1].strip(), 0.0
-            elif curr:
-                try:
-                    r, t = map(float, line.split(","))
-                    cumulative += t
-                    convergence_raw[curr].append((r, cumulative))
-                except:
-                    continue
+# 2. build the summary table
+summary_table = "| Scene | Variant | Final RMSE | Date |\n|---|---|---|---|\n"
+for s in sorted(scenes.keys()):
+    for entry in scenes[s]:
+        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse']):.5f} | {entry['date']} |\n"
 
-summary_table = "| Mode | Final RMSE | Total Time | Steps |\n|---|---|---|---|\n"
+# 3. build the dynamic gallery and convergence sections
+# we look for the specific convergence plots created by generate_plots.py
+gallery_sections = ""
+for s in sorted(scenes.keys()):
+    gallery_sections += f"### Scene: {s}\n\n"
 
-# Gallery now starts with the Reference column
-gallery_header = "| Reference |"
-gallery_sep = "| :---: |"
-gallery_imgs = "| ![Reference](renderings/reference.png) |"
-gallery_diffs = "| |"
+    # render/diff table
+    header = "| Type |"
+    sep = "| :---: |"
+    row_render = "| **Render** |"
+    row_diff = "| **Diff** |"
 
-if convergence_raw:
-    for mode in sorted(convergence_raw.keys()):
-        pts = convergence_raw[mode]
-        final_p = pts[-1]
-        summary_table += f"| **{mode.upper()}** | {final_p[0]:.4f} | {final_p[1]:.2f}s | {len(pts)} |\n"
-        gallery_header += f" {mode.upper()} |"
-        gallery_sep += " :---: |"
-        gallery_imgs += f" ![ {mode} ](renderings/latest-{mode}.png) |"
-        gallery_diffs += f" ![ Diff {mode} ](renderings/latest-diff-{mode}.png) |"
-else:
-    summary_table = "*No summary data available.*"
+    for entry in sorted(scenes[s], key=lambda x: x["variant"]):
+        v = entry["variant"]
+        img_name = f"latest-render_log_{s}_{v}.png"
+        diff_name = f"latest-diff_render_log_{s}_{v}.png"
 
-conv_chart_html = "![Convergence Plot](renderings/convergence.png)"
+        header += f" {v} |"
+        sep += " :---: |"
+        row_render += f" ![ {v} ](renderings/{img_name}) |"
+        row_diff += f" ![ diff {v} ](renderings/{diff_name}) |"
 
-# --- 4. Assemble Final README ---
+    gallery_sections += f"{header}\n{sep}\n{row_render}\n{row_diff}\n\n"
+
+    # link the specific convergence plot for this scene
+    conv_plot = f"renderings/convergence_{s}.png"
+    if (
+        os.path.exists(f"data-branch/{conv_plot}") or True
+    ):  # assume it exists if generating
+        gallery_sections += (
+            f"**Convergence for {s}:**\n\n![ {s} convergence ]({conv_plot})\n\n---\n"
+        )
+
+# 4. finalize the readme
 with open(readme_path, "w") as f:
     f.write(f"""# Path Tracer Benchmark Dashboard
 
-## Summary
+## Summary Results
 {summary_table}
 
 ## Historical Trend
-{trend_chart}
+![Historical Trend](renderings/history_trend.png)
 
-## Latest Render Gallery
-{gallery_header if convergence_raw else ""}
-{gallery_sep if convergence_raw else ""}
-{gallery_imgs if convergence_raw else ""}
-{gallery_diffs if convergence_raw else ""}
-
-## Convergence Comparison
-{conv_chart_html}
+## Render Gallery & Convergence
+{gallery_sections if scenes else "*no renderings found.*"}
 
 ---
-*Last updated: {latest_date} (Commit: {os.environ.get("GITHUB_SHA", "local")[:8]})*
+*last updated: {latest_date} (commit: {os.environ.get("GITHUB_SHA", "local")[:8]})*
 """)
