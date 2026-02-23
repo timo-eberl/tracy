@@ -38,7 +38,7 @@ runs:
         cp -v tests/img/exr/diffs/*.png data-branch/renderings/
 
         # Create 'Latest' symlinks or copies for the dashboard
-        for img in previews/*.png; do
+        for img in tests/img/exr/previews/*.png; do
           base=$(basename "$img")
           cp "$img" "data-branch/renderings/latest-$base"
         done

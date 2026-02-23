@@ -103,7 +103,7 @@ jobs:
         uses: ./.github/actions/exr-to-png-conversion
         with:
           input_dir: 'tests/img/exr/zig_render/'
-          output_dir: 'previews/'
+          output_dir: 'tests/img/exr/previews/'
 
       - name: Generate Reference Preview
         uses: ./.github/actions/exr-to-png-conversion
@@ -142,7 +142,6 @@ jobs:
         uses: ./.github/actions/process-benchmark-data
         with:
           bench_version: ${{ env.bench_version }}
-          modes: "st mt"
 
 
   # --- JOB 2: DEPLOY (Web/WASM) ---

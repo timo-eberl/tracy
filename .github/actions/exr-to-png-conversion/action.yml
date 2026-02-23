@@ -9,7 +9,7 @@ inputs:
   output_dir:
     description: 'Directory where .png files should be saved'
     required: true
-    default: 'previews/'
+    default: 'tests/img/exr/previews/'
 
 runs:
   using: "composite"
