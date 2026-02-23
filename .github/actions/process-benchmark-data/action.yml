@@ -1,4 +1,11 @@
 name: 'Process Benchmark Data'
+description: 'Updates the orphan benchmark branch with new scores, plots, and a directory of renderings'
+
+inputs: 
+  bench_version:
+    description: 'The version/build string for the current run'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -16,31 +23,33 @@ runs:
     - name: Integrate Data and Renderings
       shell: bash
       run: |
-        # define paths clearly to avoid "cannot stat" errors
         SRC_DIR="${{ github.workspace }}/tests/img/exr"
         DEST_DIR="${{ github.workspace }}/data-branch"
+
+        # debug: this will show us exactly what files exist if cp fails
+        echo "--- Debug: List all files in tests/img/exr ---"
+        ls -R $SRC_DIR
 
         mkdir -p $DEST_DIR/logs
         mkdir -p $DEST_DIR/renderings
         
-        # update history csv
+        # 1. update history csv
         python3 scripts/update_benchmark.py rmse_results.json $DEST_DIR/history.csv
 
-        # copy renderings using absolute paths and force-overwrite
-        # we add || true so the script doesn't crash if a folder is empty
-        cp -v $SRC_DIR/previews/*.png $DEST_DIR/renderings/ || true
-        cp -v $SRC_DIR/diffs/*.png $DEST_DIR/renderings/ || true
+        # 2. copy renderings
+        # we use 'nullglob' so the loop just skips if no pngs exist
+        shopt -s nullglob
+        
+        cp -v $SRC_DIR/previews/*.png $DEST_DIR/renderings/ || echo "no previews found"
+        cp -v $SRC_DIR/diffs/*.png $DEST_DIR/renderings/ || echo "no diffs found"
 
-        # loop through previews specifically to create the 'latest' links
-        # we check if files exist first to prevent the 'cannot stat' crash
-        if ls $SRC_DIR/previews/*.png 1> /dev/null 2>&1; then
-          for img in $SRC_DIR/previews/*.png; do
-            base=$(basename "$img")
-            cp "$img" "$DEST_DIR/renderings/latest-$base"
-          done
-        fi
+        # 3. create 'latest' links
+        for img in $SRC_DIR/previews/*.png; do
+          base=$(basename "$img")
+          cp "$img" "$DEST_DIR/renderings/latest-$base"
+        done
 
-        # generate plots - updated to point to the correct log directory
+        # 4. generate plots
         python3 scripts/generate_plots.py $SRC_DIR/zig_render/ $DEST_DIR/history.csv $DEST_DIR/renderings/ 30
 
     - name: Update Dashboard
@@ -55,5 +64,6 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add .
-        git commit -m "Benchmark Update" || echo "no changes"
+        # we use the input variable here
+        git commit -m "Benchmark Update: ${{ inputs.bench_version }}" || echo "no changes"
         git push origin HEAD:benchmarks
