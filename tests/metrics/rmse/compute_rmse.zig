@@ -10,7 +10,7 @@ pub fn computeScore(target_fp: [:0]const u8) !f32 {
 
     //const stdout = std.io.getStdOut().writer();
 
-    const ref_fp = "tests/img/exr/reference.exr";
+    const ref_fp = "tests/img/exr/reference/reference.exr";
 
     std.fs.cwd().access(ref_fp, .{}) catch {
         std.debug.print("Error: Reference image not found at {s}\n", .{ref_fp});
