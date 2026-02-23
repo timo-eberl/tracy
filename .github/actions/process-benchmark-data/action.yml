@@ -34,8 +34,8 @@ runs:
         # We copy everything from our preview folders into the data branch.
         # Filenames like 'render_st_CornellBox.png' are preserved.
         
-        cp -v previews/*.png data-branch/renderings/
-        cp -v diffs/*.png data-branch/renderings/
+        cp -v tests/img/exr/previews/*.png data-branch/renderings/
+        cp -v tests/img/exr/diffs/*.png data-branch/renderings/
 
         # Create 'Latest' symlinks or copies for the dashboard
         for img in previews/*.png; do
