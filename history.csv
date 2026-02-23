@@ -1,0 +1,5 @@
+date,version,scene,variant,rmse,iterations,commit
+2026-02-23T23:30:40.283688,0.1.0-build.131,default,st,1.0961,2,0dccd405
+2026-02-23T23:30:40.283688,0.1.0-build.131,test,mt,1.0961,2,0dccd405
+2026-02-23T23:30:40.283688,0.1.0-build.131,test,st,1.0961,2,0dccd405
+2026-02-23T23:30:40.283688,0.1.0-build.131,default,mt,1.0961,2,0dccd405
