@@ -51,7 +51,7 @@ for s in sorted(scenes.keys()):
     for entry in sorted(scenes[s], key=lambda x: x["variant"]):
         v = entry["variant"]
         img_name = f"latest-render_{s}_{v}.png"
-        diff_name = f"diff_render_{s}_{v}.png"
+        diff_name = f"latest-diff_render_{s}_{v}.png"
 
         header += f" {v} |"
         sep += " :---: |"
@@ -61,7 +61,7 @@ for s in sorted(scenes.keys()):
     gallery_sections += f"{header}\n{sep}\n{row_render}\n{row_diff}\n\n"
 
     # link the specific convergence plot for this scene
-    conv_plot = f"renderings/convergence_{s}.png"
+    conv_plot = f"plots/convergence_{s}.png"
     if (
         os.path.exists(f"data-branch/{conv_plot}") or True
     ):  # assume it exists if generating
@@ -77,10 +77,10 @@ with open(readme_path, "w") as f:
 {summary_table}
 
 ## RMSE Trend
-![RMSE Trend](renderings/history_score_trend.png)
+![RMSE Trend](plots/history_score_trend.png)
 
 ## Time Taken Trend
-![Time Taken Trend](renderings/history_time_trend.png)
+![Time Taken Trend](plots/history_time_trend.png)
 
 ## Render Gallery & Convergence
 {gallery_sections if scenes else "*no renderings found.*"}

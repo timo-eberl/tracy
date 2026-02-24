@@ -59,7 +59,7 @@ runs:
             cp "$img" "$DEST_DIR/renderings/latest-$base"
           done
         # Run the plot generation script
-        python3 scripts/generate_plots.py "$SRC_DIR/zig_render/" "$DEST_DIR/history.csv" "$DEST_DIR/renderings/" 30
+        python3 scripts/generate_plots.py "$SRC_DIR/zig_render/" "$DEST_DIR/history.csv" "$DEST_DIR/plots/" 30
 
     - name: Update Dashboard
       shell: bash
