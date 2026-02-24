@@ -66,7 +66,7 @@ for s in sorted(scenes.keys()):
         os.path.exists(f"data-branch/{conv_plot}") or True
     ):  # assume it exists if generating
         gallery_sections += (
-            f"**Convergence for {s}:**\n\n![ {s} convergence ]({conv_plot})\n\n---\n"
+            f"### Convergence: {s}\n\n![ {s} convergence ]({conv_plot})\n\n---\n"
         )
 
 # 4. finalize the readme
