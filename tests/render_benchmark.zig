@@ -7,10 +7,19 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
-const NUM_ITERATIONS = 2;
+// structs used for parsing the config json
+const RenderJob = struct {
+    scene: []const u8,
+    variant: []const u8,
+    iterations: u32,
+};
+
+const Config = struct {
+    jobs: []RenderJob,
+};
 
 // writes the benchmarking results to a log file per mode per scene
-fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, variant: []const u8) !void {
+fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, variant: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
     defer file.close();
 
@@ -28,14 +37,8 @@ fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepa
 
 // args
 // scene: slice - use this as scene target
-pub fn runRender(scene: []const u8) !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u32) !void {
     const variant_label = if (config.multithreaded) "mt" else "st";
-
     // Dynamic output path based on mode
     const out_dir = "tests/img/exr/zig_render/";
     // We use std.fmt.allocPrint to create the filename dynamically
@@ -62,14 +65,24 @@ pub fn runRender(scene: []const u8) !void {
     const stdout = std.io.getStdOut().writer();
     try stdout.print("Rendering scene {s} with mode ({s}) at {d}x{d}...\n", .{ scene, variant_label, width, height });
 
+    // uncomment when scene path arg gets added to tracy init
+    // const scene_path_c = try allocator.dupeZ(u8, scene);
+    // defer allocator.free(scene_path_c);
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
-    var scores: [NUM_ITERATIONS]f32 = undefined;
-    var timings: [NUM_ITERATIONS]f64 = undefined;
+    var scores = try allocator.alloc(f32, iterations);
+    defer allocator.free(scores);
+    var timings = try allocator.alloc(f64, iterations);
+    defer allocator.free(timings);
     var i: usize = 0;
     var timer = try std.time.Timer.start();
 
+<<<<<<< Updated upstream
     while (i < NUM_ITERATIONS) : (i += 1) {
+=======
+    while (i < iterations) : (i += 1) {
+        timer.reset();
+>>>>>>> Stashed changes
         const start_time = timer.read();
 
         tracy.render_refine(5); // ADD SCENE ARG HERE
@@ -91,13 +104,25 @@ pub fn runRender(scene: []const u8) !void {
 
     const log_fp = try std.fmt.allocPrint(allocator, "{s}render_log_{s}_{s}.txt", .{ out_dir, scene, variant_label });
     try writeScores(scores, timings, log_fp, variant_label);
-    try stdout.print("Done. Results appended to {s}\n", .{log_fp});
+    try stdout.print("Done. Results written to {s}\n", .{log_fp});
 }
 
 pub fn main() !void {
-    const scene = "default";
-    try runRender(scene);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
 
-    const scene_2 = "test";
-    try runRender(scene_2);
+    // Get CLI args: [program_name, scene, iterations]
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len < 3) {
+        std.debug.print("Usage: render_bench <scene> <iterations>\n", .{});
+        return;
+    }
+
+    const scene = args[1];
+
+    const iterations = try std.fmt.parseInt(u32, args[2], 10);
+    // Pass these directly to your runRender function
+    try runRender(allocator, scene, iterations);
 }

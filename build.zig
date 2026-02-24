@@ -308,8 +308,11 @@ pub fn build(b: *std.Build) void {
     render_bench_exe.linkLibrary(tinyexr_lib);
     b.installArtifact(render_bench_exe);
 
-    const run_render_bench = b.addRunArtifact(render_bench_exe);
-    b.step("run-render-bench", "Run the Zig example").dependOn(&run_render_bench.step);
+    //const run_render_bench = b.addRunArtifact(render_bench_exe);
+    //b.step("run-render-bench", "Run the Zig example").dependOn(&run_render_bench.step);
+    const install_bench = b.addInstallArtifact(render_bench_exe, .{});
+    const build_bench_step = b.step("bench-build", "Only build the benchmark binary");
+    build_bench_step.dependOn(&install_bench.step);
 
     // --- UNIT TESTS ---
     const test_mod = b.createModule(.{

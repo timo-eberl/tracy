@@ -79,25 +79,17 @@ jobs:
       #     rmse-bench zig build run-zig -Doptimize=ReleaseSafe
       #
 
-      - name: Render and Benchmark ST
+      - name: Run Orchestrated Benchmarks
         run: |
+          # Clean old results locally so we don't mix up files
           rm -f tests/img/exr/zig_render/*
+          
           docker run --rm \
-          -v $(pwd):/app \
-          -v ~/.cache/zig:/root/.cache/zig \
-          -w /app rmse-bench \
-          zig build run-render-bench \
-          -Doptimize=ReleaseFast -Dmultithreaded=false
-
-      - name: Render and Benchmark MT
-        run: |
-          docker run --rm \
-          -v $(pwd):/app \
-          -v ~/.cache/zig:/root/.cache/zig \
-          -w /app rmse-bench zig \
-          build run-render-bench \
-          -Doptimize=ReleaseFast -Dmultithreaded=true
-          python3 scripts/create_log.py rmse_results.json
+            -v $(pwd):/app \
+            -v ~/.cache/zig:/root/.cache/zig \
+            -w /app rmse-bench \
+            python3 scripts/run_benchmarks.py \
+            python3 scripts/create_log.py rmse_results.json
 
       - name: Generate Render Previews
         uses: ./.github/actions/exr-to-png-conversion
