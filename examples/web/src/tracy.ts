@@ -6,6 +6,7 @@ export interface TracyModule {
 
 export interface RenderSettings {
 	scene: number,
+	max_depth: number,
 	width: number,
 	height: number,
 	filterType: number,

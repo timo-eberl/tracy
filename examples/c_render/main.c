@@ -39,7 +39,7 @@ void save_image_as_tga(const char* file_path, unsigned char* buffer, int width, 
 int main() {
 	const int scene = 1;
 
-	// Define image dimensions
+	const int max_depth = 6;
 	const int width = 640;
 	const int height = 480;
 
@@ -54,8 +54,8 @@ int main() {
 
 	printf("Rendering scene %d at %dx%d...\n", scene, width, height);
 
-	render_init(scene, width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y,
-				focus_z);
+	render_init(scene, max_depth, width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist,
+				focus_x, focus_y, focus_z);
 
 	// do incremental updates and update image each time for live preview
 	for (size_t i = 0; i < STEPS; i++) {

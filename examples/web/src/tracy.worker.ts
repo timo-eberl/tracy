@@ -22,7 +22,7 @@ self.onmessage = async (event) => {
 	const Module = await modulePromise;
 
 	Module._render_init(
-		s.scene, s.width, s.height, s.filterType,
+		s.scene, s.max_depth, s.width, s.height, s.filterType,
 		degToRad(s.camera.rotation.x), degToRad(s.camera.rotation.y), s.camera.distance,
 		s.camera.focusPoint.x, s.camera.focusPoint.y, s.camera.focusPoint.z
 	);

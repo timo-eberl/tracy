@@ -26,7 +26,6 @@
 #define MITCHELL_RADIUS 2.0
 #define BOX_RADIUS 0.5
 
-#define MAX_DEPTH 5
 #define RR_START_DEPTH 2 // Roussian Roulette starts after some samples
 
 // If true, reinhard tonemapping and srgb conversion will be used. Otherwise raw (clamped) data will
@@ -176,12 +175,13 @@ int buffer_width = 0;
 int buffer_height = 0;
 
 // state variables
+Scene current_scene;
+int max_depth;
 int width, height;
 Vec camera_origin;
 Vec forward, right, up;
 int sample_count;		// Global counter of total samples processed (used for seeding)
 FilterType filter_type; // Current selected filter
-Scene current_scene;
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
@@ -500,7 +500,7 @@ float clamp_survival_probability(float probability) {
 
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng); // forward declaration for recursion
 Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
-	if (depth + 1 > MAX_DEPTH) { return (Vec){0, 0, 0}; }
+	if (depth + 1 > max_depth) { return (Vec){0, 0, 0}; }
 
 	HitInfo hit;
 	Primitive* hit_prim = NULL;
@@ -649,9 +649,15 @@ float* update_image_hdr() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void render_init(int p_scene_id, int p_width, int p_height, int p_filter_type, double p_cam_angle_x,
-				 double p_cam_angle_y, double p_cam_dist, double p_focus_x, double p_focus_y,
-				 double p_focus_z) {
+void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int p_filter_type,
+				 double p_cam_angle_x, double p_cam_angle_y, double p_cam_dist, double p_focus_x,
+				 double p_focus_y, double p_focus_z) {
+
+	int num_available_scenes = sizeof(all_scenes) / sizeof(Scene);
+	current_scene = (p_scene_id >= 0 && p_scene_id < num_available_scenes) ? all_scenes[p_scene_id]
+																		   : (Scene){0};
+
+	max_depth = p_max_depth;
 	width = p_width;
 	height = p_height;
 	filter_type = (FilterType)p_filter_type;
@@ -669,10 +675,6 @@ void render_init(int p_scene_id, int p_width, int p_height, int p_filter_type, d
 	Vec world_up = {0, 1, 0};
 	right = vec_normalize(vec_cross(forward, world_up));
 	up = vec_normalize(vec_cross(right, forward));
-
-	int num_available_scenes = sizeof(all_scenes) / sizeof(Scene);
-	current_scene = (p_scene_id >= 0 && p_scene_id < num_available_scenes) ? all_scenes[p_scene_id]
-																		   : (Scene){0};
 
 	sample_count = 0;
 }

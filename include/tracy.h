@@ -9,13 +9,13 @@ extern "C" {
 #include <stdint.h>
 
 /**
- * Initializes or reconfigures the renderer with new scene parameters.
+ * Initializes or reconfigures the renderer with new render settings.
  * Must be called at least once before any rendering. Calling it again will reset the render
  * progress with the new settings.
  */
-void render_init(int scene_id, int width, int height, int filter_type, double cam_angle_x,
-				 double cam_angle_y, double cam_dist, double focus_x, double focus_y,
-				 double focus_z);
+void render_init(int scene_id, int max_depth, int width, int height, int filter_type,
+				 double cam_angle_x, double cam_angle_y, double cam_dist, double focus_x,
+				 double focus_y, double focus_z);
 
 /**
  * Progressively refines the image by adding more samples.
