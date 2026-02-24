@@ -43,6 +43,10 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
     tracy.render_init(640, 480, 0, 0.04258, 0.0, 5.5, 0.0, 1.25, 0.0);
 
+    // uncomment when scene path arg gets added to tracy init
+    // const scene_path_c = try allocator.dupeZ(u8, scene);
+    // defer allocator.free(scene_path_c);
+    tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
     var scores = try allocator.alloc(f32, iterations);
     defer allocator.free(scores);
     var timings = try allocator.alloc(f64, iterations);
