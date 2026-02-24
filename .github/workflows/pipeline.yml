@@ -58,6 +58,11 @@ jobs:
             docker build -t rmse-bench --target benchmark-env .
           fi
 
+      # set up container builder that supports cache features
+      - name: Dockerfile Changed -> Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        if: steps.changed-dockerfile.outputs.any_changed == 'true'
+
       - name: Dockerfile Changed -> Build new Benchmark Image
         uses: docker/build-push-action@v5
         if: steps.changed-dockerfile.outputs.any_changed == 'true'
