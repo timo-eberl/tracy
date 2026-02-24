@@ -7,10 +7,8 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
-const NUM_ITERATIONS = 2;
-
 // writes the benchmarking results to a log file per mode per scene
-fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, variant: []const u8) !void {
+fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, variant: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
     defer file.close();
 
@@ -26,19 +24,10 @@ fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepa
     try bw.flush();
 }
 
-// args
-// scene: slice - use this as scene target
-pub fn runRender(scene: []const u8) !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u32) !void {
     const variant_label = if (config.multithreaded) "mt" else "st";
-
-    // Dynamic output path based on mode
     const out_dir = "tests/img/exr/zig_render/";
-    // We use std.fmt.allocPrint to create the filename dynamically
+
     const out_filename = try std.fmt.allocPrint(allocator, "render_{s}_{s}.exr", .{ scene, variant_label });
     defer allocator.free(out_filename);
 
@@ -46,6 +35,7 @@ pub fn runRender(scene: []const u8) !void {
     defer allocator.free(out_fp_slice);
     const out_fp = try allocator.dupeZ(u8, out_fp_slice);
     defer allocator.free(out_fp);
+
     try std.fs.cwd().makePath(out_dir);
 
     const width: i32 = 640;
@@ -58,32 +48,33 @@ pub fn runRender(scene: []const u8) !void {
     const focus_x = 0.0;
     const focus_y = 1.25;
     const focus_z = 0.0;
-
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("Rendering scene {s} with mode ({s}) at {d}x{d}...\n", .{ scene, variant_label, width, height });
+
+    try stdout.print("Rendering scene {s} ({s}) at 640x480...\n", .{ scene, variant_label });
+
+    // uncomment when scene path arg gets added to tracy init
+    // const scene_path_c = try allocator.dupeZ(u8, scene);
+    // defer allocator.free(scene_path_c);
 
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
-    var scores: [NUM_ITERATIONS]f32 = undefined;
-    var timings: [NUM_ITERATIONS]f64 = undefined;
+    var scores = try allocator.alloc(f32, iterations);
+    defer allocator.free(scores);
+    var timings = try allocator.alloc(f64, iterations);
+    defer allocator.free(timings);
     var i: usize = 0;
     var timer = try std.time.Timer.start();
+    while (i < iterations) : (i += 1) {
+        timer.reset(); // Clock starts at 0 now
+        tracy.render_refine(5);
 
-    while (i < NUM_ITERATIONS) : (i += 1) {
-        timer.reset();
-        const start_time = timer.read();
-
-        tracy.render_refine(5); // ADD SCENE ARG HERE
-        const end_time = timer.read();
-        // Duration in seconds for this specific step
-        timings[i] = @as(f64, @floatFromInt(end_time - start_time)) / std.time.ns_per_s;
+        // duration_ns is exactly the time spent in render_refine
+        const duration_ns = timer.read();
+        timings[i] = @as(f64, @floatFromInt(duration_ns)) / std.time.ns_per_s;
 
         const buffer_ptr = tracy.update_image_hdr();
-
         var err_msg: [*c]const u8 = null;
-        const ret = tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, width, height, &err_msg);
-        if (ret != 0) {
-            if (err_msg != null) try stdout.print("EXR Error: {s}\n", .{err_msg});
+        if (tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, 640, 480, &err_msg) != 0) {
             return error.ExrSaveFailed;
         }
 
@@ -91,14 +82,28 @@ pub fn runRender(scene: []const u8) !void {
     }
 
     const log_fp = try std.fmt.allocPrint(allocator, "{s}render_log_{s}_{s}.txt", .{ out_dir, scene, variant_label });
+    defer allocator.free(log_fp);
+
     try writeScores(scores, timings, log_fp, variant_label);
-    try stdout.print("Done. Results appended to {s}\n", .{log_fp});
+    try stdout.print("Done. Results written to {s}\n", .{log_fp});
 }
 
 pub fn main() !void {
-    const scene = "default";
-    try runRender(scene);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
 
-    const scene_2 = "test";
-    try runRender(scene_2);
+    // Get CLI args: [program_name, scene, iterations]
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len < 3) {
+        std.debug.print("Usage: render_bench <scene> <iterations>\n", .{});
+        return;
+    }
+
+    const scene = args[1];
+
+    const iterations = try std.fmt.parseInt(u32, args[2], 10);
+    // Pass these directly to your runRender function
+    try runRender(allocator, scene, iterations);
 }

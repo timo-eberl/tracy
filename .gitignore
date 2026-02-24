@@ -14,8 +14,8 @@ node_modules/
 # zig
 .zig-cache/
 zig-out/
-tests/img/zig_render/
-.rmse_results.txt
+tests/img/exr/zig_render/
+rmse_results.json
 
 # release build
 dist/
@@ -29,3 +29,18 @@ render_zig.tga
 
 compile_commands.json
 
+
+# python
+.venv/
+venv/
+env/
+.uv_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+*.egg-info/
+.env
+.python-version
+uv.lock
+pyproject.toml

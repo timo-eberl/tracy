@@ -31,10 +31,10 @@ for (s, v), data in latest_entries.items():
     scenes[s].append(data)
 
 # 2. build the summary table
-summary_table = "| Scene | Variant | Final RMSE | Date |\n|---|---|---|---|\n"
+summary_table = "| Scene | Variant | RelMSE Score | Render Time | Iterations | Date |\n|---|---|---|---|---|---|\n"
 for s in sorted(scenes.keys()):
     for entry in scenes[s]:
-        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse_score']):.5f} | {float(entry['rmse_time']):.2f}s | {entry['date']} |\n"
+        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse_score']):.5f} | {float(entry['rmse_time']):.2f}s | {entry['iterations']} | {entry['date']} |\n"
 
 # 3. build the dynamic gallery and convergence sections
 # we look for the specific convergence plots created by generate_plots.py
@@ -76,8 +76,8 @@ with open(readme_path, "w") as f:
 ## Summary Results
 {summary_table}
 
-## RMSE Trend
-![RMSE Trend](plots/history_score_trend.png)
+## RelMSE Trend
+![RelMSE Trend](plots/history_score_trend.png)
 
 ## Time Taken Trend
 ![Time Taken Trend](plots/history_time_trend.png)
