@@ -1,15 +1,15 @@
-name: 'EXR to PNG Conversion'
-description: 'Sets up Python and converts the rendered EXR to a PNG preview'
+name: 'EXR Directory to PNG Conversion'
+description: 'Converts all EXR files in a directory to PNG previews'
 
 inputs:
-  input_path:
-    description: 'Path to the source .exr file'
+  input_dir:
+    description: 'Directory containing .exr files'
     required: true
-    default: 'tests/img/exr/zig_render/render_st.exr'
-  output_path:
-    description: 'Path where the .png should be saved'
+    default: 'tests/img/exr/zig_render/'
+  output_dir:
+    description: 'Directory where .png files should be saved'
     required: true
-    default: 'preview-st.png'
+    default: 'tests/img/exr/previews/'
 
 runs:
   using: "composite"
@@ -23,7 +23,7 @@ runs:
       shell: bash
       run: pip install mitsuba numpy Pillow
 
-    - name: Convert EXR to PNG
+    - name: Convert EXRs to PNGs
       shell: bash
-      # We pass the inputs directly to the python script as arguments
-      run: python3 exr_to_png.py "${{ inputs.input_path }}" "${{ inputs.output_path }}"
+      # Pass the directories to the script
+      run: python3 scripts/exr_to_png.py "${{ inputs.input_dir }}" "${{ inputs.output_dir }}"
