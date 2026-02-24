@@ -7,7 +7,29 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
-const RenderParams = struct { width: i32, height: i32, filter_type: i32, cam_angle_x: f32, cam_angle_y: f32, cam_dist: f32, focus_x: f32, focus_y: f32, focus_z: f32 };
+const RenderParams = struct {
+    scene_id: u32,
+    max_depth: u32,
+    width: i32,
+    height: i32,
+    filter_type: i32,
+    cam_angle_x: f32,
+    cam_angle_y: f32,
+    cam_dist: f32,
+    focus_x: f32,
+    focus_y: f32,
+    focus_z: f32,
+    pub fn toC(self: @This()) struct { sid: c_int, depth: c_int, w: c_int, h: c_int, ft: c_int } {
+        return .{
+            .sid = @intCast(self.scene_id),
+            .depth = @intCast(self.max_depth),
+            .w = @intCast(self.width),
+            .h = @intCast(self.height),
+            .ft = @intCast(self.filter_type),
+        };
+    }
+};
+
 // writes the benchmarking results to a log file per mode per scene
 fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, variant: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
@@ -39,19 +61,6 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
     try std.fs.cwd().makePath(out_dir);
 
-    const scene_id = 0;
-
-    const max_depth = 5;
-    const width: i32 = 640;
-    const height: i32 = 480;
-
-    const filter_type = 0;
-    const cam_angle_x = 0.04258603374866164;
-    const cam_angle_y = 0.0;
-    const cam_dist = 5.5;
-    const focus_x = 0.0;
-    const focus_y = 1.25;
-    const focus_z = 0.0;
     const stdout = std.io.getStdOut().writer();
 
     try stdout.print("Rendering scene {s} ({s}) at 640x480...\n", .{ scene, variant_label });
@@ -59,8 +68,8 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
     // uncomment when scene path arg gets added to tracy init
     // const scene_path_c = try allocator.dupeZ(u8, scene);
     // defer allocator.free(scene_path_c);
-
-    tracy.render_init(scene_id, max_depth, width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
+    const c = p.toC();
+    tracy.render_init(c.sid, c.depth, c.w, c.h, c.ft, p.cam_angle_x, p.cam_angle_y, p.cam_dist, p.focus_x, p.focus_y, p.focus_z);
 
     var scores = try allocator.alloc(f32, iterations);
     defer allocator.free(scores);

@@ -8,6 +8,8 @@ from collections import defaultdict
 
 # The definitive list of parameters Zig expects
 PARAM_SCHEMA = {
+    "scene_id": int,
+    "max_depth": int,
     "width": int,
     "height": int,
     "filter_type": int,
@@ -21,6 +23,8 @@ PARAM_SCHEMA = {
 
 # The baseline configuration used if values are missing in YAML
 DEFAULT_PARAMS = {
+    "scene_id": 0,
+    "max_depth": 5,
     "width": 640,
     "height": 480,
     "filter_type": 0,
