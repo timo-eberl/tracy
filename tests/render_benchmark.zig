@@ -38,22 +38,25 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
     try std.fs.cwd().makePath(out_dir);
 
+    const width: i32 = 640;
+    const height: i32 = 480;
+
+    const filter_type = 0;
+    const cam_angle_x = 0.04258603374866164;
+    const cam_angle_y = 0.0;
+    const cam_dist = 5.5;
+    const focus_x = 0.0;
+    const focus_y = 1.25;
+    const focus_z = 0.0;
     const stdout = std.io.getStdOut().writer();
+
     try stdout.print("Rendering scene {s} ({s}) at 640x480...\n", .{ scene, variant_label });
 
-    tracy.render_init(640, 480, 0, 0.04258, 0.0, 5.5, 0.0, 1.25, 0.0);
+    // uncomment when scene path arg gets added to tracy init
+    // const scene_path_c = try allocator.dupeZ(u8, scene);
+    // defer allocator.free(scene_path_c);
 
-    // uncomment when scene path arg gets added to tracy init
-    // const scene_path_c = try allocator.dupeZ(u8, scene);
-    // defer allocator.free(scene_path_c);
-    // uncomment when scene path arg gets added to tracy init
-    // const scene_path_c = try allocator.dupeZ(u8, scene);
-    // defer allocator.free(scene_path_c);
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
-    var scores = try allocator.alloc(f32, iterations);
-    defer allocator.free(scores);
-    var timings = try allocator.alloc(f64, iterations);
-    defer allocator.free(timings);
 
     var scores = try allocator.alloc(f32, iterations);
     defer allocator.free(scores);
@@ -61,7 +64,6 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
     defer allocator.free(timings);
     var i: usize = 0;
     var timer = try std.time.Timer.start();
-    var i: usize = 0;
     while (i < iterations) : (i += 1) {
         timer.reset(); // Clock starts at 0 now
         tracy.render_refine(5);
