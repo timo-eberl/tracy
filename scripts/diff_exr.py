@@ -5,9 +5,11 @@ Usage Example:
     python diff_exr.py render_v1.exr render_v2.exr
     python diff_exr.py render_v1.exr render_v2.exr -o difference_map.exr
 """
+
 import os
 import sys
 import argparse
+import glob
 
 # Enable OpenEXR support in OpenCV
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
@@ -15,47 +17,77 @@ os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 import cv2
 import numpy as np
 
-def generate_diff(img_a_path, img_b_path, output_path):
-    img_a = cv2.imread(img_a_path, cv2.IMREAD_UNCHANGED)
-    img_b = cv2.imread(img_b_path, cv2.IMREAD_UNCHANGED)
 
-    if img_a is None:
-        print(f"Error: Could not load {img_a_path}")
-        sys.exit(1)
-    if img_b is None:
-        print(f"Error: Could not load {img_b_path}")
-        sys.exit(1)
+def generate_diff(render_path, ref_path, output_path):
+    # Load images with IMREAD_UNCHANGED to preserve float data (HDR)
+    img_render = cv2.imread(render_path, cv2.IMREAD_UNCHANGED)
+    img_ref = cv2.imread(ref_path, cv2.IMREAD_UNCHANGED)
 
-    if img_a.shape != img_b.shape:
-        print(f"Error: Dimension mismatch.")
-        print(f"A: {img_a.shape}, B: {img_b.shape}")
-        sys.exit(1)
+    if img_render is None:
+        print(f"  [!] Error: Could not load render {render_path}")
+        return False
+    if img_ref is None:
+        print(f"  [!] Error: Could not load reference {ref_path}")
+        return False
 
-    diff = cv2.absdiff(img_a, img_b)
+    if img_render.shape != img_ref.shape:
+        print(f"  [!] Error: Dimension mismatch for {os.path.basename(render_path)}.")
+        print(f"      Render: {img_render.shape}, Ref: {img_ref.shape}")
+        return False
+
+    # Absolute difference
+    diff = cv2.absdiff(img_render, img_ref)
 
     max_diff = np.max(diff)
     avg_diff = np.mean(diff)
 
-    print(f"Max pixel diff: {max_diff:.6f}")
-    print(f"Avg pixel diff: {avg_diff:.6f}")
-
-    if max_diff == 0:
-        print("Images are identical.")
-    else:
-        print("Images differ.")
+    print(f"  - Max diff: {max_diff:.6f} | Avg diff: {avg_diff:.6f}")
 
     if cv2.imwrite(output_path, diff):
-        print(f"Difference saved to: {output_path}")
+        return True
     else:
-        print("Error saving output image.")
-        sys.exit(1)
+        print(f"  [!] Error saving output to {output_path}")
+        return False
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate a difference image between two EXR files.")
-    parser.add_argument("image1", help="Path to first EXR image")
-    parser.add_argument("image2", help="Path to second EXR image")
-    parser.add_argument("-o", "--output", default="diff.exr", help="Output filename (default: diff.exr)")
+    parser = argparse.ArgumentParser(
+        description="Batch generate difference images between a directory and a reference EXR."
+    )
+    parser.add_argument("input_dir", help="Directory containing .exr renders")
+    parser.add_argument("output_dir", help="Directory where diff files will be saved")
+    parser.add_argument("reference", help="Path to the reference/ground-truth EXR")
 
     args = parser.parse_args()
 
-    generate_diff(args.image1, args.image2, args.output)
+    # Create output directory if it doesn't exist
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+
+    # Find all EXR files in the input directory
+    exr_files = glob.glob(os.path.join(args.input_dir, "*.exr"))
+
+    if not exr_files:
+        print(f"No EXR files found in {args.input_dir}")
+        sys.exit(0)
+
+    print(
+        f"Comparing {len(exr_files)} files against reference: {os.path.basename(args.reference)}"
+    )
+
+    success_count = 0
+    for render_path in exr_files:
+        filename = os.path.basename(render_path)
+        # Skip the reference image if it happens to be in the same directory
+        if os.path.abspath(render_path) == os.path.abspath(args.reference):
+            continue
+
+        # Build output filename (e.g., render_st.exr -> diff_render_st.exr)
+        diff_filename = f"diff_{filename}"
+        output_path = os.path.join(args.output_dir, diff_filename)
+
+        print(f"Processing: {filename}")
+        if generate_diff(render_path, args.reference, output_path):
+            success_count += 1
+
+    print(f"\nDone. Generated {success_count} difference maps in '{args.output_dir}'.")

@@ -7,12 +7,11 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
-const NUM_ITERATIONS = 100;
+const NUM_ITERATIONS = 2;
 
-// Updated writeScores signature
+// writes the benchmarking results to a log file per mode per scene
 fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepath: []const u8, variant: []const u8) !void {
-    const file = try std.fs.cwd().createFile(filepath, .{ .truncate = false });
-    try file.seekFromEnd(0);
+    const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
     defer file.close();
 
     var bw = std.io.bufferedWriter(file.writer());
@@ -27,7 +26,9 @@ fn writeScores(scores: [NUM_ITERATIONS]f32, timings: [NUM_ITERATIONS]f64, filepa
     try bw.flush();
 }
 
-pub fn main() !void {
+// args
+// scene: slice - use this as scene target
+pub fn runRender(scene: []const u8) !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     const args = try std.process.argsAlloc(allocator);
@@ -38,7 +39,7 @@ pub fn main() !void {
     // Dynamic output path based on mode
     const out_dir = "tests/img/exr/zig_render/";
     // We use std.fmt.allocPrint to create the filename dynamically
-    const out_filename = try std.fmt.allocPrint(allocator, "render_{s}.exr", .{variant_label});
+    const out_filename = try std.fmt.allocPrint(allocator, "render_{s}_{s}.exr", .{ scene, variant_label });
     defer allocator.free(out_filename);
 
     const out_fp_slice = try std.fs.path.join(allocator, &.{ out_dir, out_filename });
@@ -59,19 +60,20 @@ pub fn main() !void {
     const focus_z = 0.0;
 
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("Rendering scene ({s}) at {d}x{d}...\n", .{ variant_label, width, height });
+    try stdout.print("Rendering scene {s} with mode ({s}) at {d}x{d}...\n", .{ scene, variant_label, width, height });
 
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
     var scores: [NUM_ITERATIONS]f32 = undefined;
     var timings: [NUM_ITERATIONS]f64 = undefined;
     var i: usize = 0;
-
     var timer = try std.time.Timer.start();
 
     while (i < NUM_ITERATIONS) : (i += 1) {
+        timer.reset();
         const start_time = timer.read();
-        tracy.render_refine(5);
+
+        tracy.render_refine(5); // ADD SCENE ARG HERE
         const end_time = timer.read();
         // Duration in seconds for this specific step
         timings[i] = @as(f64, @floatFromInt(end_time - start_time)) / std.time.ns_per_s;
@@ -80,7 +82,6 @@ pub fn main() !void {
 
         var err_msg: [*c]const u8 = null;
         const ret = tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, width, height, &err_msg);
-
         if (ret != 0) {
             if (err_msg != null) try stdout.print("EXR Error: {s}\n", .{err_msg});
             return error.ExrSaveFailed;
@@ -89,7 +90,15 @@ pub fn main() !void {
         scores[i] = try rmse.computeScore(out_fp);
     }
 
-    const log_fp = out_dir ++ "zig_render_log.txt";
+    const log_fp = try std.fmt.allocPrint(allocator, "{s}render_log_{s}_{s}.txt", .{ out_dir, scene, variant_label });
     try writeScores(scores, timings, log_fp, variant_label);
     try stdout.print("Done. Results appended to {s}\n", .{log_fp});
+}
+
+pub fn main() !void {
+    const scene = "default";
+    try runRender(scene);
+
+    const scene_2 = "test";
+    try runRender(scene_2);
 }

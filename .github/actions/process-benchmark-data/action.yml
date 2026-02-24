@@ -1,14 +1,10 @@
 name: 'Process Benchmark Data'
-description: 'Updates the orphan benchmark branch with new scores and plots'
+description: 'Updates the orphan benchmark branch with new scores, plots, and a directory of renderings'
 
 inputs: 
   bench_version:
     description: 'The version/build string for the current run'
     required: true
-  modes:
-    description: 'The rendering modes to process (e.g., st mt)'
-    required: true
-    default: 'st mt'
 
 runs:
   using: "composite"
@@ -20,52 +16,55 @@ runs:
         path: data-branch
         fetch-depth: 0
 
-    - name: Setup Python & Dependencies
+    - name: Setup Python
       shell: bash
-      run: |
-        python3 -m pip install matplotlib
+      run: python3 -m pip install matplotlib
 
     - name: Integrate Data and Renderings
       shell: bash
       run: |
-        mkdir -p data-branch/logs
-        mkdir -p data-branch/renderings
+        SRC_DIR="${{ github.workspace }}/tests/img/exr"
+        DEST_DIR="${{ github.workspace }}/data-branch"
+        VERSION="${{ inputs.bench_version }}"
+
+        # Make sure our target structure exists
+        mkdir -p "$DEST_DIR/logs/$VERSION"
+        mkdir -p "$DEST_DIR/renderings/$VERSION"
         
-        # 1. Archive the RAW log
-        cp -f tests/img/exr/zig_render/zig_render_log.txt data-branch/latest_raw_log.txt
-        cp -f tests/img/exr/zig_render/zig_render_log.txt data-branch/logs/${{ inputs.bench_version }}.log
+        # Update the master history file
+        python3 scripts/update_benchmark.py rmse_results.json "$DEST_DIR/history.csv"
 
-        # 2. Update History CSV
-        # We must update the CSV *before* generating plots so the trend graph includes this run.
-        python3 scripts/update_benchmark.py rmse_results.json data-branch/history.csv
+        # Archive the render logs for this version
+        shopt -s nullglob
+        cp $SRC_DIR/zig_render/*.txt "$DEST_DIR/logs/$VERSION/"
 
-        # 3. Generate BOTH Plots (Log, CSV, OutputDir)
-        # Now data-branch/history.csv contains the latest data
-        python3 scripts/generate_plots.py data-branch/latest_raw_log.txt data-branch/history.csv data-branch/renderings/ 30
-
-        # 4. Handle Preview Images
-        for mode in ${{ inputs.modes }}; do
-          if [ -f "preview-$mode.png" ]; then
-            cp "preview-$mode.png" "data-branch/renderings/latest-$mode.png"
-            cp "preview-$mode.png" "data-branch/renderings/${{ inputs.bench_version }}-$mode.png"
-            cp "preview-$mode.png" "data-branch/renderings/latest.png"
-          fi
-          # Handle Diff Images
-          if [ -f "diff-$mode.png" ]; then
-            cp "diff-$mode.png" "data-branch/renderings/latest-diff-$mode.png"
-          fi
-        done
-        
-        # Handle Reference Image
-        if [ -f "preview-reference.png" ]; then
-          cp "preview-reference.png" "data-branch/renderings/reference.png"
+        # Handle previews if they exist
+        if [ -d "$SRC_DIR/previews" ]; then
+          # Save a versioned copy of the previews
+          cp $SRC_DIR/previews/*.png "$DEST_DIR/renderings/$VERSION/"
+          
+          # Update the "latest" pointers for the dashboard
+          for img in $SRC_DIR/previews/*.png; do
+            base=$(basename "$img")
+            cp "$img" "$DEST_DIR/renderings/latest-$base"
+          done
         fi
+
+        # Archive the error diffs
+        cp $SRC_DIR/diffs/*.png "$DEST_DIR/renderings/$VERSION/"
+
+        # Update the "latest" diff pointers for the dashboard
+        for img in $SRC_DIR/diffs/*.png; do
+          base=$(basename "$img")
+            cp "$img" "$DEST_DIR/renderings/latest-$base"
+          done
+        # Run the plot generation script
+        python3 scripts/generate_plots.py "$SRC_DIR/zig_render/" "$DEST_DIR/history.csv" "$DEST_DIR/plots/" 30
 
     - name: Update Dashboard
       shell: bash
       run: |
-        # Update Benchmark removed from here as it is now done in the previous step
-        python3 scripts/generate_dashboard.py data-branch/history.csv data-branch/README.md data-branch/latest_raw_log.txt
+        python3 scripts/generate_dashboard.py "${{ github.workspace }}/data-branch/history.csv" "${{ github.workspace }}/data-branch/README.md"
 
     - name: Commit and Push
       shell: bash
@@ -74,6 +73,5 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add .
-        # Using --allow-empty or || true to prevent pipeline failure if nothing changed
-        git commit -m "Benchmark: ${{ inputs.bench_version }}" || echo "No changes to commit"
+        git commit -m "Benchmark Update: ${{ inputs.bench_version }}" || echo "no changes"
         git push origin HEAD:benchmarks

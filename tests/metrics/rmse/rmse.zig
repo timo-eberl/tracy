@@ -45,7 +45,7 @@ pub fn computeRmse(ref_img: exr_utils.ExrImage, test_img: exr_utils.ExrImage) !f
     var sum_sq_diff: f64 = 0.0;
     const total_pixels = ref_img.width * ref_img.height;
 
-    // iterate over pixels [R G B A]
+    // iterate over pixels [B G R A]
     var i: usize = 0;
     while (i < ref_img.pixels.len) : (i += 4) {
         const b_ref = ref_img.pixels[i + 0];
@@ -57,11 +57,17 @@ pub fn computeRmse(ref_img: exr_utils.ExrImage, test_img: exr_utils.ExrImage) !f
         const g_test = test_img.pixels[i + 1];
         const r_test = test_img.pixels[i + 2];
 
-        const b_diff = r_ref - r_test;
-        const g_diff = g_ref - g_test;
-        const r_diff = b_ref - b_test;
+        const b_se = (b_ref - b_test) * (b_ref - b_test);
+        const g_se = (g_ref - g_test) * (g_ref - g_test);
+        const r_se = (r_ref - r_test) * (r_ref - r_test);
 
-        sum_sq_diff += (r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff);
+        const eps = 0.000001; // Avoid division by zero
+
+        // standard MSE
+        // sum_sq_diff += (r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff);
+
+        // relative MSE
+        sum_sq_diff += b_se / (b_ref * b_ref + eps) + g_se / (g_ref * g_ref + eps) + r_se / (r_ref * r_ref + eps);
     }
 
     // calculate RMSE
