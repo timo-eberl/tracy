@@ -40,16 +40,16 @@ int main() {
 	const int scene = 1;
 
 	const int max_depth = 6;
-	const int width = 640;
-	const int height = 480;
+	const int width = 280;
+	const int height = 320;
 
 	const int filter_type = 0;
 
-	const double cam_angle_x = 0.04258603374866164;
+	const double cam_angle_x = 0.4;
 	const double cam_angle_y = 0.0;
-	const double cam_dist = 5.5;
+	const double cam_dist = 4.0;
 	const double focus_x = 0.0;
-	const double focus_y = 1.25;
+	const double focus_y = 1.05;
 	const double focus_z = 0.0;
 
 	printf("Rendering scene %d at %dx%d...\n", scene, width, height);
