@@ -70,19 +70,10 @@ jobs:
           context: .
           target: benchmark-env
           push: false
+          load: true #instructs the Buildx engine to export the finished image from its isolated build container and import it into the local Docker daemon's image store
           tags: rmse-bench
           cache-from: type=gha # use docker layer caching
           cache-to: type=gha,mode=max
-
-      # render the target image
-      # - name: Render Scene
-      #   run: |
-      #     docker run --rm \
-      #     -v $(pwd):/app \
-      #     -v ~/.cache/zig:/root/.cache/zig \
-      #     -w /app \
-      #     rmse-bench zig build run-zig -Doptimize=ReleaseSafe
-      #
 
       - name: Run Benchmarks
         run: |
