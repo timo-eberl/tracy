@@ -10,10 +10,10 @@ pub fn build(b: *std.Build) void {
 
     // --- OPTIONS ---
     const use_openmp = b.option(bool, "multithreaded", "Enable OpenMP support") orelse false;
-    const use_cos_sampling = b.option(bool, "cossampling", "Enable Cosine Weighted Sampling") orelse false;
+    const use_russian_roulette = b.option(bool, "russianroulette", "Enable Russian Roulette termination strategy") orelse false;
 
-    const tracy_flags = if (use_cos_sampling) &[_][]const u8{ "-std=c11", "-DCOS_SAMPLING" } else &[_][]const u8{"-std=c11"};
-    const wasm_flags = if (use_cos_sampling) &[_][]const u8{ "-std=c11", "-D__EMSCRIPTEN__", "-DCOS_SAMPLING" } else &[_][]const u8{ "-std=c11", "-D__EMSCRIPTEN__" };
+    const tracy_flags = if (use_russian_roulette) &[_][]const u8{ "-std=c11", "-DENABLE_RUSSIAN_ROULETTE" } else &[_][]const u8{"-std=c11"};
+    const wasm_flags = if (use_russian_roulette) &[_][]const u8{ "-std=c11", "-D__EMSCRIPTEN__", "-DENABLE_RUSSIAN_ROULETTE" } else &[_][]const u8{ "-std=c11", "-D__EMSCRIPTEN__" };
 
     // PCG Configuration
     const pcg_include = b.path("dependencies/pcg-c/include");
@@ -60,10 +60,10 @@ pub fn build(b: *std.Build) void {
 
     // --- HELPER FOR OPENMP ---
     const configure_openmp = struct {
-        fn apply(step: *std.Build.Step.Compile, enabled: bool, cos_enabled: bool, b_ptr: *std.Build) void {
+        fn apply(step: *std.Build.Step.Compile, enabled: bool, russian_roulette_enabled: bool, b_ptr: *std.Build) void {
             const flags = if (enabled)
-                if (cos_enabled) &[_][]const u8{ "-std=c11", "-fopenmp", "-D_OPENMP", "-DCOS_SAMPLING" } else &[_][]const u8{ "-std=c11", "-fopenmp", "-D_OPENMP" }
-            else if (cos_enabled) &[_][]const u8{ "-std=c11", "-DCOS_SAMPLING" } else &[_][]const u8{"-std=c11"};
+                if (russian_roulette_enabled) &[_][]const u8{ "-std=c11", "-fopenmp", "-D_OPENMP", "-DENABLE_RUSSIAN_ROULETTE" } else &[_][]const u8{ "-std=c11", "-fopenmp", "-D_OPENMP" }
+            else if (russian_roulette_enabled) &[_][]const u8{ "-std=c11", "-DENABLE_RUSSIAN_ROULETTE" } else &[_][]const u8{"-std=c11"};
 
             if (enabled) {
                 step.root_module.addCSourceFile(.{
@@ -105,7 +105,7 @@ pub fn build(b: *std.Build) void {
     c_exe.want_lto = use_lto;
     c_exe.root_module.addCSourceFile(.{ .file = b.path("examples/c_render/main.c") });
 
-    configure_openmp.apply(c_exe, use_openmp, use_cos_sampling, b);
+    configure_openmp.apply(c_exe, use_openmp, use_russian_roulette, b);
 
     c_exe.root_module.addIncludePath(b.path("include"));
     c_exe.root_module.addIncludePath(pcg_include);
@@ -127,7 +127,7 @@ pub fn build(b: *std.Build) void {
     });
     zig_exe.want_lto = use_lto;
 
-    configure_openmp.apply(zig_exe, use_openmp, use_cos_sampling, b);
+    configure_openmp.apply(zig_exe, use_openmp, use_russian_roulette, b);
 
     zig_exe.root_module.addIncludePath(b.path("include"));
     zig_exe.root_module.addIncludePath(pcg_include);
@@ -295,7 +295,7 @@ pub fn build(b: *std.Build) void {
 
     render_bench_exe.want_lto = use_lto;
 
-    configure_openmp.apply(render_bench_exe, use_openmp, use_cos_sampling, b);
+    configure_openmp.apply(render_bench_exe, use_openmp, use_russian_roulette, b);
 
     render_bench_exe.root_module.addIncludePath(b.path("include"));
     render_bench_exe.root_module.addIncludePath(pcg_include);

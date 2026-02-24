@@ -24,9 +24,10 @@ zig build run-zig -Doptimize=ReleaseFast -Dtarget=native
 
 You can optionally specify those parameters:
 
-| Option                 | Functionality                        |
-| :--------------------- | :----------------------------------- |
-| `-Dmultithreaded=true` | Enables Multi-Threading using OpenMP |
+| Option                   | Functionality                                 |
+| :----------------------- | :-------------------------------------------- |
+| `-Dmultithreaded=true`   | Enables Multi-Threading using OpenMP          |
+| `-Drussianroulette=true` | Enables Russian Roulette termination strategy |
 
 ## Unit Testing
 
