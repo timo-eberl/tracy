@@ -31,7 +31,7 @@ for (s, v), data in latest_entries.items():
     scenes[s].append(data)
 
 # 2. build the summary table
-summary_table = "| Scene | Variant | RelMSE Score | Render Time | Iterations | Date |\n|---|---|---|---|\n"
+summary_table = "| Scene | Variant | RelMSE Score | Render Time | Iterations | Date |\n|---|---|---|---|---|---|\n"
 for s in sorted(scenes.keys()):
     for entry in scenes[s]:
         summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse_score']):.5f} | {float(entry['rmse_time']):.2f}s | {entry['iterations']} | {entry['date']} |\n"
