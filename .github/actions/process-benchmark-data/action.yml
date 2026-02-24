@@ -25,37 +25,41 @@ runs:
       run: |
         SRC_DIR="${{ github.workspace }}/tests/img/exr"
         DEST_DIR="${{ github.workspace }}/data-branch"
+        VERSION="${{ inputs.bench_version }}"
 
-        # debug: this will show us exactly what files exist if cp fails
-        echo "--- Debug: List all files in tests/img/exr ---"
-        ls -R $SRC_DIR
-
-        mkdir -p $DEST_DIR/logs
-        mkdir -p $DEST_DIR/renderings
+        # Make sure our target structure exists
+        mkdir -p "$DEST_DIR/logs/$VERSION"
+        mkdir -p "$DEST_DIR/renderings/$VERSION"
         
-        # 1. update history csv
-        python3 scripts/update_benchmark.py rmse_results.json $DEST_DIR/history.csv
+        # Update the master history file
+        python3 scripts/update_benchmark.py rmse_results.json "$DEST_DIR/history.csv"
 
-        # 2. copy renderings
-        # we use 'nullglob' so the loop just skips if no pngs exist
+        # Archive the render logs for this version
         shopt -s nullglob
-        
-        cp -v $SRC_DIR/previews/*.png $DEST_DIR/renderings/ || echo "no previews found"
-        cp -v $SRC_DIR/diffs/*.png $DEST_DIR/renderings/ || echo "no diffs found"
+        cp $SRC_DIR/zig_render/*.txt "$DEST_DIR/logs/$VERSION/"
 
-        # 3. create 'latest' links
-        for img in $SRC_DIR/previews/*.png; do
-          base=$(basename "$img")
-          cp "$img" "$DEST_DIR/renderings/latest-$base"
-        done
+        # Handle previews if they exist
+        if [ -d "$SRC_DIR/previews" ]; then
+          # Save a versioned copy of the previews
+          cp $SRC_DIR/previews/*.png "$DEST_DIR/renderings/$VERSION/"
+          
+          # Update the "latest" pointers for the dashboard
+          for img in $SRC_DIR/previews/*.png; do
+            base=$(basename "$img")
+            cp "$img" "$DEST_DIR/renderings/latest-$base"
+          done
+        fi
 
-        # 4. generate plots
-        python3 scripts/generate_plots.py $SRC_DIR/zig_render/ $DEST_DIR/history.csv $DEST_DIR/renderings/ 30
+        # Archive the error diffs
+        cp $SRC_DIR/diffs/*.png "$DEST_DIR/renderings/$VERSION/"
+
+        # Run the plot generation script
+        python3 scripts/generate_plots.py "$SRC_DIR/zig_render/" "$DEST_DIR/history.csv" "$DEST_DIR/renderings/" 30
 
     - name: Update Dashboard
       shell: bash
       run: |
-        python3 scripts/generate_dashboard.py ${{ github.workspace }}/data-branch/history.csv ${{ github.workspace }}/data-branch/README.md
+        python3 scripts/generate_dashboard.py "${{ github.workspace }}/data-branch/history.csv" "${{ github.workspace }}/data-branch/README.md"
 
     - name: Commit and Push
       shell: bash
@@ -64,6 +68,5 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add .
-        # we use the input variable here
         git commit -m "Benchmark Update: ${{ inputs.bench_version }}" || echo "no changes"
         git push origin HEAD:benchmarks
