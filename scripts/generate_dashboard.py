@@ -51,7 +51,7 @@ for s in sorted(scenes.keys()):
     for entry in sorted(scenes[s], key=lambda x: x["variant"]):
         v = entry["variant"]
         img_name = f"latest-render_{s}_{v}.png"
-        diff_name = f"latest-diff_render_{s}_{v}.png"
+        diff_name = f"diff_render_{s}_{v}.png"
 
         header += f" {v} |"
         sep += " :---: |"
