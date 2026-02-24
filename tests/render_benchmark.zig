@@ -48,6 +48,8 @@ pub fn runRender(scene: []const u8) !void {
     defer allocator.free(out_fp);
     try std.fs.cwd().makePath(out_dir);
 
+    const scene_id = 0;
+
     const width: i32 = 640;
     const height: i32 = 480;
 
@@ -62,7 +64,7 @@ pub fn runRender(scene: []const u8) !void {
     const stdout = std.io.getStdOut().writer();
     try stdout.print("Rendering scene {s} with mode ({s}) at {d}x{d}...\n", .{ scene, variant_label, width, height });
 
-    tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
+    tracy.render_init(scene_id, width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
     var scores: [NUM_ITERATIONS]f32 = undefined;
     var timings: [NUM_ITERATIONS]f64 = undefined;

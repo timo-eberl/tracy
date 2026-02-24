@@ -56,6 +56,7 @@ typedef struct {
 	ShapeType type; Vec color; MaterialType material;
 	union { Sphere sphere; Triangle triangle; } geo;
 } Primitive;
+typedef struct { Primitive* primitives; int size; } Scene;
 
 // t: distance, p: point, n: normal, inside: flag
 typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
@@ -80,7 +81,7 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // room dimensions: (3,2.4,4)
 
 // clang-format off
-Primitive scene[] = {
+Primitive scene_cornell[] = {
 	// Left Wall (x = -1.5)
 	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}}},
 	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}}},
@@ -117,8 +118,24 @@ Primitive scene[] = {
 	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}, true}},
 	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}, true}},
 };
-int num_primitives = sizeof(scene) / sizeof(Primitive);
+
+Primitive scene_caustics[] = {
+	// Floor
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}}},
+	// Glass
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {-0.3, 0.3, 0.0}, .radius = 0.2}},
+	// Light
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}}},
+};
 // clang-format on
+
+Scene all_scenes[] = {
+	{scene_cornell, sizeof(scene_cornell) / sizeof(Primitive)},
+	{scene_caustics, sizeof(scene_caustics) / sizeof(Primitive)},
+};
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -164,6 +181,7 @@ Vec camera_origin;
 Vec forward, right, up;
 int sample_count;		// Global counter of total samples processed (used for seeding)
 FilterType filter_type; // Current selected filter
+Scene current_scene;
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
@@ -260,20 +278,22 @@ bool intersect_scene(Ray r, HitInfo* closest_hit, Primitive** hit_primitive) {
 	closest_hit->t = INFINITY;
 	*hit_primitive = NULL;
 
-	for (int i = 0; i < num_primitives; ++i) {
+	for (int i = 0; i < current_scene.size; ++i) {
 		HitInfo current_hit;
 		bool hit = false;
 
-		switch (scene[i].type) {
-		case SHAPE_SPHERE: hit = intersect_sphere(r, scene[i].geo.sphere, &current_hit); break;
+		switch (current_scene.primitives[i].type) {
+		case SHAPE_SPHERE:
+			hit = intersect_sphere(r, current_scene.primitives[i].geo.sphere, &current_hit);
+			break;
 		case SHAPE_TRIANGLE:
-			hit = intersect_triangle(r, scene[i].geo.triangle, &current_hit);
+			hit = intersect_triangle(r, current_scene.primitives[i].geo.triangle, &current_hit);
 			break;
 		}
 
 		if (hit && current_hit.t < closest_hit->t) {
 			*closest_hit = current_hit;
-			*hit_primitive = &scene[i];
+			*hit_primitive = &current_scene.primitives[i];
 		}
 	}
 
@@ -629,7 +649,7 @@ float* update_image_hdr() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angle_x,
+void render_init(int p_scene_id, int p_width, int p_height, int p_filter_type, double p_cam_angle_x,
 				 double p_cam_angle_y, double p_cam_dist, double p_focus_x, double p_focus_y,
 				 double p_focus_z) {
 	width = p_width;
@@ -649,6 +669,10 @@ void render_init(int p_width, int p_height, int p_filter_type, double p_cam_angl
 	Vec world_up = {0, 1, 0};
 	right = vec_normalize(vec_cross(forward, world_up));
 	up = vec_normalize(vec_cross(right, forward));
+
+	int num_available_scenes = sizeof(all_scenes) / sizeof(Scene);
+	current_scene = (p_scene_id >= 0 && p_scene_id < num_available_scenes) ? all_scenes[p_scene_id]
+																		   : (Scene){0};
 
 	sample_count = 0;
 }

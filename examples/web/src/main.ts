@@ -98,6 +98,7 @@ function setupCameraControls() {
 
 async function drawPreview() {
 	await tracy.renderFast({
+		scene: 0,
 		width: width / 2,
 		height: height / 2,
 		filterType: 1,
@@ -106,7 +107,7 @@ async function drawPreview() {
 			distance: camera.distance,
 			focusPoint: camera.focusPoint
 		},
-		samplesPerPixel: 0
+		samplesPerPixel: 1
 	});
 }
 
@@ -117,6 +118,7 @@ async function drawFull() {
 	const startTime = performance.now();
 
 	await tracy.renderFull({
+		scene: 0,
 		width: width,
 		height: height,
 		filterType: 0,
@@ -125,7 +127,7 @@ async function drawFull() {
 			distance: camera.distance,
 			focusPoint: camera.focusPoint
 		},
-		samplesPerPixel: 30
+		samplesPerPixel: 15
 	});
 
 	const endTime = performance.now();

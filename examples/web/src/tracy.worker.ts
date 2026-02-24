@@ -22,12 +22,13 @@ self.onmessage = async (event) => {
 	const Module = await modulePromise;
 
 	Module._render_init(
-		s.width, s.height, s.filterType, degToRad(s.camera.rotation.x), degToRad(s.camera.rotation.y),
-		s.camera.distance, s.camera.focusPoint.x, s.camera.focusPoint.y, s.camera.focusPoint.z
+		s.scene, s.width, s.height, s.filterType,
+		degToRad(s.camera.rotation.x), degToRad(s.camera.rotation.y), s.camera.distance,
+		s.camera.focusPoint.x, s.camera.focusPoint.y, s.camera.focusPoint.z
 	);
 
 	if (command === 'renderFast') {
-		Module._render_refine(1);
+		Module._render_refine(s.samplesPerPixel);
 		const bufferPtr = Module._update_image_ldr();
 		self.postMessage({
 			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true

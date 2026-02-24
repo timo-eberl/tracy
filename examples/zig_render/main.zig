@@ -5,6 +5,8 @@ const tracy = @cImport({
 });
 
 pub fn main() !void {
+    const scene_id = 0;
+
     const width: i32 = 640;
     const height: i32 = 480;
 
@@ -19,9 +21,9 @@ pub fn main() !void {
 
     const stdout = std.io.getStdOut().writer();
 
-    try stdout.print("Rendering scene at {d}x{d}...\n", .{ width, height });
+    try stdout.print("Rendering scene {d} at {d}x{d}...\n", .{ scene_id, width, height });
 
-    tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
+    tracy.render_init(scene_id, width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
 
     var i: usize = 0;
     while (i < 10) : (i += 1) {

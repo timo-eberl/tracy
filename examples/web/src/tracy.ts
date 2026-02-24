@@ -5,6 +5,7 @@ export interface TracyModule {
 }
 
 export interface RenderSettings {
+	scene: number,
 	width: number,
 	height: number,
 	filterType: number,
