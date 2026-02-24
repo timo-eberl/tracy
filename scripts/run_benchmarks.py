@@ -101,7 +101,7 @@ def main():
     print(f"Total jobs: {len(resolved_jobs)} | Variants: {len(job_groups)}\n")
 
     for variant, jobs in job_groups.items():
-        mode_label = "Multi-threaded" if variant == "mt" else "Single-threaded"
+        mode_label = "Russian Roulette" if variant == "rr" else "Standard"
         print(f"--- Variant: {mode_label} ---")
 
         # Build the Zig binary for this specific variant
