@@ -20,7 +20,16 @@ if os.path.dirname(csv_path):
 
 with open(csv_path, mode="a", newline="") as csvfile:
     # new schema includes scene, variant, and iterations
-    fieldnames = ["date", "version", "scene", "variant", "rmse", "iterations", "commit"]
+    fieldnames = [
+        "date",
+        "version",
+        "scene",
+        "variant",
+        "rmse_score",
+        "rmse_time",
+        "iterations",
+        "commit",
+    ]
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
     if not file_exists:
@@ -34,7 +43,8 @@ with open(csv_path, mode="a", newline="") as csvfile:
                 "version": entry["version"],
                 "scene": entry.get("scene", "unknown"),
                 "variant": entry.get("variant", "default"),
-                "rmse": entry["rmse_value"],
+                "rmse_score": entry["rmse_score"],
+                "rmse_time": entry["rmse_time"],
                 "iterations": entry.get("iterations", 0),
                 "commit": entry["commit"],
             }
