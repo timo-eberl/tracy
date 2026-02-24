@@ -3,3 +3,7 @@ date,version,scene,variant,rmse_score,rmse_time,iterations,commit
 2026-02-24T20:41:28.042144,0.0.0-unknown,test,mt,0.9491,6.038085,10,local-de
 2026-02-24T20:41:28.042144,0.0.0-unknown,test,st,2.1107,3.596827,2,local-de
 2026-02-24T20:41:28.042144,0.0.0-unknown,default,mt,0.9491,5.940484,10,local-de
+2026-02-24T20:48:32.636703,0.0.0-unknown,default,st,2.1107,3.582934,2,local-de
+2026-02-24T20:48:32.636703,0.0.0-unknown,test,mt,0.9491,5.965641000000001,10,local-de
+2026-02-24T20:48:32.636703,0.0.0-unknown,test,st,2.1107,3.576238,2,local-de
+2026-02-24T20:48:32.636703,0.0.0-unknown,default,mt,0.9491,6.026837999999999,10,local-de
