@@ -86,7 +86,7 @@ jobs:
 
       - name: Run Benchmarks
         run: |
-          # Clean old results locally so we don't mix up files
+          # clean render output directory
           rm -f tests/img/exr/zig_render/*
           
           docker run --rm \
