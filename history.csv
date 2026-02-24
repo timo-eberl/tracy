@@ -1,0 +1,5 @@
+date,version,scene,variant,rmse_score,rmse_time,iterations,commit
+2026-02-24T20:58:15.716278,0.0.0-unknown,default,st,2.1107,3.177702,2,local-de
+2026-02-24T20:58:15.716278,0.0.0-unknown,test,mt,0.9491,5.941576,10,local-de
+2026-02-24T20:58:15.716278,0.0.0-unknown,test,st,2.1107,3.1963619999999997,2,local-de
+2026-02-24T20:58:15.716278,0.0.0-unknown,default,mt,0.9491,6.01766,10,local-de
