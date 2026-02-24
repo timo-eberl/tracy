@@ -103,7 +103,7 @@ def generate_trend_plot(csv_path, output_path, max_versions=20):
             v = row["version"]
             # we create a label like "cornellbox (st)"
             label = f"{row['scene']} ({row['variant']})".lower()
-            r = float(row["rmse"])
+            r = float(row["rmse_score"])
 
             # shortening the version string for the x-axis
             short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
