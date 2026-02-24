@@ -39,8 +39,11 @@ try:
         scene_tag = parts[0]
         variant_tag = parts[1]
 
-        current_scores = []
-
+        current_score: tuple[int, float, float] = (
+            0,
+            0.0,
+            0.0,
+        )  # tuple(num_iterations, score, time
         with open(file_path, "r") as f:
             for line in f:
                 line = line.strip()
@@ -50,18 +53,24 @@ try:
                 try:
                     # Zig log format: score,time_seconds
                     score_str = line.split(",")[0]
-                    current_scores.append(float(score_str))
+                    time_str = line.split(",")[1]
+                    current_score = (
+                        current_score[0] + 1,
+                        float(score_str),
+                        current_score[2] + float(time_str),
+                    )
                 except (ValueError, IndexError):
                     continue
 
-        if current_scores:
+        if current_score[0] > 0:
             runs_data.append(
                 {
                     "version": f"{base_version}",
                     "variant": variant_tag,
                     "scene": scene_tag,
-                    "rmse_value": current_scores[-1],  # Last score
-                    "iterations": len(current_scores),
+                    "rmse_value": current_score[1],  # Last score
+                    "time": current_score[2],
+                    "iterations": current_score[0],
                     "timestamp": timestamp,
                     "commit": commit_sha,
                 }
