@@ -231,5 +231,5 @@ if __name__ == "__main__":
         csv_in, os.path.join(out_dir, "history_score_trend.png"), max_versions=num_v
     )
     generate_time_trend_plot(
-        csv_in, os.path.join(out_dir, "history_score_trend.png"), max_versions=num_v
+        csv_in, os.path.join(out_dir, "history_time_trend.png"), max_versions=num_v
     )
