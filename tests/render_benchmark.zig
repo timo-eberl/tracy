@@ -46,12 +46,20 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
     // uncomment when scene path arg gets added to tracy init
     // const scene_path_c = try allocator.dupeZ(u8, scene);
     // defer allocator.free(scene_path_c);
+    // uncomment when scene path arg gets added to tracy init
+    // const scene_path_c = try allocator.dupeZ(u8, scene);
+    // defer allocator.free(scene_path_c);
     tracy.render_init(width, height, filter_type, cam_angle_x, cam_angle_y, cam_dist, focus_x, focus_y, focus_z);
     var scores = try allocator.alloc(f32, iterations);
     defer allocator.free(scores);
     var timings = try allocator.alloc(f64, iterations);
     defer allocator.free(timings);
 
+    var scores = try allocator.alloc(f32, iterations);
+    defer allocator.free(scores);
+    var timings = try allocator.alloc(f64, iterations);
+    defer allocator.free(timings);
+    var i: usize = 0;
     var timer = try std.time.Timer.start();
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
@@ -80,9 +88,9 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    // Get CLI args: [program_name, scene, iterations]
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -92,7 +100,8 @@ pub fn main() !void {
     }
 
     const scene = args[1];
-    const iterations = try std.fmt.parseInt(u32, args[2], 10);
 
+    const iterations = try std.fmt.parseInt(u32, args[2], 10);
+    // Pass these directly to your runRender function
     try runRender(allocator, scene, iterations);
 }
