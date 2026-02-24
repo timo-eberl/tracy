@@ -89,7 +89,7 @@ jobs:
           # clean render output directory
           rm -f tests/img/exr/zig_render/*
           
-          docker run --rm \
+          docker run -e --rm \
             -v $(pwd):/app \
             -v ~/.cache/zig:/root/.cache/zig \
             -w /app rmse-bench \
