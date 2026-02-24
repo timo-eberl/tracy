@@ -16,7 +16,7 @@ output_path = sys.argv[1]
 # Metadata from environment
 base_version = os.environ.get("bench_version", "0.0.0-unknown")
 commit_sha = os.environ.get("GITHUB_SHA", "local-dev")[:8]
-timestamp = datetime.now().isoformat()
+timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
 runs_data = []
 

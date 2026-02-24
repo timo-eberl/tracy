@@ -116,7 +116,9 @@ RUN apt-get update && apt-get install -y \
 	xz-utils \
 	build-essential \
 	time \
-	&& rm -rf /var/lib/apt/lists/*
+	python3-pip \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& pip3 install pyyaml --break-system-packages
 
 # Install Zig 
 ARG ZIG_VERSION=0.14.1 
@@ -137,4 +139,4 @@ WORKDIR /app
 COPY . .
 # Default Command
 # When this container runs, it executes the test and prints to Standard Output
-CMD ["zig", "build", "rmse_run"]
+# CMD ["zig", "build", "rmse_run"]
