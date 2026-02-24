@@ -1,13 +1,44 @@
+scenes:
+  - tag: "standard_baseline"
+    name: "Standard Baseline"
+    description: "Default benchmark settings for consistent comparison"
+    width: 640
+    height: 480
+    filter_type: 0
+    cam_angle_x: 0.04258603374866164
+    cam_angle_y: 0.0
+    cam_dist: 5.5
+    focus_x: 0.0
+    focus_y: 1.25
+    focus_z: 0.0
+
+  - tag: "hd_cinematic"
+    name: "HD Cinematic"
+    description: "High resolution setup with a tighter focus"
+    width: 1280
+    height: 720
+    filter_type: 1
+    cam_angle_x: 0.05
+    cam_angle_y: -0.1
+    cam_dist: 7.0
+    focus_x: 0.0
+    focus_y: 1.0
+    focus_z: 0.0
 jobs:
-  - scene: "default"
-    variant: "st"
-    iterations: 10
-  - scene: "default"
+  - scene: "example_1"
     variant: "mt"
+    tag: "standard_baseline"
     iterations: 100
-  - scene: "test"
+
+  - scene: "example_2"
     variant: "st"
-    iterations: 10
-  - scene: "test"
+    tag: "hd_baseline"
+    iterations: 20
+
+  - scene: "example_3"
     variant: "mt"
-    iterations: 100
+    tag: "standard_baseline"
+    iterations: 50
+    width: 800
+    height: 600
+    cam_dist: 4.5

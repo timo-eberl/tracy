@@ -7,6 +7,7 @@ const tracy = @cImport({
 });
 const rmse = @import("metrics/rmse/compute_rmse.zig");
 
+const RenderParams = struct { width: i32, height: i32, filter_type: i32, cam_angle_x: f32, cam_angle_y: f32, cam_dist: f32, focus_x: f32, focus_y: f32, focus_z: f32 };
 // writes the benchmarking results to a log file per mode per scene
 fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, variant: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
@@ -24,7 +25,7 @@ fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, 
     try bw.flush();
 }
 
-pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u32) !void {
+pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u32, p: RenderParams) !void {
     const variant_label = if (config.multithreaded) "mt" else "st";
     const out_dir = "tests/img/exr/zig_render/";
 
@@ -100,13 +101,16 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     if (args.len < 3) {
-        std.debug.print("Usage: render_bench <scene> <iterations>\n", .{});
+        std.debug.print("Usage: render_bench <scene> <iterations> <cam_params>\n", .{});
         return;
     }
-
     const scene = args[1];
 
     const iterations = try std.fmt.parseInt(u32, args[2], 10);
+    const json_str = args[3];
+    const parsed = try std.json.parseFromSlice(RenderParams, allocator, json_str, .{});
+    defer parsed.deinit();
+    const p = parsed.value;
     // Pass these directly to your runRender function
-    try runRender(allocator, scene, iterations);
+    try runRender(allocator, scene, iterations, p);
 }
