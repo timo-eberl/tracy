@@ -3,10 +3,10 @@
 ## Summary Results
 | Scene | Variant | Final RMSE | Date |
 |---|---|---|---|
-| default | **st** | 2.11070 | 3.58s | 2026-02-24T17:41:41.512119 |
-| default | **mt** | 2.11070 | 1.20s | 2026-02-24T17:41:41.512119 |
-| test | **mt** | 2.11070 | 1.19s | 2026-02-24T17:41:41.512119 |
-| test | **st** | 2.11070 | 3.59s | 2026-02-24T17:41:41.512119 |
+| default | **st** | 2.11070 | 3.58s | 2026-02-24T17:55:17.079280 |
+| default | **mt** | 2.11070 | 1.24s | 2026-02-24T17:55:17.079280 |
+| test | **mt** | 2.11070 | 1.21s | 2026-02-24T17:55:17.079280 |
+| test | **st** | 2.11070 | 3.58s | 2026-02-24T17:55:17.079280 |
 
 
 ## RMSE Trend
@@ -23,7 +23,7 @@
 | **Render** | ![ mt ](renderings/latest-render_default_mt.png) | ![ st ](renderings/latest-render_default_st.png) |
 | **Diff** | ![ diff mt ](renderings/latest-diff_render_default_mt.png) | ![ diff st ](renderings/latest-diff_render_default_st.png) |
 
-**Convergence for default:**
+### Convergence: default
 
 ![ default convergence ](plots/convergence_default.png)
 
@@ -35,7 +35,7 @@
 | **Render** | ![ mt ](renderings/latest-render_test_mt.png) | ![ st ](renderings/latest-render_test_st.png) |
 | **Diff** | ![ diff mt ](renderings/latest-diff_render_test_mt.png) | ![ diff st ](renderings/latest-diff_render_test_st.png) |
 
-**Convergence for test:**
+### Convergence: test
 
 ![ test convergence ](plots/convergence_test.png)
 
@@ -43,4 +43,4 @@
 
 
 ---
-*last updated: 2026-02-24T17:41:41.512119 (commit: 1050946f)*
+*last updated: 2026-02-24T17:55:17.079280 (commit: d2ee357b)*
