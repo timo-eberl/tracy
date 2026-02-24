@@ -93,8 +93,7 @@ jobs:
             -v $(pwd):/app \
             -v ~/.cache/zig:/root/.cache/zig \
             -w /app rmse-bench \
-            python3 scripts/run_benchmarks.py \
-            python3 scripts/create_log.py rmse_results.json
+            bash -c "python3 scripts/run_benchmarks.py && python3 scripts/create_log.py rmse_results.json"
 
       - name: Generate Render Previews
         uses: ./.github/actions/exr-to-png-conversion
