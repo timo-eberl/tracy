@@ -53,6 +53,12 @@ runs:
         # Archive the error diffs
         cp $SRC_DIR/diffs/*.png "$DEST_DIR/renderings/$VERSION/"
 
+        # Update the "latest" diff pointers for the dashboard
+        for img in $SRC_DIR/diffs/*.png; do
+          base=$(basename "$img")
+            cp "$img" "$DEST_DIR/renderings/latest-$base"
+          done
+        fi
         # Run the plot generation script
         python3 scripts/generate_plots.py "$SRC_DIR/zig_render/" "$DEST_DIR/history.csv" "$DEST_DIR/renderings/" 30
 
