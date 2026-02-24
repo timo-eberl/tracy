@@ -15,3 +15,7 @@ date,version,scene,variant,rmse_score,rmse_time,iterations,commit
 2026-02-24 21:18,0.1.0-build.159,test,mt,0.3017,59.417135999999985,100,local-de
 2026-02-24 21:18,0.1.0-build.159,test,st,0.9491,17.918234,10,local-de
 2026-02-24 21:18,0.1.0-build.159,default,mt,0.3017,59.508084999999994,100,local-de
+2026-02-24 21:34,0.1.0-build.161,default,st,0.9491,17.973660000000002,10,local-de
+2026-02-24 21:34,0.1.0-build.161,test,mt,0.3017,59.46860500000002,100,local-de
+2026-02-24 21:34,0.1.0-build.161,test,st,0.9491,18.02811,10,local-de
+2026-02-24 21:34,0.1.0-build.161,default,mt,0.3017,59.510664999999996,100,local-de
