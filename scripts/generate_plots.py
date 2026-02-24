@@ -142,6 +142,78 @@ def generate_trend_plot(csv_path, output_path, max_versions=20):
     plt.close()
 
 
+def generate_time_trend_plot(csv_path, output_path, max_versions=20):
+    # tracks how long it took to converge across different builds
+    if not os.path.exists(csv_path):
+        return
+
+    # store timing data indexed by scene+variant combo
+    data = defaultdict(dict)
+    versions = []
+
+    with open(csv_path, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            v = row["version"]
+            # creating the same identifiable label as the rmse chart
+            label = f"{row['scene']} ({row['variant']})".lower()
+
+            # pull the convergence time instead of the error value
+            try:
+                t = float(row["rmse_time"])
+            except (KeyError, ValueError, TypeError):
+                continue
+
+            # logic to keep version strings short and readable on the x-axis
+            short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
+            if short_v not in versions:
+                versions.append(short_v)
+
+            data[label][short_v] = t
+
+    # only look at the most recent builds to avoid a cluttered graph
+    window_versions = versions[-max_versions:] if max_versions > 0 else versions
+    plt.figure(figsize=(10, 6))
+
+    for i, label in enumerate(sorted(data.keys())):
+        # align timing data with the version indices on the x-axis
+        y_values = [data[label].get(v) for v in window_versions]
+        indices = [idx for idx, val in enumerate(y_values) if val is not None]
+        times = [val for val in y_values if val is not None]
+
+        if not times:
+            continue
+
+        plt.plot(
+            indices,
+            times,
+            label=label,
+            color=get_color(i),
+            marker="D",  # diamond marker to distinguish from the rmse chart
+            markersize=5,
+            linewidth=2,
+        )
+
+    # format x-axis to show the build version tags
+    plt.xticks(range(len(window_versions)), window_versions, rotation=45)
+
+    # y-axis starts at zero since time cannot be negative
+    plt.ylim(bottom=0)
+
+    plt.title(
+        f"Convergence Time Trend (Last {len(window_versions)} builds)", fontsize=12
+    )
+    plt.ylabel("Time to Converge (seconds)")
+    plt.xlabel("Build Version")
+
+    # place the legend outside to the right so it doesn't overlap the lines
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize="small")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
+
+
 if __name__ == "__main__":
     # usage: python generate_plots.py <log_dir> <csv_path> <out_dir>
     if len(sys.argv) < 4:
@@ -156,5 +228,8 @@ if __name__ == "__main__":
     generate_convergence_plots(log_dir, out_dir)
     # generate one big trend plot
     generate_trend_plot(
-        csv_in, os.path.join(out_dir, "history_trend.png"), max_versions=num_v
+        csv_in, os.path.join(out_dir, "history_score_trend.png"), max_versions=num_v
+    )
+    generate_time_trend_plot(
+        csv_in, os.path.join(out_dir, "history_score_trend.png"), max_versions=num_v
     )

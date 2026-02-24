@@ -68,8 +68,8 @@ try:
                     "version": f"{base_version}",
                     "variant": variant_tag,
                     "scene": scene_tag,
-                    "rmse_value": current_score[1],  # Last score
-                    "time": current_score[2],
+                    "rmse_score": current_score[1],  # Last score
+                    "rmse_time": current_score[2],
                     "iterations": current_score[0],
                     "timestamp": timestamp,
                     "commit": commit_sha,

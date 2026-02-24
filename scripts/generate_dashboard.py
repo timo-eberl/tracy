@@ -34,7 +34,7 @@ for (s, v), data in latest_entries.items():
 summary_table = "| Scene | Variant | Final RMSE | Date |\n|---|---|---|---|\n"
 for s in sorted(scenes.keys()):
     for entry in scenes[s]:
-        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse']):.5f} | {entry['date']} |\n"
+        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse_score']):.5f} | {float(entry['rmse_time']):.2f}s | {entry['date']} |\n"
 
 # 3. build the dynamic gallery and convergence sections
 # we look for the specific convergence plots created by generate_plots.py
@@ -76,8 +76,11 @@ with open(readme_path, "w") as f:
 ## Summary Results
 {summary_table}
 
-## Historical Trend
-![Historical Trend](renderings/history_trend.png)
+## RMSE Trend
+![RMSE Trend](renderings/history_score_trend.png)
+
+## Time Taken Trend
+![Time Taken Trend](renderings/history_time_trend.png)
 
 ## Render Gallery & Convergence
 {gallery_sections if scenes else "*no renderings found.*"}
