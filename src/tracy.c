@@ -502,7 +502,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		Vec normal = hit.n;
 
 		double survival_prob = 1.0; // Default to 100% survival
-		// Russian Roulette
+#ifdef ENABLE_RUSSIAN_ROULETTE
 		if (depth >= RR_START_DEPTH) {
 			// Probability is based on how 'bright' the surface is.
 			// Darker surfaces are more likely to terminate.
@@ -510,6 +510,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 			// Terminate based on survival probability
 			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
 		}
+#endif
 
 		Vec next_direction = sample_cosine_hemisphere(normal, rng);
 
@@ -530,13 +531,14 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
 
 		double survival_prob = 1.0;
-		// Russian Roulette
+#ifdef ENABLE_RUSSIAN_ROULETTE
 		if (depth >= RR_START_DEPTH) {
 			// Mirrors are usually bright, but if it's a dark mirror, we might kill it
 			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
 			// Terminate based on survival probability
 			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
 		}
+#endif
 
 		// we don't implement a perfect mirror as a brdf
 		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
