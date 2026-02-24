@@ -3,10 +3,10 @@
 ## Summary Results
 | Scene | Variant | Final RMSE | Date |
 |---|---|---|---|
-| default | **st** | 1.09610 | 2026-02-23T23:48:50.345913 |
-| default | **mt** | 1.09610 | 2026-02-23T23:48:50.345913 |
-| test | **mt** | 1.09610 | 2026-02-23T23:48:50.345913 |
-| test | **st** | 1.09610 | 2026-02-23T23:48:50.345913 |
+| default | **st** | 1.09610 | 2026-02-24T00:09:31.999120 |
+| default | **mt** | 1.09610 | 2026-02-24T00:09:31.999120 |
+| test | **mt** | 1.09610 | 2026-02-24T00:09:31.999120 |
+| test | **st** | 1.09610 | 2026-02-24T00:09:31.999120 |
 
 
 ## Historical Trend
@@ -17,8 +17,8 @@
 
 | Type | mt | st |
 | :---: | :---: | :---: |
-| **Render** | ![ mt ](renderings/latest-render_log_default_mt.png) | ![ st ](renderings/latest-render_log_default_st.png) |
-| **Diff** | ![ diff mt ](renderings/latest-diff_render_log_default_mt.png) | ![ diff st ](renderings/latest-diff_render_log_default_st.png) |
+| **Render** | ![ mt ](renderings/latest-render_default_mt.png) | ![ st ](renderings/latest-render_default_st.png) |
+| **Diff** | ![ diff mt ](renderings/latest-diff_render_default_mt.png) | ![ diff st ](renderings/latest-diff_render_default_st.png) |
 
 **Convergence for default:**
 
@@ -29,8 +29,8 @@
 
 | Type | mt | st |
 | :---: | :---: | :---: |
-| **Render** | ![ mt ](renderings/latest-render_log_test_mt.png) | ![ st ](renderings/latest-render_log_test_st.png) |
-| **Diff** | ![ diff mt ](renderings/latest-diff_render_log_test_mt.png) | ![ diff st ](renderings/latest-diff_render_log_test_st.png) |
+| **Render** | ![ mt ](renderings/latest-render_test_mt.png) | ![ st ](renderings/latest-render_test_st.png) |
+| **Diff** | ![ diff mt ](renderings/latest-diff_render_test_mt.png) | ![ diff st ](renderings/latest-diff_render_test_st.png) |
 
 **Convergence for test:**
 
@@ -40,4 +40,4 @@
 
 
 ---
-*last updated: 2026-02-23T23:48:50.345913 (commit: 9ab48036)*
+*last updated: 2026-02-24T00:09:31.999120 (commit: 3b04f599)*
