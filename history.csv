@@ -27,3 +27,6 @@ date,version,scene,variant,rmse_score,rmse_time,iterations,commit
 2026-02-24 22:26,0.1.0-build.163,test,mt,0.2826,70.50632000000004,100,local-de
 2026-02-24 22:26,0.1.0-build.163,test,st,0.8742,21.694028000000003,10,local-de
 2026-02-24 22:26,0.1.0-build.163,default,mt,0.2826,70.47411300000002,100,local-de
+2026-02-24 22:48,0.1.0-build.165,example,3,421.8494,56.245696,50,local-de
+2026-02-24 22:48,0.1.0-build.165,example,1,0.2826,70.469622,100,local-de
+2026-02-24 22:48,0.1.0-build.165,example,2,0.6193,42.530001000000006,20,local-de

@@ -5,6 +5,9 @@
 |---|---|---|---|---|---|
 | default | **st** | 0.87420 | 21.69s | 10 | 2026-02-24 22:26 |
 | default | **mt** | 0.28260 | 70.47s | 100 | 2026-02-24 22:26 |
+| example | **3** | 421.84940 | 56.25s | 50 | 2026-02-24 22:48 |
+| example | **1** | 0.28260 | 70.47s | 100 | 2026-02-24 22:48 |
+| example | **2** | 0.61930 | 42.53s | 20 | 2026-02-24 22:48 |
 | test | **mt** | 0.28260 | 70.51s | 100 | 2026-02-24 22:26 |
 | test | **st** | 0.87420 | 21.69s | 10 | 2026-02-24 22:26 |
 
@@ -28,6 +31,18 @@
 ![ default convergence ](plots/convergence_default.png)
 
 ---
+### Scene: example
+
+| Type | 1 | 2 | 3 |
+| :---: | :---: | :---: | :---: |
+| **Render** | ![ 1 ](renderings/latest-render_example_1.png) | ![ 2 ](renderings/latest-render_example_2.png) | ![ 3 ](renderings/latest-render_example_3.png) |
+| **Diff** | ![ diff 1 ](renderings/latest-diff_render_example_1.png) | ![ diff 2 ](renderings/latest-diff_render_example_2.png) | ![ diff 3 ](renderings/latest-diff_render_example_3.png) |
+
+### Convergence: example
+
+![ example convergence ](plots/convergence_example.png)
+
+---
 ### Scene: test
 
 | Type | mt | st |
@@ -43,4 +58,4 @@
 
 
 ---
-*last updated: 2026-02-24 22:26 (commit: 0c556e0a)*
+*last updated: 2026-02-24 22:48 (commit: 6ec9a4a5)*
