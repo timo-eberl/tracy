@@ -1,13 +1,13 @@
 jobs:
   - scene: "default"
     variant: "st"
-    iterations: 2
+    iterations: 10
   - scene: "default"
     variant: "mt"
-    iterations: 10
+    iterations: 100
   - scene: "test"
     variant: "st"
-    iterations: 2
+    iterations: 10
   - scene: "test"
     variant: "mt"
-    iterations: 10
+    iterations: 100
