@@ -1,7 +1,8 @@
 scenes:
-  - tag: "standard_baseline"
-    name: "Standard Baseline"
-    description: "Default benchmark settings for consistent comparison"
+  - tag: "cornell"
+    name: "Sphere Cornell Box"
+    description: "Contains all material types and tests many light phenomenoms"
+    max_depth: 5
     width: 640
     height: 480
     filter_type: 0
@@ -12,33 +13,36 @@ scenes:
     focus_y: 1.25
     focus_z: 0.0
 
-  - tag: "hd_cinematic"
-    name: "HD Cinematic"
-    description: "High resolution setup with a tighter focus"
-    width: 1280
-    height: 720
-    filter_type: 1
-    cam_angle_x: 0.05
-    cam_angle_y: -0.1
-    cam_dist: 7.0
+  - tag: "caustics"
+    name: "Caustics"
+    description: "Glass spheres, diffuse ground, and colored area lights"
+    max_depth: 6
+    width: 320
+    height: 240
+    filter_type: 0
+    cam_angle_x: 0.04258603374866164
+    cam_angle_y: 0.0
+    cam_dist: 5.5
     focus_x: 0.0
-    focus_y: 1.0
+    focus_y: 1.25
     focus_z: 0.0
 jobs:
   - scene: "example_1"
-    variant: "mt"
-    tag: "standard_baseline"
+    variant: "std"
+    tag: "cornell"
     iterations: 100
 
   - scene: "example_2"
-    variant: "st"
-    tag: "hd_baseline"
-    iterations: 20
+    variant: "rr"
+    tag: "cornell"
+    iterations: 100
 
   - scene: "example_3"
-    variant: "mt"
-    tag: "standard_baseline"
-    iterations: 50
-    width: 800
-    height: 600
-    cam_dist: 4.5
+    variant: "rr"
+    tag: "caustics"
+    iterations: 200
+
+  - scene: "example_4"
+    variant: "rr"
+    tag: "caustics"
+    iterations: 200

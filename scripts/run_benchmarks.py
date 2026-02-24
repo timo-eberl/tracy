@@ -105,13 +105,15 @@ def main():
         print(f"--- Variant: {mode_label} ---")
 
         # Build the Zig binary for this specific variant
-        is_mt = "true" if variant == "mt" else "false"
+        is_mt = "true"
+        is_rr = "true" if variant == "rr" else "false"
         build_cmd = [
             "zig",
             "build",
             "bench-build",
             "-Doptimize=ReleaseFast",
             f"-Dmultithreaded={is_mt}",
+            f"-Drussianroulette={is_rr}",
         ]
 
         start_build = time.time()
