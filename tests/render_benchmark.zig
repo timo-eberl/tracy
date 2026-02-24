@@ -70,6 +70,7 @@ pub fn runRender(scene: []const u8) !void {
     var timer = try std.time.Timer.start();
 
     while (i < NUM_ITERATIONS) : (i += 1) {
+        timer.reset();
         const start_time = timer.read();
 
         tracy.render_refine(5); // ADD SCENE ARG HERE
