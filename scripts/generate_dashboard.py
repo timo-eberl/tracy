@@ -34,7 +34,7 @@ for (s, v), data in latest_entries.items():
 summary_table = "| Scene | Variant | Final RMSE | Date |\n|---|---|---|---|\n"
 for s in sorted(scenes.keys()):
     for entry in scenes[s]:
-        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse']):.5f} | {entry['date']} |\n"
+        summary_table += f"| {s} | **{entry['variant']}** | {float(entry['rmse_score']):.5f} | {float(entry['rmse_time']):.2f}s | {entry['date']} |\n"
 
 # 3. build the dynamic gallery and convergence sections
 # we look for the specific convergence plots created by generate_plots.py
@@ -51,7 +51,7 @@ for s in sorted(scenes.keys()):
     for entry in sorted(scenes[s], key=lambda x: x["variant"]):
         v = entry["variant"]
         img_name = f"latest-render_{s}_{v}.png"
-        diff_name = f"diff_render_{s}_{v}.png"
+        diff_name = f"latest-diff_render_{s}_{v}.png"
 
         header += f" {v} |"
         sep += " :---: |"
@@ -61,12 +61,12 @@ for s in sorted(scenes.keys()):
     gallery_sections += f"{header}\n{sep}\n{row_render}\n{row_diff}\n\n"
 
     # link the specific convergence plot for this scene
-    conv_plot = f"renderings/convergence_{s}.png"
+    conv_plot = f"plots/convergence_{s}.png"
     if (
         os.path.exists(f"data-branch/{conv_plot}") or True
     ):  # assume it exists if generating
         gallery_sections += (
-            f"**Convergence for {s}:**\n\n![ {s} convergence ]({conv_plot})\n\n---\n"
+            f"### Convergence: {s}\n\n![ {s} convergence ]({conv_plot})\n\n---\n"
         )
 
 # 4. finalize the readme
@@ -76,8 +76,11 @@ with open(readme_path, "w") as f:
 ## Summary Results
 {summary_table}
 
-## Historical Trend
-![Historical Trend](renderings/history_trend.png)
+## RMSE Trend
+![RMSE Trend](plots/history_score_trend.png)
+
+## Time Taken Trend
+![Time Taken Trend](plots/history_time_trend.png)
 
 ## Render Gallery & Convergence
 {gallery_sections if scenes else "*no renderings found.*"}
