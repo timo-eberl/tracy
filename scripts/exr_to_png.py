@@ -21,11 +21,12 @@ def convert_file(in_path, out_path):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         sys.exit(1)
-
+    name = ""
     # Use absolute paths so the runner doesn't get lost
     input_dir = os.path.abspath(sys.argv[1])
     output_dir = os.path.abspath(sys.argv[2])
-
+    if len(sys.argv) == 4:
+        name = sys.argv[3]
     os.makedirs(output_dir, exist_ok=True)
 
     # Grab all EXRs in the target folder
@@ -38,7 +39,8 @@ if __name__ == "__main__":
 
     for exr_path in exr_files:
         # Swap .exr for .png properly
-        name = os.path.splitext(os.path.basename(exr_path))[0]
+        if not name:
+            name = os.path.splitext(os.path.basename(exr_path))[0]
         png_path = os.path.join(output_dir, f"{name}.png")
 
         convert_file(exr_path, png_path)

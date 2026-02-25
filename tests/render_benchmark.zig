@@ -92,7 +92,12 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
             return error.ExrSaveFailed;
         }
 
-        scores[i] = try rmse.computeScore(out_fp);
+        const ref_fp_slice = try std.fmt.allocPrint(allocator, "mitsuba_scenes/{s}/scene.exr", .{scene});
+        defer allocator.free(ref_fp_slice);
+        const ref_fp = try allocator.dupeZ(u8, ref_fp_slice);
+        defer allocator.free(ref_fp);
+
+        scores[i] = try rmse.computeScore(out_fp, ref_fp);
     }
 
     const log_fp = try std.fmt.allocPrint(allocator, "{s}render_log_{s}_{s}.txt", .{ out_dir, scene, variant_label });

@@ -34,15 +34,15 @@ jobs:
 
   - scene: "example2"
     variant: "rr"
-    tag: "cornell"
+    tag: "caustics"
     iterations: 5
-
-  - scene: "example3"
-    variant: "rr"
-    tag: "caustics"
-    iterations: 10
-
-  - scene: "example4"
-    variant: "rr"
-    tag: "caustics"
-    iterations: 10
+  #
+  # - scene: "example3"
+  #   variant: "rr"
+  #   tag: "caustics"
+  #   iterations: 10
+  #
+  # - scene: "example4"
+  #   variant: "rr"
+  #   tag: "caustics"
+  #   iterations: 10

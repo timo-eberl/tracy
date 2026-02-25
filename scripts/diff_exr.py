@@ -56,7 +56,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("input_dir", help="Directory containing .exr renders")
     parser.add_argument("output_dir", help="Directory where diff files will be saved")
-    parser.add_argument("reference", help="Path to the reference/ground-truth EXR")
+    parser.add_argument(
+        "reference_dir",
+        help="Path to the directory containing the reference/ground-truth EXR files",
+    )
 
     args = parser.parse_args()
 
@@ -77,6 +80,11 @@ if __name__ == "__main__":
 
     success_count = 0
     for render_path in exr_files:
+        scene = os.path.splitext(render_path)[0].split("_")[-1]
+        ref_fp = os.path.join(args.reference_dir, f"reference_{scene}.exr")
+
+        print("SCENE_PATH: {scene}")
+
         filename = os.path.basename(render_path)
         # Skip the reference image if it happens to be in the same directory
         if os.path.abspath(render_path) == os.path.abspath(args.reference):
@@ -87,7 +95,7 @@ if __name__ == "__main__":
         output_path = os.path.join(args.output_dir, diff_filename)
 
         print(f"Processing: {filename}")
-        if generate_diff(render_path, args.reference, output_path):
+        if generate_diff(render_path, ref_fp, output_path):
             success_count += 1
 
     print(f"\nDone. Generated {success_count} difference maps in '{args.output_dir}'.")

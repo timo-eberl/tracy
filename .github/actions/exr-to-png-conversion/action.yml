@@ -10,7 +10,11 @@ inputs:
     description: 'Directory where .png files should be saved'
     required: true
     default: 'tests/img/exr/previews/'
-
+  filename:
+    description: 'Filename of the output png file without file suffix'
+    required: false
+    default: ''
+  
 runs:
   using: "composite"
   steps:
@@ -26,4 +30,4 @@ runs:
     - name: Convert EXRs to PNGs
       shell: bash
       # Pass the directories to the script
-      run: python3 scripts/exr_to_png.py "${{ inputs.input_dir }}" "${{ inputs.output_dir }}"
+      run: python3 scripts/exr_to_png.py "${{ inputs.input_dir }}" "${{ inputs.output_dir }} "${{ inputs.filename }}

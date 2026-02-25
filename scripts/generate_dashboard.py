@@ -61,7 +61,7 @@ for s in sorted(scenes.keys()):
     # add reference image
     header += " Reference |"
     sep += " :---: |"
-    row_render += " ![ Reference](renderings/reference.png) |"
+    row_render += f" ![ Reference](renderings/reference_{s}.png) |"
     row_diff += " |"
     gallery_sections += f"{header}\n{sep}\n{row_render}\n{row_diff}\n\n"
 
