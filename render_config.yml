@@ -30,13 +30,13 @@ jobs:
   - scene: "example1"
     variant: "std"
     tag: "cornell"
-    iterations: 1
+    iterations: 10
 
-  # - scene: "example2"
-  #   variant: "rr"
-  #   tag: "caustics"
-  #   iterations: 5
-  #
+  - scene: "example2"
+    variant: "rr"
+    tag: "caustics"
+    iterations: 5
+  
   # - scene: "example3"
   #   variant: "rr"
   #   tag: "caustics"
