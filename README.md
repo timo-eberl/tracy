@@ -43,10 +43,10 @@ zig build test --summary all
 
 ## Performance Testing
 
-The render benchmark runs multiple rendering iterations, saves the images as exr, computes the RMSE (root mean square error) after each iteration and prints them to console.
+The render benchmark runs multiple rendering iterations, saves the images as exr, computes the RMSE (root mean square error) after each iteration and prints them to console. Configured in `render_config.yml`
 
 ```bash
-zig build run-render-bench -Doptimize=ReleaseFast -Dtarget=native
+python scripts/run_benchmarks.py
 ```
 
 ## Mitsuba Reference
