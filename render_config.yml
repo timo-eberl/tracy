@@ -27,15 +27,15 @@ scenes:
     focus_y: 1.05
     focus_z: 0.0
 jobs:
-  - scene: "example_1"
+  - scene: "example1"
     variant: "std"
     tag: "cornell"
-    iterations: 100
+    iterations: 5
 
-  - scene: "example_2"
+  - scene: "example2"
     variant: "rr"
     tag: "cornell"
-    iterations: 100
+    iterations: 5
 
   # - scene: "example_3"
   #   variant: "rr"

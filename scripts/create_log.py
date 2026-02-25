@@ -49,6 +49,8 @@ try:
                 line = line.strip()
                 if not line or line.startswith("VARIANT:"):
                     continue
+                if line.startswith("SCENE:"):
+                    scene_tag = line.removeprefix("SCENE: ")
 
                 try:
                     # Zig log format: score,time_seconds
