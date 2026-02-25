@@ -83,8 +83,7 @@ if __name__ == "__main__":
         scene = os.path.splitext(render_path)[0].split("_")[-1]
         ref_fp = os.path.join(args.reference_dir, f"reference_{scene}.exr")
 
-        print("SCENE_PATH: {scene}")
-
+        print(f"Comparing {render_path} against reference: {ref_fp}")
         filename = os.path.basename(render_path)
         # Skip the reference image if it happens to be in the same directory
         if os.path.abspath(render_path) == os.path.abspath(args.reference):
