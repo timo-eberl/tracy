@@ -19,6 +19,55 @@ def get_color(index):
     return color_cycle[index % len(color_cycle)]
 
 
+def generate_trend_plot(csv_path, output_path, max_versions=20):
+    # shows how performance changes over different builds
+    if not os.path.exists(csv_path):
+        return
+    # we group by a combined key of scene+variant
+    data = defaultdict(dict)
+    versions = []
+    with open(csv_path, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            v = row["version"]
+            # we create a label like "cornellbox (st)"
+            label = f"{row['scene']} ({row['variant']})".lower()
+            r = float(row["rmse_score"])
+            # shortening the version string for the x-axis
+            short_v = f"b.{v.split('.')[-1]}" if "build" in v else v[-6:]
+            if short_v not in versions:
+                versions.append(short_v)
+            data[label][short_v] = r
+    window_versions = versions[-max_versions:] if max_versions > 0 else versions
+    plt.figure(figsize=(10, 6))
+    for i, label in enumerate(sorted(data.keys())):
+        y_values = [data[label].get(v) for v in window_versions]
+        indices = [idx for idx, val in enumerate(y_values) if val is not None]
+        values = [val for val in y_values if val is not None]
+        if not values:
+            continue
+        plt.plot(
+            indices,
+            values,
+            label=label,
+            color=get_color(i),
+            marker="s",
+            markersize=5,
+            linewidth=2,
+        )
+
+    plt.xticks(range(len(window_versions)), window_versions, rotation=45)
+
+    plt.ylim(bottom=0)
+    plt.margins(y=0.15)
+    plt.title(f"Historical Trend (Last {len(window_versions)} builds)", fontsize=12)
+    plt.ylabel("Final RMSE")
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize="small")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
+
+
 def generate_convergence_plots(log_dir, output_dir):
     # we need to group logs by scene because a single graph with
     # 20 different scenes would be unreadable
@@ -133,6 +182,7 @@ def generate_trend_plot(csv_path, output_path, max_versions=20):
 
     plt.xticks(range(len(window_versions)), window_versions, rotation=45)
     plt.ylim(bottom=0)
+    plt.margins(y=0.15)
     plt.title(f"Historical Trend (Last {len(window_versions)} builds)", fontsize=12)
     plt.ylabel("Final RMSE")
     plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize="small")

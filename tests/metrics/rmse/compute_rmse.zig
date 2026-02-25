@@ -3,14 +3,14 @@ const testing = std.testing;
 const exr_utils = @import("exr_utils");
 const rmse = @import("rmse.zig");
 
-pub fn computeScore(target_fp: [:0]const u8) !f32 {
+pub fn computeScore(target_fp: [:0]const u8, ref_fp: [:0]const u8) !f32 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     //const stdout = std.io.getStdOut().writer();
 
-    const ref_fp = "tests/img/exr/reference/reference.exr";
+    //const ref_fp = "tests/img/exr/reference/reference.exr";
 
     std.fs.cwd().access(ref_fp, .{}) catch {
         std.debug.print("Error: Reference image not found at {s}\n", .{ref_fp});
