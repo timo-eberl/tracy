@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # Use absolute paths so the runner doesn't get lost
     input_dir = os.path.abspath(sys.argv[1])
     output_dir = os.path.abspath(sys.argv[2])
-    if len(sys.argv) == 4:
+    if len(sys.argv) > 3:
         name = sys.argv[3]
     os.makedirs(output_dir, exist_ok=True)
 
@@ -42,5 +42,5 @@ if __name__ == "__main__":
         if not name:
             name = os.path.splitext(os.path.basename(exr_path))[0]
         png_path = os.path.join(output_dir, f"{name}.png")
-
+        print(f"generating png: {png_path}")
         convert_file(exr_path, png_path)
