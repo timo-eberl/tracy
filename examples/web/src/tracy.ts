@@ -2,11 +2,12 @@
 export interface TracyModule {
 	renderFast: (settings: RenderSettings) => Promise<void>;
 	renderFull: (settings: RenderSettings) => Promise<void>;
+	cancel: () => void;
 }
 
 export interface RenderSettings {
 	scene: number,
-	max_depth: number,
+	maxDepth: number,
 	width: number,
 	height: number,
 	filterType: number,
@@ -28,29 +29,45 @@ export interface CameraProperties {
 }
 
 export function create(context: CanvasRenderingContext2D): TracyModule {
-	// Create the worker. The new URL(...) syntax is the modern standard for module-based workers.
-	// This requires a bundler (like Vite, Webpack, Parcel) to work correctly.
-	const worker = new Worker(new URL('./tracy.worker.ts', import.meta.url), { type: 'module' });
+	let worker: Worker;
 
 	let resolveCurrentRender: ((value: void) => void) | null = null;
 
-	// Listen for messages (the final rendered image) from the worker
-	worker.onmessage = (event) => {
-		const { sharedMemory, bufferPtr, width, height, finished } = event.data as {
-			sharedMemory: WebAssembly.Memory; bufferPtr: number; width: number; height: number;
-			finished: boolean
+	// Encapsulate worker initialization so we can respawn it
+	function initWorker() {
+		// Create the worker. The new URL(...) syntax is the modern standard for module-based workers.
+		// This requires a bundler (like Vite, Webpack, Parcel) to work correctly.
+		worker = new Worker(new URL('./tracy.worker.ts', import.meta.url), { type: 'module' });
+
+		// Listen for messages (the final rendered image) from the worker
+		worker.onmessage = (event) => {
+			const { sharedMemory, bufferPtr, width, height, finished } = event.data as {
+				sharedMemory: WebAssembly.Memory; bufferPtr: number; width: number; height: number;
+				finished: boolean
+			};
+			// Create a view into the WebAssembly memory
+			// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
+			const rawArray = new Uint8ClampedArray(sharedMemory.buffer, bufferPtr, width * height * 4);
+			updateImage(context, rawArray, width, height);
+
+			if (finished && resolveCurrentRender) {
+				resolveCurrentRender();
+				resolveCurrentRender = null;
+			}
 		};
-		// Create a view into the WebAssembly memory
-		// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
-		const rawArray = new Uint8ClampedArray(sharedMemory.buffer, bufferPtr, width * height * 4);
+	}
 
-		updateImage(context, rawArray, width, height);
+	initWorker();
 
-		if (finished && resolveCurrentRender) {
-			resolveCurrentRender();
+	function cancel() {
+		if (resolveCurrentRender) {
+			worker.terminate(); // Force-kill the blocked thread
+			initWorker();       // Instantly respawn a fresh worker & WASM environment
+
+			resolveCurrentRender(); // Resolve the pending promise so the app doesn't hang
 			resolveCurrentRender = null;
 		}
-	};
+	}
 
 	function callWorker(
 		command: 'renderFast' | 'renderFull', s: RenderSettings
@@ -62,13 +79,14 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 			resolveCurrentRender = resolve;
 		});
 
-		worker.postMessage( { command, s } );
+		worker.postMessage({ command, s });
 		return renderPromise;
 	}
 
 	return {
 		renderFast: (s) => callWorker('renderFast', s),
 		renderFull: (s) => callWorker('renderFull', s),
+		cancel,
 	}
 };
 
