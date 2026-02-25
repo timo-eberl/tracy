@@ -44,3 +44,4 @@ if __name__ == "__main__":
         png_path = os.path.join(output_dir, f"{name}.png")
         print(f"generating png: {png_path}")
         convert_file(exr_path, png_path)
+        name = ""

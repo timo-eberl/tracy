@@ -17,8 +17,8 @@ scenes:
     name: "Caustics"
     description: "Glass spheres, diffuse ground, and colored area lights"
     max_depth: 6
-    width: 320
-    height: 280
+    width: 280
+    height: 320
     filter_type: 0
     cam_angle_x: 0.4
     cam_angle_y: 0.0

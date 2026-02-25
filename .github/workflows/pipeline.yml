@@ -87,11 +87,11 @@ jobs:
             -w /app rmse-bench \
             bash -c "python3 scripts/run_benchmarks.py && python3 scripts/create_log.py rmse_results.json"
 
-      # - name: Generate Render Previews
-      #   uses: ./.github/actions/exr-to-png-conversion
-      #   with:
-      #     input_dir: 'tests/img/exr/zig_render/'
-      #     output_dir: 'tests/img/exr/previews/'
+      - name: Generate Render Previews
+        uses: ./.github/actions/exr-to-png-conversion
+        with:
+          input_dir: 'tests/img/exr/zig_render/'
+          output_dir: 'tests/img/exr/previews/'
 
       - name: Generate Reference Preview - Caustics
         uses: ./.github/actions/exr-to-png-conversion
