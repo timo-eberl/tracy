@@ -33,7 +33,7 @@
         </film>
 
         <sampler type="independent">
-            <integer name="sample_count" value="200000"/>
+            <integer name="sample_count" value="1000000"/>
         </sampler>
     </sensor>
     
