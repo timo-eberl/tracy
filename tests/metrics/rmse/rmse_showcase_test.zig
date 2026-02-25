@@ -7,7 +7,7 @@ test "RMSE test" {
     const ally = testing.allocator;
     const base = "tests/img/";
 
-    std.debug.print("\n========================= SSIM REPORT =========================\n", .{});
+    std.debug.print("\n========================= RMSE REPORT =========================\n", .{});
 
     // Convergence tests (Sequential improvements)
     try rmse.compareAndLog(ally, base ++ "black.exr", base ++ "1_iterations_render_zig.exr");
