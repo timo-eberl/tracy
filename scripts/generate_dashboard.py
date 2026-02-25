@@ -58,6 +58,11 @@ for s in sorted(scenes.keys()):
         row_render += f" ![ {v} ](renderings/{img_name}) |"
         row_diff += f" ![ diff {v} ](renderings/{diff_name}) |"
 
+    # add reference image
+    header += " Reference |"
+    sep += " :---: |"
+    row_render += f" ![ Reference](renderings/reference_{s}.png) |"
+    row_diff += " |"
     gallery_sections += f"{header}\n{sep}\n{row_render}\n{row_diff}\n\n"
 
     # link the specific convergence plot for this scene

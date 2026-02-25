@@ -137,7 +137,8 @@ def main():
 
             run_cmd = [
                 "./zig-out/bin/render-bench-zig",
-                job["scene"],
+                # job["scene"],
+                job["tag"],
                 str(job["iterations"]),
                 json_payload,
             ]

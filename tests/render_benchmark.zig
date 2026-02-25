@@ -31,7 +31,7 @@ const RenderParams = struct {
 };
 
 // writes the benchmarking results to a log file per mode per scene
-fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, variant: []const u8) !void {
+fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, variant: []const u8, scene: []const u8) !void {
     const file = try std.fs.cwd().createFile(filepath, .{ .truncate = true });
     defer file.close();
 
@@ -39,6 +39,7 @@ fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, 
     const writer = bw.writer();
 
     try writer.print("VARIANT:{s}\n", .{variant});
+    try writer.print("SCENE:{s}\n", .{scene});
     for (scores, 0..) |s, i| {
         // Format: score,time_seconds
         try writer.print("{d:.4},{d:.6}\n", .{ s, timings[i] });
@@ -63,7 +64,7 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
     const stdout = std.io.getStdOut().writer();
 
-    try stdout.print("Rendering scene {s} ({s}) at 640x480...\n", .{ scene, variant_label });
+    try stdout.print("Rendering scene {s} ({s}) at {d}x{d}...\n", .{ scene, variant_label, p.width, p.height });
 
     // uncomment when scene path arg gets added to tracy init
     // const scene_path_c = try allocator.dupeZ(u8, scene);
@@ -87,17 +88,22 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
         const buffer_ptr = tracy.update_image_hdr();
         var err_msg: [*c]const u8 = null;
-        if (tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, 640, 480, &err_msg) != 0) {
+        if (tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, p.width, p.height, &err_msg) != 0) {
             return error.ExrSaveFailed;
         }
 
-        scores[i] = try rmse.computeScore(out_fp);
+        const ref_fp_slice = try std.fmt.allocPrint(allocator, "mitsuba_scenes/{s}/scene.exr", .{scene});
+        defer allocator.free(ref_fp_slice);
+        const ref_fp = try allocator.dupeZ(u8, ref_fp_slice);
+        defer allocator.free(ref_fp);
+
+        scores[i] = try rmse.computeScore(out_fp, ref_fp);
     }
 
     const log_fp = try std.fmt.allocPrint(allocator, "{s}render_log_{s}_{s}.txt", .{ out_dir, scene, variant_label });
     defer allocator.free(log_fp);
 
-    try writeScores(scores, timings, log_fp, variant_label);
+    try writeScores(scores, timings, log_fp, variant_label, scene);
     try stdout.print("Done. Results written to {s}\n", .{log_fp});
 }
 

@@ -30,12 +30,13 @@ runs:
         # Make sure our target structure exists
         mkdir -p "$DEST_DIR/logs/$VERSION"
         mkdir -p "$DEST_DIR/renderings/$VERSION"
-        
+
         # Update the master history file
         python3 scripts/update_benchmark.py rmse_results.json "$DEST_DIR/history.csv"
 
         # Archive the render logs for this version
         shopt -s nullglob
+        cp $SRC_DIR/reference/*.png "$DEST_DIR/renderings/"
         cp $SRC_DIR/zig_render/*.txt "$DEST_DIR/logs/$VERSION/"
 
         # Handle previews if they exist
@@ -52,7 +53,6 @@ runs:
 
         # Archive the error diffs
         cp $SRC_DIR/diffs/*.png "$DEST_DIR/renderings/$VERSION/"
-
         # Update the "latest" diff pointers for the dashboard
         for img in $SRC_DIR/diffs/*.png; do
           base=$(basename "$img")
