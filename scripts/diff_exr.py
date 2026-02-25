@@ -74,10 +74,6 @@ if __name__ == "__main__":
         print(f"No EXR files found in {args.input_dir}")
         sys.exit(0)
 
-    print(
-        f"Comparing {len(exr_files)} files against reference: {os.path.basename(args.reference)}"
-    )
-
     success_count = 0
     for render_path in exr_files:
         scene = os.path.splitext(render_path)[0].split("_")[-1]
