@@ -1,4 +1,0 @@
-VARIANT:std
-SCENE:cornell
-3.3087,0.710989
-
