@@ -26,7 +26,7 @@ if __name__ == "__main__":
     input_dir = os.path.abspath(sys.argv[1])
     output_dir = os.path.abspath(sys.argv[2])
     if len(sys.argv) > 3:
-        name = sys.argv[3]
+        name = sys.argv[3].strip()
     os.makedirs(output_dir, exist_ok=True)
 
     # Grab all EXRs in the target folder
