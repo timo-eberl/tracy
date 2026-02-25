@@ -36,11 +36,11 @@ jobs:
 
   - scene: "example2"
     variant: "rr"
-    tag: "iterations"
+    tag: "cornell"
     iterations: 60
-  
+
   - scene: "example3"
-    variant: "rr"
+    variant: "std"
     tag: "caustics"
     iterations: 200
 
