@@ -6,6 +6,23 @@ It started as a learning project with the purpose to apply and understand the to
 
 It is actively being developed with a focus on automated testing and profiling in the context of the lecture "System Engineering and Management".
 
+## Benchmark Dashboard
+
+As part of the project's focus on automated profiling, it features a fully automated CI/CD pipeline that tracks rendering performance, runtime trends, and image quality (using relMSE) across commits. 
+
+You can view the automatically generated dashboard, containing convergence plots and visual difference maps against Mitsuba reference renders, on the [**`benchmarks` branch**](https://github.com/timo-eberl/tracy/tree/benchmarks).
+
+## Project Structure
+
+* **`src/` & `include/`**: The core path tracer implementation written in C.
+* **`examples/`**: Frontends and wrappers demonstrating how to use the C library:
+  * **`web/`**: The interactive web application (TypeScript, Vite) that runs the renderer via WebAssembly (Emscripten).
+  * **`c_render/` & `zig_render/`**: Native command-line interfaces demonstrating rendering and EXR/TGA image generation.
+* **`tests/`**: White-box unit tests written in Zig, alongside the relative Mean Squared Error (relMSE) metric calculators and benchmark runners.
+* **`scripts/`**: Python and Bash automation scripts for running benchmarks, calculating EXR differences, and generating plots for the dashboard.
+* **`mitsuba_scenes/`**: XML scene definitions for the Mitsuba 3 renderer, used to generate ground-truth reference images for the benchmarks.
+* **`.github/`**: CI/CD pipelines that automatically build Docker images, run benchmarks, and update the performance dashboard.
+
 ## Native Development
 
 The project includes usage examples in both C and Zig.
@@ -43,7 +60,7 @@ zig build test --summary all
 
 ## Performance Testing
 
-The render benchmark runs multiple rendering iterations, saves the images as exr, computes the RMSE (root mean square error) after each iteration and prints them to console. Configured in `render_config.yml`
+The render benchmark runs multiple rendering iterations, saves the images as exr, computes the relMSE (relative mean square error) after each iteration and prints them to console. Configured in `render_config.yml`
 
 ```bash
 python scripts/run_benchmarks.py
