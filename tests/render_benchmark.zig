@@ -48,7 +48,7 @@ fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, 
 }
 
 pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u32, p: RenderParams) !void {
-    const variant_label = if (config.multithreaded) "mt" else "st";
+    const variant_label = if (config.russianroulette) "rr" else "std";
     const out_dir = "tests/img/exr/zig_render/";
 
     const out_filename = try std.fmt.allocPrint(allocator, "render_{s}_{s}.exr", .{ scene, variant_label });

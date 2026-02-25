@@ -291,6 +291,7 @@ pub fn build(b: *std.Build) void {
     // so that the program knows about the multithreaded flag
     const options = b.addOptions();
     options.addOption(bool, "multithreaded", use_openmp);
+    options.addOption(bool, "russianroulette", use_russian_roulette);
     render_bench_exe.root_module.addOptions("config", options);
 
     render_bench_exe.want_lto = use_lto;
