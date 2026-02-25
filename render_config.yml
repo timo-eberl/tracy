@@ -36,15 +36,15 @@ jobs:
 
   - scene: "example2"
     variant: "rr"
-    tag: "caustics"
+    tag: "iterations"
     iterations: 60
   
-  # - scene: "example3"
-  #   variant: "rr"
-  #   tag: "caustics"
-  #   iterations: 10
-  #
-  # - scene: "example4"
-  #   variant: "rr"
-  #   tag: "caustics"
-  #   iterations: 10
+  - scene: "example3"
+    variant: "rr"
+    tag: "caustics"
+    iterations: 200
+
+  - scene: "example4"
+    variant: "rr"
+    tag: "caustics"
+    iterations: 200
