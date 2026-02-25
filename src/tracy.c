@@ -48,7 +48,8 @@ typedef struct { Vec origin; Vec dir; } Ray;
 typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // Geometry Data Structures
 typedef struct { Vec center; double radius; } Sphere;
-typedef struct { Vec v0, v1, v2; bool two_sided } Triangle;
+// two_sided is useful for thin geometry, like paper
+typedef struct { Vec v0, v1, v2; bool two_sided; } Triangle;
 typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
 // The generic Scene Object
 typedef struct {
@@ -82,27 +83,27 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // clang-format off
 Primitive scene_cornell[] = {
 	// Left Wall (x = -1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}, false}},
 	// Right Wall (x = 1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, false}},
 	// Back Wall (z = -2.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}, false}},
 	// Bottom (y = 0.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}, false}},
 	// Top (y = 2.4)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}, false}},
 	// Mirror Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
 	// Glass Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
 	// Area Light (1x1m Rect)
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, false}},
 	// Light Shield - 4 Sides Angled 45 Degree
 	// Side 1: Front
 	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}, true}},
@@ -120,14 +121,14 @@ Primitive scene_cornell[] = {
 
 Primitive scene_caustics[] = {
 	// Floor
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}, false}},
 	// Glass
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {-0.3, 0.3, 0.0}, .radius = 0.2}},
 	// Light
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}, false}},
 };
 // clang-format on
 
