@@ -1,5 +1,0 @@
-date,version,scene,variant,rmse_score,rmse_time,iterations,commit
-2026-02-25 12:44,0.1.0-build.171,SCENE:example2,rr,1.3539,3.029452,5,local-de
-2026-02-25 12:44,0.1.0-build.171,SCENE:example1,std,1.2467,3.524377,5,local-de
-2026-02-25 12:51,0.1.0-build.172,example2,rr,1.3539,3.0301400000000003,5,local-de
-2026-02-25 12:51,0.1.0-build.172,example1,std,1.2467,3.527292,5,local-de
