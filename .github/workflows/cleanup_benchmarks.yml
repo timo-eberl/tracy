@@ -37,7 +37,7 @@ jobs:
               # Re-place the .gitkeep so the empty directory stays tracked
               touch "$dir.gitkeep"
           done
-    - name: Commit and Push Reset
+      - name: Commit and Push Reset
         shell: bash
         run: |
           git config user.name "github-actions[bot]"

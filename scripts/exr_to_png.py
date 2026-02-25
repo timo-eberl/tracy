@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # Grab all EXRs in the target folder
     exr_files = glob.glob(os.path.join(input_dir, "*.exr"))
-
+    print(f"EXR-FILES found: {exr_files}")
     if not exr_files:
         print(f"No files found in {input_dir}")
         sys.exit(1)
