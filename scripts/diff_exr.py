@@ -82,8 +82,6 @@ if __name__ == "__main__":
         print(f"Comparing {render_path} against reference: {ref_fp}")
         filename = os.path.basename(render_path)
         # Skip the reference image if it happens to be in the same directory
-        if os.path.abspath(render_path) == os.path.abspath(args.reference):
-            continue
 
         # Build output filename (e.g., render_st.exr -> diff_render_st.exr)
         diff_filename = f"diff_{filename}"
