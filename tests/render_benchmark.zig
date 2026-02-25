@@ -64,7 +64,7 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
     const stdout = std.io.getStdOut().writer();
 
-    try stdout.print("Rendering scene {s} ({s}) at {d}x{d}...\n", .{ scene, variant_label, p.height, p.width });
+    try stdout.print("Rendering scene {s} ({s}) at {d}x{d}...\n", .{ scene, variant_label, p.width, p.height });
 
     // uncomment when scene path arg gets added to tracy init
     // const scene_path_c = try allocator.dupeZ(u8, scene);
@@ -88,7 +88,7 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
 
         const buffer_ptr = tracy.update_image_hdr();
         var err_msg: [*c]const u8 = null;
-        if (tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, 640, 480, &err_msg) != 0) {
+        if (tracy.save_exr_rgb_fp16(out_fp, buffer_ptr, p.width, p.height, &err_msg) != 0) {
             return error.ExrSaveFailed;
         }
 
