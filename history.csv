@@ -5,3 +5,5 @@ date,version,scene,variant,rmse_score,rmse_time,iterations,commit
 2026-02-24 23:52,0.1.0-build.167,example,4,nan,38.52399099999999,200,local-de
 2026-02-25 00:04,0.1.0-build.168,example,1,0.2826,70.42954,100,local-de
 2026-02-25 00:04,0.1.0-build.168,example,2,0.3017,61.097854999999996,100,local-de
+2026-02-25 00:22,0.1.0-build.169,example,2,0.3017,60.756315,100,local-de
+2026-02-25 00:22,0.1.0-build.169,example,1,0.2826,71.00764800000002,100,local-de
