@@ -133,6 +133,7 @@ def generate_trend_plot(csv_path, output_path, max_versions=20):
 
     plt.xticks(range(len(window_versions)), window_versions, rotation=45)
     plt.ylim(bottom=0)
+    plt.margins(y=0.15)
     plt.title(f"Historical Trend (Last {len(window_versions)} builds)", fontsize=12)
     plt.ylabel("Final RMSE")
     plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize="small")

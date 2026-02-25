@@ -17,22 +17,23 @@ jobs:
           # We need full history to ensure we are modifying the existing branch
           fetch-depth: 0
 
-      - name: Delete Files but Keep Structure
+      - name: Recursive Cleanup and Restructure
         shell: bash
         run: |
-          echo "Current branch state:"
-          ls -R
+          # 1. Remove all currently tracked files from the index and disk
+          # This is recursive by default and leaves the .git folder alone
+          git rm -rf .
 
-          # Find all files (not directories) and delete them
-          # We exclude the .git directory to keep the repository logic intact
-          find . -type f -not -path '*/.*' -delete
+          # 2. Re-create the directory structure using .gitkeep
+          # This finds every directory (excluding the .git folder and the root)
+          # and places a .gitkeep inside it.
+          find . -type d -not -path "./.git*" -not -path "." -exec touch {}/.gitkeep \;
 
-          # Git does not track empty directories. 
-          # To keep the structure, we place a .gitkeep in every folder.
-          find . -type d -not -path '*/.*' -not -path '.' -exec touch {}/.gitkeep \;
+          # 3. Add the .gitkeep files back to the index
+          git add .
 
-          echo "Remaining structure:"
-          ls -R
+          echo "Directories:"
+          find . -maxdepth 4 -not -path '*/.*'
 
       - name: Commit and Push Reset
         shell: bash
