@@ -3,8 +3,8 @@
 ## Summary Results
 | Scene | Variant | RelMSE Score | Render Time | Iterations | Date |
 |---|---|---|---|---|---|
-| caustics | **rr** | 0.65010 | 8.82s | 200 | 2026-02-25 20:21 |
-| cornell | **std** | 0.50030 | 42.68s | 60 | 2026-02-25 20:21 |
+| caustics | **rr** | 0.65010 | 8.79s | 200 | 2026-02-25 20:33 |
+| cornell | **std** | 0.36620 | 42.66s | 60 | 2026-02-25 20:33 |
 
 
 ## RelMSE Trend
@@ -41,4 +41,4 @@
 
 
 ---
-*last updated: 2026-02-25 20:21 (commit: ad4e10b9)*
+*last updated: 2026-02-25 20:33 (commit: 608bfb63)*
