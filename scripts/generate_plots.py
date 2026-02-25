@@ -251,9 +251,9 @@ def generate_time_trend_plot(csv_path, output_path, max_versions=20):
     plt.ylim(bottom=0)
 
     plt.title(
-        f"Convergence Time Trend (Last {len(window_versions)} builds)", fontsize=12
+        f"Runtime Trend (Last {len(window_versions)} builds)", fontsize=12
     )
-    plt.ylabel("Time to Converge (seconds)")
+    plt.ylabel("Runtime (seconds)")
     plt.xlabel("Build Version")
 
     # place the legend outside to the right so it doesn't overlap the lines

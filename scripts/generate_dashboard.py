@@ -84,8 +84,8 @@ with open(readme_path, "w") as f:
 ## RelMSE Trend
 ![RelMSE Trend](plots/history_score_trend.png)
 
-## Time Taken Trend
-![Time Taken Trend](plots/history_time_trend.png)
+## Runtime Trend
+![Runtime Trend](plots/history_time_trend.png)
 
 ## Render Gallery & Convergence
 {gallery_sections if scenes else "*no renderings found.*"}
