@@ -77,7 +77,7 @@ if __name__ == "__main__":
     success_count = 0
     for render_path in exr_files:
         scene = os.path.splitext(render_path)[0].split("_")[-1]
-        ref_fp = os.path.join(args.reference_dir, f"reference_{scene}.exr")
+        ref_fp = os.path.join(args.reference_dir, f"{scene}/scene.exr")
 
         print(f"Comparing {render_path} against reference: {ref_fp}")
         filename = os.path.basename(render_path)
