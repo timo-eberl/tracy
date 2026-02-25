@@ -20,22 +20,24 @@ jobs:
       - name: Recursive Cleanup and Restructure
         shell: bash
         run: |
-          # 1. Remove all currently tracked files from the index and disk
-          # This is recursive by default and leaves the .git folder alone
-          git rm -rf .
+          # 1. Delete all files in the root (excluding .git)
+          find . -maxdepth 1 -type f -not -path "./.git*" -delete
 
-          # 2. Re-create the directory structure using .gitkeep
-          # This finds every directory (excluding the .git folder and the root)
-          # and places a .gitkeep inside it.
-          find . -type d -not -path "./.git*" -not -path "." -exec touch {}/.gitkeep \;
-
-          # 3. Add the .gitkeep files back to the index
-          git add .
-
-          echo "Directories:"
-          find . -maxdepth 4 -not -path '*/.*'
-
-      - name: Commit and Push Reset
+          # 2. Find all directories at the root (maxdepth 1)
+          # For each root directory, wipe its contents and put a .gitkeep inside
+          for dir in */; do
+              # Skip the .git directory
+              [[ "$dir" == ".git/" ]] && continue
+              
+              echo "Cleaning $dir but keeping the folder..."
+              
+              # Remove everything inside this directory recursively
+              rm -rf "$dir"*
+              
+              # Re-place the .gitkeep so the empty directory stays tracked
+              touch "$dir.gitkeep"
+          done
+    - name: Commit and Push Reset
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
