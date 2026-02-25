@@ -36,7 +36,7 @@ runs:
 
         # Archive the render logs for this version
         shopt -s nullglob
-        cp $SRC_DIR/reference/reference.png "$DEST_DIR/renderings/"
+        cp $SRC_DIR/reference/*.png "$DEST_DIR/renderings/"
         cp $SRC_DIR/zig_render/*.txt "$DEST_DIR/logs/$VERSION/"
 
         # Handle previews if they exist
