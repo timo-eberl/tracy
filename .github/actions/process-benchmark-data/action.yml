@@ -36,12 +36,10 @@ runs:
 
         # Archive the render logs for this version
         shopt -s nullglob
-        echo "REFERENCE IMAGES:"
         cp $SRC_DIR/reference/*.png "$DEST_DIR/renderings/"
         cp $SRC_DIR/zig_render/*.txt "$DEST_DIR/logs/$VERSION/"
 
         # Handle previews if they exist
-        echo "PREVIEWS"
         if [ -d "$SRC_DIR/previews" ]; then
           # Save a versioned copy of the previews
           cp $SRC_DIR/previews/*.png "$DEST_DIR/renderings/$VERSION/"
@@ -54,12 +52,9 @@ runs:
         fi
 
         # Archive the error diffs
-        echo "DIFFS:"
         cp $SRC_DIR/diffs/*.png "$DEST_DIR/renderings/$VERSION/"
-        echo "LATEST DIFFS:"
         # Update the "latest" diff pointers for the dashboard
         for img in $SRC_DIR/diffs/*.png; do
-        echo "IMG:"
           base=$(basename "$img")
             cp "$img" "$DEST_DIR/renderings/latest-$base"
           done

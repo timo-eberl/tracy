@@ -32,12 +32,12 @@ jobs:
   - scene: "example1"
     variant: "std"
     tag: "cornell"
-    iterations: 30
+    iterations: 60
 
   - scene: "example2"
     variant: "rr"
     tag: "caustics"
-    iterations: 40
+    iterations: 60
   
   # - scene: "example3"
   #   variant: "rr"
