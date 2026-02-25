@@ -39,7 +39,7 @@ fn writeScores(scores: []const f32, timings: []const f64, filepath: []const u8, 
     const writer = bw.writer();
 
     try writer.print("VARIANT:{s}\n", .{variant});
-    try writer.print("SCENE:{}\n", .{scene});
+    try writer.print("SCENE:{s}\n", .{scene});
     for (scores, 0..) |s, i| {
         // Format: score,time_seconds
         try writer.print("{d:.4},{d:.6}\n", .{ s, timings[i] });
