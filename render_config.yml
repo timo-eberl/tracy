@@ -37,12 +37,12 @@ jobs:
     tag: "cornell"
     iterations: 100
 
-  - scene: "example_3"
-    variant: "rr"
-    tag: "caustics"
-    iterations: 200
+  # - scene: "example_3"
+  #   variant: "rr"
+  #   tag: "caustics"
+  #   iterations: 200
 
-  - scene: "example_4"
-    variant: "rr"
-    tag: "caustics"
-    iterations: 200
+  # - scene: "example_4"
+  #   variant: "rr"
+  #   tag: "caustics"
+  #   iterations: 200
