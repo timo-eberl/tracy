@@ -7,6 +7,7 @@ mi.set_variant("scalar_rgb")
 
 
 def convert_file(in_path, out_path):
+    print(f"Converting: {os.path.basename(in_path)} -> {os.path.basename(out_path)}")
     # Load HDR and convert to 8-bit sRGB for PNG
     try:
         bitmap = mi.Bitmap(in_path)
@@ -32,7 +33,6 @@ if __name__ == "__main__":
     # Grab all EXRs in the target folder
     exr_files = glob.glob(os.path.join(input_dir, "*.exr"))
 
-    # If the list is empty, the paths are likely wrong in the YAML
     if not exr_files:
         print(f"No files found in {input_dir}")
         sys.exit(1)
