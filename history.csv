@@ -1,0 +1,3 @@
+date,version,scene,variant,rmse_score,rmse_time,iterations,commit
+2026-02-25 19:23,0.1.0-build.199,cornell,std,0.6391,20.059431,30,local-de
+2026-02-25 19:23,0.1.0-build.199,caustics,rr,1.42,1.8432509999999995,40,local-de
