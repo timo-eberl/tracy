@@ -2,6 +2,7 @@ scenes:
   - tag: "cornell"
     name: "Sphere Cornell Box"
     description: "Contains all material types and tests many light phenomenoms"
+    scene_id: 0
     max_depth: 5
     width: 640
     height: 480
@@ -16,6 +17,7 @@ scenes:
   - tag: "caustics"
     name: "Caustics"
     description: "Glass spheres, diffuse ground, and colored area lights"
+    scene_id: 1
     max_depth: 6
     width: 280
     height: 320
