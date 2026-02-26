@@ -1,60 +1,114 @@
+:root {
+	--bg-color: #f0f0f0;
+	--sidebar-bg: #ffffff;
+	--text-color: #333333;
+	--border-color: #dddddd;
+	--input-bg: #f9f9f9;
+	--input-border: #cccccc;
+	--accent-color: #007acc;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg-color: #121212;
+		--sidebar-bg: #1e1e1e;
+		--text-color: #e0e0e0;
+		--border-color: #333333;
+		--input-bg: #2d2d2d;
+		--input-border: #444444;
+		--accent-color: #3b9deb;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
 body {
-	text-align: center;
-	font-family: Arial, Helvetica, sans-serif;
 	margin: 0;
-	background-color: var(--default-background-color);
-	color: var(--default-font-color);
+	font-family: Roboto, Helvetica, Arial, sans-serif;
+	background-color: var(--bg-color);
+	color: var(--text-color);
+	height: 100vh;
+	overflow: hidden;
+}
+
+.app-container {
+	display: flex;
+	height: 100%;
+	width: 100%;
+}
+
+.sidebar {
+	width: 280px;
+	background-color: var(--sidebar-bg);
+	border-right: 1px solid var(--border-color);
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+	z-index: 10;
+}
+
+.sidebar h1 {
+	margin: 0 0 10px 0;
+	font-size: 1.5rem;
+}
+
+.control-group {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.control-group label {
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.control-group input, 
+.control-group select {
+	padding: 8px;
+	border: 1px solid var(--input-border);
+	background-color: var(--input-bg);
+	color: var(--text-color);
+	border-radius: 4px;
+	font-size: 0.95rem;
+	outline: none;
+}
+
+.control-group input:focus, 
+.control-group select:focus {
+	border-color: var(--accent-color);
+}
+
+.instructions {
+	margin-top: auto;
+	padding: 15px;
+	background-color: var(--input-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	font-size: 0.85rem;
+	line-height: 1.4;
+}
+
+.instructions ul {
+	margin: 5px 0 0;
+	padding-left: 20px;
+}
+
+.canvas-container {
+	flex: 1;
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: var(--bg-color);
 }
 
 canvas {
-	display: block;
-	position: absolute;
-	margin: auto;
-	inset: 0;
-	width: 640px;
-	height: 480px;
-	background: black;
-}
-
-.animated-border {
-	padding: 4px;
-
-	/* Create the dashed lines using gradients */
-	background:
-		linear-gradient(90deg, red 50%, transparent 50%),
-		linear-gradient(90deg, red 50%, transparent 50%),
-		linear-gradient(0deg, red 50%, transparent 50%),
-		linear-gradient(0deg, red 50%, transparent 50%);
-
-	background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-
-	/* Define the size of the dashes (e.g., 15px dash, 4px thickness) */
-	background-size: 15px 4px, 15px 4px, 4px 15px, 4px 15px;
-
-	/* Initial position of the four "border" lines */
-	background-position: 0% 0%, 100% 100%, 0% 100%, 100% 0px;
-
-	/* Apply the animation */
-	animation: marching-ants 5s linear infinite;
-	}
-
-	@keyframes marching-ants {
-	to {
-	/* Move the background position to create the animation */
-	background-position: 100% 0%, 0% 100%, 0% 0%, 100% 100%;
-	}
-}
-
-/* default color scheme */
-:root {
-	--default-font-color: #303030;
-	--default-background-color: #e9e9e9;
-}
-
-/* dark color scheme (depending on browser settings) */
-@media (prefers-color-scheme: dark) {
-	:root {
-		--default-font-color: #cac5be;
-		--default-background-color: #181a1b;
-	}
+	object-fit: contain;
+	max-width: 100%;
+	max-height: 100%;
 }

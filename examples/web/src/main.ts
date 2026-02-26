@@ -2,8 +2,13 @@ import * as Tracy from "../src/tracy";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("2d") as CanvasRenderingContext2D;
-let width = canvas.clientWidth;
-let height = canvas.clientHeight;
+
+// UI Elements
+const uiScene = document.getElementById("ui-scene") as HTMLSelectElement;
+const uiRes = document.getElementById("ui-res") as HTMLSelectElement;
+const uiDepth = document.getElementById("ui-depth") as HTMLInputElement;
+const uiFilter = document.getElementById("ui-filter") as HTMLSelectElement;
+const uiSpp = document.getElementById("ui-spp") as HTMLInputElement;
 
 const cameraDistanceBounds = { min: 0.01, max: 5000 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
@@ -33,12 +38,6 @@ function main() {
 function clamp(v: number, min: number, max: number) { return Math.min(Math.max(v, min), max); }
 
 function setupCameraControls() {
-	window.onresize = () => {
-		width = canvas.clientWidth;
-		height = canvas.clientHeight;
-		cameraChanged = true;
-	};
-
 	canvas.onmousedown = (event) => { if (event.button === 0) isMouseDown = true; };
 	document.onmouseup = (event) => { if (event.button === 0) isMouseDown = false; };
 	
@@ -59,24 +58,37 @@ function setupCameraControls() {
 		camera.distance = clamp(camera.distance * delta, cameraDistanceBounds.min, cameraDistanceBounds.max);
 		cameraChanged = true; // Signal that the render needs to restart
 	};
+
+	// Listen for UI parameter changes to trigger a new render
+	const triggerRender = () => { cameraChanged = true; };
+	uiScene.addEventListener("change", triggerRender);
+	uiRes.addEventListener("change", triggerRender);
+	uiDepth.addEventListener("input", triggerRender);
+	uiFilter.addEventListener("change", triggerRender);
+	uiSpp.addEventListener("input", triggerRender);
 }
 
 async function drawFull() {
 	canvas.classList.add('animated-border');
 
+	// Determine render resolution explicitly
+	const renderWidth = parseInt(uiRes.value, 10);
+	const renderHeight = Math.floor(renderWidth * 0.75); // Maintain 4:3 aspect ratio
+
+	// Read the live UI values right before sending them to the Web Worker
 	// If tracy.cancel() is called elsewhere, this await instantly resolves cleanly
 	await tracy.renderFull({
-		scene: 1,
-		maxDepth: 6,
-		width: width,
-		height: height,
-		filterType: 0,
+		scene: parseInt(uiScene.value, 10),
+		maxDepth: parseInt(uiDepth.value, 10),
+		width: renderWidth,
+		height: renderHeight,
+		filterType: parseInt(uiFilter.value, 10),
 		camera: {
 			rotation: camera.rotation,
 			distance: camera.distance,
 			focusPoint: camera.focusPoint
 		},
-		samplesPerPixel: 100
+		samplesPerPixel: parseInt(uiSpp.value, 10)
 	});
 
 	canvas.classList.remove('animated-border');

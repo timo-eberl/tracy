@@ -1,14 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 	<meta charset="utf-8">
-	<title>Tracy</title>
+	<title>Tracy Path Tracer</title>
 	<link rel="stylesheet" type="text/css" href="style.css">
 </head>
 
 <body>
-	<canvas></canvas>
+	<div class="app-container">
+		<aside class="sidebar">
+			<h1>Tracy</h1>
+			
+			<div class="control-group">
+				<label for="ui-scene">Scene</label>
+				<select id="ui-scene">
+					<option value="0">Scene 0: Cornell Spheres</option>
+					<option value="1" selected>Scene 1: Caustics</option>
+				</select>
+			</div>
+
+			<div class="control-group">
+				<label for="ui-res">Resolution</label>
+				<select id="ui-res">
+					<option value="320">320 x 240</option>
+					<option value="480" selected>480 x 360</option>
+					<option value="640">640 x 480</option>
+				</select>
+			</div>
+
+			<div class="control-group">
+				<label for="ui-depth">Max Bounces</label>
+				<input type="number" id="ui-depth" value="6" min="1">
+			</div>
+
+			<div class="control-group">
+				<label for="ui-filter">Filter Type</label>
+				<select id="ui-filter">
+					<option value="0">0: Box</option>
+					<option value="1" selected>1: Gaussian</option>
+					<option value="2">2: Mitchell</option>
+				</select>
+			</div>
+
+			<div class="control-group">
+				<label for="ui-spp">Samples / Pixel</label>
+				<input type="number" id="ui-spp" value="1000" min="1">
+			</div>
+
+			<div class="instructions">
+				<strong>Controls:</strong>
+				<ul>
+					<li>Left-click & Drag: Rotate</li>
+					<li>Mouse Wheel: Zoom</li>
+				</ul>
+			</div>
+		</aside>
+
+		<main class="canvas-container">
+			<canvas></canvas>
+		</main>
+	</div>
 </body>
 
 <script type="module" src="src/main.ts"></script>
