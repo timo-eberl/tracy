@@ -9,6 +9,7 @@ const uiRes = document.getElementById("ui-res") as HTMLSelectElement;
 const uiDepth = document.getElementById("ui-depth") as HTMLInputElement;
 const uiFilter = document.getElementById("ui-filter") as HTMLSelectElement;
 const uiSpp = document.getElementById("ui-spp") as HTMLInputElement;
+const uiStatus = document.getElementById("ui-status") as HTMLElement;
 
 const cameraDistanceBounds = { min: 0.01, max: 5000 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
@@ -27,8 +28,9 @@ function main() {
 	setupCameraControls();
 	tracy = Tracy.create(context);
 
-	tracy.onFrame = () => { 
+	tracy.onFrame = (samplesCompleted) => { 
 		isWaitingForFirstSample = false; 
+		uiStatus.innerText = `Samples: ${samplesCompleted}`;
 	};
 	
 	// Start the infinite loop that watches for camera changes
@@ -99,7 +101,7 @@ function renderLoop() {
 	if (cameraChanged && !isWaitingForFirstSample) {
 		cameraChanged = false;
 		isWaitingForFirstSample = true;
-		
+
 		tracy.cancel(); // Instantly kill the ongoing render worker
 		drawFull();     // Fire-and-forget a new progressive render
 	}

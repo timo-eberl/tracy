@@ -31,12 +31,14 @@ self.onmessage = async (event) => {
 		Module._render_refine(s.samplesPerPixel);
 		const bufferPtr = Module._update_image_ldr();
 		self.postMessage({
-			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true
+			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true,
+			samplesCompleted: s.samplesPerPixel
 		});
 	}
 	else if (command === 'renderFull') {
 		let samplesPerRun = 1;
 		let samplesRemaining = s.samplesPerPixel;
+		let samplesCompleted = 0;
 
 		while (samplesRemaining > 0) {
 			// either a full run, or whatever is left
@@ -44,10 +46,12 @@ self.onmessage = async (event) => {
 			Module._render_refine(samplesForThisRun);
 			const bufferPtr = Module._update_image_ldr();
 			samplesRemaining -= samplesForThisRun;
+			samplesCompleted += samplesForThisRun;
 
 			const isFinished = (samplesRemaining === 0);
 			self.postMessage({
-				sharedMemory, bufferPtr, width: s.width, height: s.height, finished: isFinished
+				sharedMemory, bufferPtr, width: s.width, height: s.height, finished: isFinished,
+				samplesCompleted
 			});
 
 			samplesPerRun++;

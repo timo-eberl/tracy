@@ -3,7 +3,7 @@ export interface TracyModule {
 	renderFast: (settings: RenderSettings) => Promise<void>;
 	renderFull: (settings: RenderSettings) => Promise<void>;
 	cancel: () => void;
-	onFrame?: () => void;
+	onFrame?: (samplesCompleted: number) => void;
 }
 
 export interface RenderSettings {
@@ -49,16 +49,16 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 		// Listen for messages (the final rendered image) from the worker
 		worker.onmessage = (event) => {
-			const { sharedMemory, bufferPtr, width, height, finished } = event.data as {
+			const { sharedMemory, bufferPtr, width, height, finished, samplesCompleted } = event.data as {
 				sharedMemory: WebAssembly.Memory; bufferPtr: number; width: number; height: number;
-				finished: boolean
+				finished: boolean; samplesCompleted: number;
 			};
 			// Create a view into the WebAssembly memory
 			// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
 			const rawArray = new Uint8ClampedArray(sharedMemory.buffer, bufferPtr, width * height * 4);
 			updateImage(context, rawArray, width, height);
 
-			if (api.onFrame) api.onFrame();
+			if (api.onFrame) api.onFrame(samplesCompleted);
 
 			if (finished && resolveCurrentRender) {
 				resolveCurrentRender();

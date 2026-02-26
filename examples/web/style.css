@@ -67,6 +67,16 @@ body {
 	font-weight: 600;
 }
 
+#ui-status {
+	font-size: 0.9rem;
+	font-family: monospace;
+	padding: 8px;
+	background-color: var(--input-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	color: var(--text-color);
+}
+
 .control-group input, 
 .control-group select {
 	padding: 8px;
