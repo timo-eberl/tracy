@@ -3,6 +3,7 @@ export interface TracyModule {
 	renderFast: (settings: RenderSettings) => Promise<void>;
 	renderFull: (settings: RenderSettings) => Promise<void>;
 	cancel: () => void;
+	onFrame?: () => void;
 }
 
 export interface RenderSettings {
@@ -33,6 +34,13 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 	let resolveCurrentRender: ((value: void) => void) | null = null;
 
+	// Create the API object first so the worker can access api.onFrame
+	const api: TracyModule = {
+		renderFast: (s) => callWorker('renderFast', s),
+		renderFull: (s) => callWorker('renderFull', s),
+		cancel: cancel
+	};
+
 	// Encapsulate worker initialization so we can respawn it
 	function initWorker() {
 		// Create the worker. The new URL(...) syntax is the modern standard for module-based workers.
@@ -49,6 +57,8 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 			// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
 			const rawArray = new Uint8ClampedArray(sharedMemory.buffer, bufferPtr, width * height * 4);
 			updateImage(context, rawArray, width, height);
+
+			if (api.onFrame) api.onFrame();
 
 			if (finished && resolveCurrentRender) {
 				resolveCurrentRender();
@@ -83,11 +93,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 		return renderPromise;
 	}
 
-	return {
-		renderFast: (s) => callWorker('renderFast', s),
-		renderFull: (s) => callWorker('renderFull', s),
-		cancel,
-	}
+	return api;
 };
 
 function updateImage(
