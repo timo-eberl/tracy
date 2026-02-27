@@ -51,7 +51,7 @@ typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // Geometry Data Structures
 typedef struct { Vec center; float radius; } Sphere;
 // two_sided is useful for thin geometry, like paper
-typedef struct { Vec v0, v1, v2; bool two_sided; } Triangle;
+typedef struct { Vec v0, v1, v2; Vec edge1, edge2; bool two_sided; } Triangle;
 typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
 // The generic Scene Object
 typedef struct {
@@ -85,52 +85,52 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // clang-format off
 Primitive scene_cornell[] = {
 	// Left Wall (x = -1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}, .two_sided=false}},
 	// Right Wall (x = 1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
 	// Back Wall (z = -2.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}, .two_sided=false}},
 	// Bottom (y = 0.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}, .two_sided=false}},
 	// Top (y = 2.4)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
 	// Mirror Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
 	// Glass Sphere
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
 	// Area Light (1x1m Rect)
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, .two_sided=false}},
 	// Light Shield - 4 Sides Angled 45 Degree
 	// Side 1: Front
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}, true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}, .two_sided=true}},
 	// Side 2: Right
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}, true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}, .two_sided=true}},
 	// Side 3: Back
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}, true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}, .two_sided=true}},
 	// Side 4: Left
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}, true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}, true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}, .two_sided=true}},
 };
 
 Primitive scene_caustics[] = {
 	// Floor
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}, .two_sided=false}},
 	// Glass
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {-0.3, 0.3, 0.0}, .radius = 0.2}},
 	// Light
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}, false}},
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}, false}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}, .two_sided=false}},
 };
 // clang-format on
 
@@ -170,10 +170,10 @@ float vec_max_component(Vec v) {
 }
 
 // The image buffer will be allocated on demand.
-uint8_t* image_buffer_ldr = NULL;			 // stores tone mapped gamma corrected colors (rgba)
-float* image_buffer_hdr = NULL;				 // stores linear averaged floats (rgb)
+uint8_t* image_buffer_ldr = NULL;			  // stores tone mapped gamma corrected colors (rgba)
+float* image_buffer_hdr = NULL;				  // stores linear averaged floats (rgb)
 DVec* summed_weighted_radiance_buffer = NULL; // stores summed raw radiance
-double* summed_weights_buffer = NULL;		 // stores the summed weights of the samples
+double* summed_weights_buffer = NULL;		  // stores the summed weights of the samples
 int buffer_width = 0;
 int buffer_height = 0;
 
@@ -226,8 +226,8 @@ bool intersect_sphere(const Ray* r, const Sphere* s, HitInfo* hit) {
 
 // ray-triangle intersection using Möller–Trumbore algorithm
 bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
-	Vec edge1 = vec_sub(tri->v1, tri->v0);
-	Vec edge2 = vec_sub(tri->v2, tri->v0);
+	Vec edge1 = tri->edge1;
+	Vec edge2 = tri->edge2;
 	Vec h = vec_cross(r->dir, edge2);
 	float a = vec_dot(edge1, h);
 
@@ -373,7 +373,8 @@ float mitchell_1d(float x) {
 	}
 	// 1 <= x < 2: 1/6 * (-7/3x^3 + 12x^2 - 20x + 32/3)
 	else {
-		return ((-7.0f / 3.0f) * x * x * x + 12.0f * x * x - 20.0f * x + 32.0f / 3.0f) * (1.0f / 6.0f);
+		return ((-7.0f / 3.0f) * x * x * x + 12.0f * x * x - 20.0f * x + 32.0f / 3.0f) *
+			   (1.0f / 6.0f);
 	}
 }
 
@@ -598,11 +599,13 @@ void write_image(bool update_ldr, bool update_hdr) {
 			// step unnecessary. But since we are doing a discrete sum, our total weight
 			// will not be exactly 1.0, so we manually keep track of it.
 			double weight = summed_weights_buffer[radiance_index];
-			Vec radiance = (weight > 0.0) ? vec_scale((Vec){(float)summed_weighted_radiance_buffer[radiance_index].x,
-															(float)summed_weighted_radiance_buffer[radiance_index].y,
-															(float)summed_weighted_radiance_buffer[radiance_index].z},
-													  1.0f / (float)weight)
-										  : (Vec){0, 0, 0};
+			Vec radiance =
+				(weight > 0.0)
+					? vec_scale((Vec){(float)summed_weighted_radiance_buffer[radiance_index].x,
+									  (float)summed_weighted_radiance_buffer[radiance_index].y,
+									  (float)summed_weighted_radiance_buffer[radiance_index].z},
+								1.0f / (float)weight)
+					: (Vec){0, 0, 0};
 
 			if (update_hdr) {
 				int image_index = radiance_index * 3; // HDR has 3 components (RGB)
@@ -646,6 +649,14 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 	int num_available_scenes = sizeof(all_scenes) / sizeof(Scene);
 	current_scene = (p_scene_id >= 0 && p_scene_id < num_available_scenes) ? all_scenes[p_scene_id]
 																		   : (Scene){0};
+	// Precompute triangle edges
+	for (int i = 0; i < current_scene.size; ++i) {
+		if (current_scene.primitives[i].type == SHAPE_TRIANGLE) {
+			Triangle* tri = &current_scene.primitives[i].geo.triangle;
+			tri->edge1 = vec_sub(tri->v1, tri->v0);
+			tri->edge2 = vec_sub(tri->v2, tri->v0);
+		}
+	}
 
 	max_depth = p_max_depth;
 	width = p_width;
