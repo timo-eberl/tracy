@@ -14,9 +14,12 @@ const pcgSources = fs.readdirSync(pcgSrcDir)
 const emflags = [
 	'-I../../include',
 	'-I../../dependencies/pcg-c/include',
+	'-I../../dependencies/simpleomp',
 	'-sMODULARIZE=1',
 	'-sEXPORT_ES6=1',
-	'-sSHARED_MEMORY=1', '-sIMPORTED_MEMORY=1',	// required so shared memory can be used
+	'-sSHARED_MEMORY=1', '-sIMPORTED_MEMORY=1', // required so shared memory can be used
+	'-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency', // required for SimpleOMP
+	'-fopenmp', '-pthread',
 	'--emit-tsd', 'tracy_c.d.ts',
 	'-Wall', '-Wextra',							// enable all warnings
 ];
@@ -40,6 +43,7 @@ const args = [
 	...pcgSources,
 	...emflags,
 	...(isDebug ? emDebug : emRelease),
+	'../../dependencies/simpleomp/libsimpleomp.a',
 	'-o', 'src/tracy_c.js'
 ];
 const result = spawnSync('emcc', args, { stdio: 'inherit', shell: true });
