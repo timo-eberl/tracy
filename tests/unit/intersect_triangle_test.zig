@@ -44,7 +44,7 @@ test "triangle: direct hit (center)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     try testing.expect(did_hit == true);
 
@@ -86,7 +86,7 @@ test "triangle: miss (outside bounds)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     try testing.expect(did_hit == false);
 }
@@ -103,7 +103,7 @@ test "triangle: miss (parallel ray)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     try testing.expect(did_hit == false);
 }
@@ -120,7 +120,7 @@ test "triangle: behind camera" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     try testing.expect(did_hit == false);
 }
@@ -138,7 +138,7 @@ test "triangle: edge case (vertex hit)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     // Barycentric coordinates usually handle v=1, u=0 (u+v=1) as inclusive.
     // Should be a hit.
@@ -160,7 +160,7 @@ test "triangle: two_sided (back face hit)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     try testing.expect(did_hit == true);
 
@@ -197,7 +197,7 @@ test "triangle: back hit (one_sided / inside)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_triangle(r, tri, &hit);
+    const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
     try testing.expect(did_hit == true);
 

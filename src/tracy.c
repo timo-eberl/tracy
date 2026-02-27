@@ -190,11 +190,11 @@ Vec reflect(Vec incident, Vec normal) {
 }
 
 // ray-sphere intersection (6.2.4)
-bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
-	Vec oc = vec_sub(r.origin, s.center);
-	double a = vec_dot(r.dir, r.dir);
-	double b = 2.0 * vec_dot(oc, r.dir);
-	double c = vec_dot(oc, oc) - s.radius * s.radius;
+bool intersect_sphere(const Ray* r, const Sphere* s, HitInfo* hit) {
+	Vec oc = vec_sub(r->origin, s->center);
+	double a = vec_dot(r->dir, r->dir);
+	double b = 2.0 * vec_dot(oc, r->dir);
+	double c = vec_dot(oc, oc) - s->radius * s->radius;
 	// quadratic formula
 	double discriminant = b * b - 4 * a * c;
 	if (discriminant < 0) {
@@ -215,19 +215,19 @@ bool intersect_sphere(Ray r, Sphere s, HitInfo* hit) {
 			return false; // both intersections are behind ray
 		}
 		hit->t = t0 > 0 ? t0 : t1; // if the first intersection is behind ray, use the other
-		hit->p = vec_add(r.origin, vec_scale(r.dir, hit->t));
-		hit->n = vec_normalize(vec_sub(hit->p, s.center));
+		hit->p = vec_add(r->origin, vec_scale(r->dir, hit->t));
+		hit->n = vec_normalize(vec_sub(hit->p, s->center));
 		hit->inside = !(t0 > 0.0);
 		return true;
 	}
 }
 
 // ray-triangle intersection using Möller–Trumbore algorithm
-bool intersect_triangle(Ray r, Triangle tri, HitInfo* hit) {
+bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
 	const double EPSILON = 0.0000001;
-	Vec edge1 = vec_sub(tri.v1, tri.v0);
-	Vec edge2 = vec_sub(tri.v2, tri.v0);
-	Vec h = vec_cross(r.dir, edge2);
+	Vec edge1 = vec_sub(tri->v1, tri->v0);
+	Vec edge2 = vec_sub(tri->v2, tri->v0);
+	Vec h = vec_cross(r->dir, edge2);
 	double a = vec_dot(edge1, h);
 
 	// Check if ray is parallel to the triangle
@@ -235,13 +235,13 @@ bool intersect_triangle(Ray r, Triangle tri, HitInfo* hit) {
 	if (a > -EPSILON && a < EPSILON) { return false; }
 
 	double f = 1.0 / a;
-	Vec s = vec_sub(r.origin, tri.v0);
+	Vec s = vec_sub(r->origin, tri->v0);
 	double u = f * vec_dot(s, h);
 
 	if (u < 0.0 || u > 1.0) { return false; }
 
 	Vec q = vec_cross(s, edge1);
-	double v = f * vec_dot(r.dir, q);
+	double v = f * vec_dot(r->dir, q);
 
 	if (v < 0.0 || u + v > 1.0) { return false; }
 
@@ -250,15 +250,15 @@ bool intersect_triangle(Ray r, Triangle tri, HitInfo* hit) {
 	// Check if intersection is in front of the camera
 	if (t > EPSILON) {
 		hit->t = t;
-		hit->p = vec_add(r.origin, vec_scale(r.dir, t));
+		hit->p = vec_add(r->origin, vec_scale(r->dir, t));
 
 		// Calculate geometric normal
 		Vec n = vec_normalize(vec_cross(edge1, edge2));
 
 		// Check orientation to set 'inside' flag correctly
 		// If normal and ray point in the same direction, we are exiting the object (inside)
-		if (vec_dot(r.dir, n) > 0.0) {
-			if (tri.two_sided) {
+		if (vec_dot(r->dir, n) > 0.0) {
+			if (tri->two_sided) {
 				hit->inside = false;
 				hit->n = vec_scale(n, -1.0);
 			} else {
@@ -275,7 +275,7 @@ bool intersect_triangle(Ray r, Triangle tri, HitInfo* hit) {
 	return false;
 }
 
-bool intersect_scene(Ray r, HitInfo* closest_hit, Primitive** hit_primitive) {
+bool intersect_scene(const Ray* r, HitInfo* closest_hit, Primitive** hit_primitive) {
 	closest_hit->t = INFINITY;
 	*hit_primitive = NULL;
 
@@ -285,10 +285,10 @@ bool intersect_scene(Ray r, HitInfo* closest_hit, Primitive** hit_primitive) {
 
 		switch (current_scene.primitives[i].type) {
 		case SHAPE_SPHERE:
-			hit = intersect_sphere(r, current_scene.primitives[i].geo.sphere, &current_hit);
+			hit = intersect_sphere(r, &current_scene.primitives[i].geo.sphere, &current_hit);
 			break;
 		case SHAPE_TRIANGLE:
-			hit = intersect_triangle(r, current_scene.primitives[i].geo.triangle, &current_hit);
+			hit = intersect_triangle(r, &current_scene.primitives[i].geo.triangle, &current_hit);
 			break;
 		}
 
@@ -408,7 +408,7 @@ bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
 	Ray shadow_ray = {surf_pos, light_direction};
 	shadow_ray.origin = vec_add(shadow_ray.origin, vec_scale(surf_normal, SELF_OCCLUSION_DELTA));
 	HitInfo shadow_ray_hit;
-	bool is_in_shadow = intersect_scene(shadow_ray, &shadow_ray_hit, &(Primitive*){NULL});
+	bool is_in_shadow = intersect_scene(&shadow_ray, &shadow_ray_hit, &(Primitive*){NULL});
 	if (is_in_shadow) { // check if occluder is further away than light source
 		double hit_dist_sq = shadow_ray_hit.t * shadow_ray_hit.t;
 		double light_dist_sq = vec_length_squared(vec_sub(light_pos, shadow_ray.origin));
@@ -505,7 +505,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	HitInfo hit;
 	Primitive* hit_prim = NULL;
-	bool did_hit = intersect_scene(r, &hit, &hit_prim);
+	bool did_hit = intersect_scene(&r, &hit, &hit_prim);
 
 	if (!did_hit) { return (Vec){0, 0, 0}; }
 

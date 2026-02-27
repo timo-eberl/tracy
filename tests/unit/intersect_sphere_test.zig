@@ -28,7 +28,7 @@ test "intersection: direct hit (head-on)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_sphere(r, s, &hit);
+    const did_hit = c.intersect_sphere(&r, &s, &hit);
 
     try testing.expect(did_hit == true);
 
@@ -55,7 +55,7 @@ test "intersection: miss (ray points away)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_sphere(r, s, &hit);
+    const did_hit = c.intersect_sphere(&r, &s, &hit);
 
     try testing.expect(did_hit == false);
 }
@@ -72,7 +72,7 @@ test "intersection: inside sphere (refraction case)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_sphere(r, s, &hit);
+    const did_hit = c.intersect_sphere(&r, &s, &hit);
 
     try testing.expect(did_hit == true);
 
@@ -99,7 +99,7 @@ test "intersection: object behind camera" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_sphere(r, s, &hit);
+    const did_hit = c.intersect_sphere(&r, &s, &hit);
 
     // The mathematical quadratic formula yields two solutions (t = -8 and t = -12),
     // but the function must reject them because they are negative (behind ray).
@@ -119,7 +119,7 @@ test "intersection: offset hit (off-center)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_sphere(r, s, &hit);
+    const did_hit = c.intersect_sphere(&r, &s, &hit);
 
     try testing.expect(did_hit == true);
 
@@ -154,7 +154,7 @@ test "intersection: grazing hit (tangent)" {
     };
 
     var hit: c.HitInfo = undefined;
-    const did_hit = c.intersect_sphere(r, s, &hit);
+    const did_hit = c.intersect_sphere(&r, &s, &hit);
 
     try testing.expect(did_hit == true);
     // Should be very close to z=5
