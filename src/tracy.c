@@ -21,10 +21,10 @@
 #endif
 
 // Filter configuration constants
-#define GAUSS_SIGMA 0.5
-#define GAUSS_RADIUS 1.5 // 3 * Sigma, captures >99% of gaussian curves influence
-#define MITCHELL_RADIUS 2.0
-#define BOX_RADIUS 0.5
+#define GAUSS_SIGMA 0.5f
+#define GAUSS_RADIUS 1.5f // 3 * Sigma, captures >99% of gaussian curves influence
+#define MITCHELL_RADIUS 2.0f
+#define BOX_RADIUS 0.5f
 
 #define RR_START_DEPTH 2 // Roussian Roulette starts after some samples
 
@@ -32,12 +32,14 @@
 // be written.
 #define TONE_MAP true
 
-// offset used for shadow rays. may need to be adjusted depending on scene scale
-#define SELF_OCCLUSION_DELTA 0.00000001
+// offset used for rays. may need to be adjusted depending on scene scale
+#define SELF_OCCLUSION_DELTA 0.00001f
+#define EPSILON 0.0001f
 
 // clang-format off
 // allow one line typedefs
-typedef struct { double x, y, z; } Vec;
+typedef struct { float x, y, z; } Vec;
+typedef struct { double x, y, z; } DVec;
 typedef struct { Vec origin; Vec dir; } Ray;
 
 // color is treated differently depending on the material type
@@ -47,7 +49,7 @@ typedef struct { Vec origin; Vec dir; } Ray;
 // REFRACTIVE: reflection and refraction, color.x=ior
 typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 // Geometry Data Structures
-typedef struct { Vec center; double radius; } Sphere;
+typedef struct { Vec center; float radius; } Sphere;
 // two_sided is useful for thin geometry, like paper
 typedef struct { Vec v0, v1, v2; bool two_sided; } Triangle;
 typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
@@ -59,7 +61,7 @@ typedef struct {
 typedef struct { Primitive* primitives; int size; } Scene;
 
 // t: distance, p: point, n: normal, inside: flag
-typedef struct { double t; Vec p; Vec n; bool inside; } HitInfo;
+typedef struct { float t; Vec p; Vec n; bool inside; } HitInfo;
 typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } FilterType;
 // clang-format on
 
@@ -145,16 +147,16 @@ Scene all_scenes[] = {
 // KEEP COMPACT: Vector intrinsics are more readable as one-liners
 Vec vec_add(Vec a, Vec b) { return (Vec){a.x + b.x, a.y + b.y, a.z + b.z}; }
 Vec vec_sub(Vec a, Vec b) { return (Vec){a.x - b.x, a.y - b.y, a.z - b.z}; }
-Vec vec_scale(Vec v, double s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
+Vec vec_scale(Vec v, float s) { return (Vec){v.x * s, v.y * s, v.z * s}; }
 Vec vec_hadamard_prod(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b.z}; }
-double vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-double vec_length(Vec v) { return sqrt(vec_dot(v, v)); }
-double vec_length_squared(Vec v) { return vec_dot(v, v); }
+float vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+float vec_length(Vec v) { return sqrtf(vec_dot(v, v)); }
+float vec_length_squared(Vec v) { return vec_dot(v, v); }
 // clang-format on
 Vec vec_normalize(Vec v) {
-	double l = vec_length(v);
-	if (l == 0) return (Vec){0, 0, 0};
-	return vec_scale(v, 1.0 / l);
+	float l = vec_length(v);
+	if (l == 0.0f) return (Vec){0, 0, 0};
+	return vec_scale(v, 1.0f / l);
 }
 Vec vec_cross(Vec a, Vec b) {
 	return (Vec){
@@ -163,14 +165,14 @@ Vec vec_cross(Vec a, Vec b) {
 		a.x * b.y - a.y * b.x,
 	};
 }
-double vec_max_component(Vec v) {
-	return fmax(v.x, fmax(v.y, v.z));
+float vec_max_component(Vec v) {
+	return fmaxf(v.x, fmaxf(v.y, v.z));
 }
 
 // The image buffer will be allocated on demand.
 uint8_t* image_buffer_ldr = NULL;			 // stores tone mapped gamma corrected colors (rgba)
 float* image_buffer_hdr = NULL;				 // stores linear averaged floats (rgb)
-Vec* summed_weighted_radiance_buffer = NULL; // stores summed raw radiance
+DVec* summed_weighted_radiance_buffer = NULL; // stores summed raw radiance
 double* summed_weights_buffer = NULL;		 // stores the summed weights of the samples
 int buffer_width = 0;
 int buffer_height = 0;
@@ -186,66 +188,65 @@ FilterType filter_type; // Current selected filter
 
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
-	return vec_sub(incident, vec_scale(normal, 2.0 * vec_dot(normal, incident)));
+	return vec_sub(incident, vec_scale(normal, 2.0f * vec_dot(normal, incident)));
 }
 
 // ray-sphere intersection (6.2.4)
 bool intersect_sphere(const Ray* r, const Sphere* s, HitInfo* hit) {
 	Vec oc = vec_sub(r->origin, s->center);
-	double a = vec_dot(r->dir, r->dir);
-	double b = 2.0 * vec_dot(oc, r->dir);
-	double c = vec_dot(oc, oc) - s->radius * s->radius;
+	float a = vec_dot(r->dir, r->dir);
+	float b = 2.0f * vec_dot(oc, r->dir);
+	float c = vec_dot(oc, oc) - s->radius * s->radius;
 	// quadratic formula
-	double discriminant = b * b - 4 * a * c;
-	if (discriminant < 0) {
+	float discriminant = b * b - 4.0f * a * c;
+	if (discriminant < 0.0f) {
 		// cant take the square root of negative number
 		// the quadratic formula has no solution -> no intersection
 		return false;
 	} else {
-		double sqrtDiscriminant = sqrt(discriminant);
+		float sqrtDiscriminant = sqrtf(discriminant);
 		// we may have either one solution (t0==t1) or two solutions (t0 < t1)
-		double t0 = (-b - sqrtDiscriminant) / (2.0 * a);
-		double t1 = (-b + sqrtDiscriminant) / (2.0 * a);
+		float t0 = (-b - sqrtDiscriminant) / (2.0f * a);
+		float t1 = (-b + sqrtDiscriminant) / (2.0f * a);
 		// we want to know about the closest intersection in front of the camera
 		// -> smallest t value
 		// however a negative t value would mean an intersection behind the camera
 		// -> ignore negative t value
 		// therefore we return the smallest positive t value
-		if (t1 <= 0) {
+		if (t1 <= 0.0f) {
 			return false; // both intersections are behind ray
 		}
-		hit->t = t0 > 0 ? t0 : t1; // if the first intersection is behind ray, use the other
+		hit->t = t0 > 0.0f ? t0 : t1; // if the first intersection is behind ray, use the other
 		hit->p = vec_add(r->origin, vec_scale(r->dir, hit->t));
 		hit->n = vec_normalize(vec_sub(hit->p, s->center));
-		hit->inside = !(t0 > 0.0);
+		hit->inside = !(t0 > 0.0f);
 		return true;
 	}
 }
 
 // ray-triangle intersection using Möller–Trumbore algorithm
 bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
-	const double EPSILON = 0.0000001;
 	Vec edge1 = vec_sub(tri->v1, tri->v0);
 	Vec edge2 = vec_sub(tri->v2, tri->v0);
 	Vec h = vec_cross(r->dir, edge2);
-	double a = vec_dot(edge1, h);
+	float a = vec_dot(edge1, h);
 
 	// Check if ray is parallel to the triangle
 	// Note: We perform double-sided intersection here.
 	if (a > -EPSILON && a < EPSILON) { return false; }
 
-	double f = 1.0 / a;
+	float f = 1.0f / a;
 	Vec s = vec_sub(r->origin, tri->v0);
-	double u = f * vec_dot(s, h);
+	float u = f * vec_dot(s, h);
 
-	if (u < 0.0 || u > 1.0) { return false; }
+	if (u < 0.0f || u > 1.0f) { return false; }
 
 	Vec q = vec_cross(s, edge1);
-	double v = f * vec_dot(r->dir, q);
+	float v = f * vec_dot(r->dir, q);
 
-	if (v < 0.0 || u + v > 1.0) { return false; }
+	if (v < 0.0f || u + v > 1.0f) { return false; }
 
-	double t = f * vec_dot(edge2, q);
+	float t = f * vec_dot(edge2, q);
 
 	// Check if intersection is in front of the camera
 	if (t > EPSILON) {
@@ -257,10 +258,10 @@ bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
 
 		// Check orientation to set 'inside' flag correctly
 		// If normal and ray point in the same direction, we are exiting the object (inside)
-		if (vec_dot(r->dir, n) > 0.0) {
+		if (vec_dot(r->dir, n) > 0.0f) {
 			if (tri->two_sided) {
 				hit->inside = false;
-				hit->n = vec_scale(n, -1.0);
+				hit->n = vec_scale(n, -1.0f);
 			} else {
 				hit->inside = true;
 				hit->n = n;
@@ -302,8 +303,8 @@ bool intersect_scene(const Ray* r, HitInfo* closest_hit, Primitive** hit_primiti
 }
 
 // srgb response curve (4.1.9)
-double linear_to_srgb(double v) {
-	return (v <= 0.0031308) ? (12.92 * v) : (1.055 * pow(v, 0.416666667) - 0.055);
+float linear_to_srgb(float v) {
+	return (v <= 0.0031308f) ? (12.92f * v) : (1.055f * powf(v, 0.416666667f) - 0.055f);
 }
 Vec vec_linear_to_srgb(Vec v) {
 	return (Vec){linear_to_srgb(v.x), linear_to_srgb(v.y), linear_to_srgb(v.z)};
@@ -311,21 +312,21 @@ Vec vec_linear_to_srgb(Vec v) {
 
 // for tone mapping we convert our color values to a single luminance value to combat
 // the problem of washing out our image described in 4.2.5
-double luminance(Vec rgb) {
-	return 0.2126 * rgb.x + 0.7152 * rgb.y + 0.0722 * rgb.z;
+float luminance(Vec rgb) {
+	return 0.2126f * rgb.x + 0.7152f * rgb.y + 0.0722f * rgb.z;
 }
 // simple reinhard tone mapping operator based on luminance
 Vec reinhard_luminance(Vec rgb_hdr) {
-	double l_hdr = luminance(rgb_hdr);
-	if (l_hdr <= 0.0) return (Vec){0, 0, 0}; // Handle black so we don't divide by 0
-	double l_ldr = l_hdr / (1.0 + l_hdr);
+	float l_hdr = luminance(rgb_hdr);
+	if (l_hdr <= 0.0f) return (Vec){0, 0, 0}; // Handle black so we don't divide by 0
+	float l_ldr = l_hdr / (1.0f + l_hdr);
 	Vec v = vec_scale(rgb_hdr, l_ldr / l_hdr);
-	return (Vec){fmin(v.x, 1.0), fmin(v.y, 1.0), fmin(v.z, 1.0)};
+	return (Vec){fminf(v.x, 1.0f), fminf(v.y, 1.0f), fminf(v.z, 1.0f)};
 }
 // 0-1 to 0-255
-uint8_t quantize(double v) {
+uint8_t quantize(float v) {
 	v = (v < 0.0f) ? 0.0f : (v > 1.0f) ? 1.0f : v; // clamp 0 1
-	return (uint8_t)(v * 255.999);
+	return (uint8_t)(v * 255.999f);
 }
 
 void initialize_buffers() {
@@ -338,7 +339,7 @@ void initialize_buffers() {
 		if (image_buffer_hdr != NULL) { free(image_buffer_hdr); }
 		if (summed_weighted_radiance_buffer != NULL) { free(summed_weighted_radiance_buffer); }
 		if (summed_weights_buffer != NULL) { free(summed_weights_buffer); }
-		summed_weighted_radiance_buffer = malloc(width * height * sizeof(Vec));
+		summed_weighted_radiance_buffer = malloc(width * height * sizeof(DVec));
 		summed_weights_buffer = malloc(width * height * sizeof(double));
 		image_buffer_ldr = malloc(width * height * 4 * sizeof(uint8_t));
 		image_buffer_hdr = malloc(width * height * 3 * sizeof(float));
@@ -347,88 +348,88 @@ void initialize_buffers() {
 	}
 	// write zeros in radiance buffers
 	// no need to clear image_buffers as they are overwritten every time they are requested
-	memset(summed_weighted_radiance_buffer, 0, width * height * sizeof(Vec));
+	memset(summed_weighted_radiance_buffer, 0, width * height * sizeof(DVec));
 	memset(summed_weights_buffer, 0, width * height * sizeof(double));
 }
 
 // 1D Box Filter
-double box_1d(double x) {
-	// half-open interval [-radius, radius). Ensures pixels on a boundary are not used for two
+float box_1d(float x) {
+	// half-open interval[-radius, radius). Ensures pixels on a boundary are not used for two
 	// pixels, although in praxis this doesn't make any difference.
-	return (x >= -BOX_RADIUS && x < BOX_RADIUS) ? 1.0 : 0.0;
+	return (x >= -BOX_RADIUS && x < BOX_RADIUS) ? 1.0f : 0.0f;
 }
 
 // 1D Mitchell-Netravali filter function with B=1/3, C=1/3.
 // This filter is separable: W(x,y) = w(x) * w(y)
 // The support radius is strictly 2.0.
-double mitchell_1d(double x) {
-	x = fabs(x);
-	if (x >= 2.0) return 0.0;
+float mitchell_1d(float x) {
+	x = fabsf(x);
+	if (x >= 2.0f) return 0.0f;
 
 	// Hardcoded coefficients for B=1/3, C=1/3
 	// 0 <= x < 1: 1/6 * (7x^3 - 12x^2 + 16/3)
-	if (x < 1.0) {
-		return (7.0 * x * x * x - 12.0 * x * x + 16.0 / 3.0) * (1.0 / 6.0);
+	if (x < 1.0f) {
+		return (7.0f * x * x * x - 12.0f * x * x + 16.0f / 3.0f) * (1.0f / 6.0f);
 	}
 	// 1 <= x < 2: 1/6 * (-7/3x^3 + 12x^2 - 20x + 32/3)
 	else {
-		return ((-7.0 / 3.0) * x * x * x + 12.0 * x * x - 20.0 * x + 32.0 / 3.0) * (1.0 / 6.0);
+		return ((-7.0f / 3.0f) * x * x * x + 12.0f * x * x - 20.0f * x + 32.0f / 3.0f) * (1.0f / 6.0f);
 	}
 }
 
 // Calculates a weight based on the 2D Gaussian PDF.
 // This implements the formula: (1 / (2πσ²)) e^(-(x² + y²) / (2σ²))
-double gaussian_weight_2d(double offset_x, double offset_y, double sigma) {
-	double two_sigma_squared = 2.0 * sigma * sigma;
+float gaussian_weight_2d(float offset_x, float offset_y, float sigma) {
+	float two_sigma_squared = 2.0f * sigma * sigma;
 	// normalization constant: (1 / (2πσ²))
-	double norm_const = 1.0 / (M_PI * two_sigma_squared);
-	double r_squared = offset_x * offset_x + offset_y * offset_y;
-	return norm_const * exp(-r_squared / two_sigma_squared);
+	float norm_const = 1.0f / ((float)M_PI * two_sigma_squared);
+	float r_squared = offset_x * offset_x + offset_y * offset_y;
+	return norm_const * expf(-r_squared / two_sigma_squared);
 }
 
 // Calculates the Fresnel reflectance amount using Schlick's approximation.
 // Determines how much light reflects vs. refracts.
-double fresnel(Vec incident, Vec normal, bool is_inside, double ior) {
-	double R0 = ((1.0 - ior) / (1.0 + ior)) * ((1.0 - ior) / (1.0 + ior));
-	double cos_i = -vec_dot(incident, normal);
+float fresnel(Vec incident, Vec normal, bool is_inside, float ior) {
+	float R0 = ((1.0f - ior) / (1.0f + ior)) * ((1.0f - ior) / (1.0f + ior));
+	float cos_i = -vec_dot(incident, normal);
 	// If we're inside the medium, use the correct IOR for the calculation
 	if (is_inside) {
 		cos_i = -cos_i; // This can happen if ray is inside the sphere
 		// We must use the transmitted angle for Schlick when going from Denser -> Rarer
-		double sin2_t = ior * ior * (1.0 - cos_i * cos_i);
-		if (sin2_t > 1.0) return 1.0; // Total Internal Reflection
-		cos_i = sqrt(1.0 - sin2_t);
+		float sin2_t = ior * ior * (1.0f - cos_i * cos_i);
+		if (sin2_t > 1.0f) return 1.0f; // Total Internal Reflection
+		cos_i = sqrtf(1.0f - sin2_t);
 	}
 
-	return R0 + (1 - R0) * pow(1 - cos_i, 5);
+	return R0 + (1.0f - R0) * powf(1.0f - cos_i, 5.0f);
 }
 
 // Calculates the refraction direction using Snell's Law from 11.2.9
 // Also handles Total Internal Reflection.
-Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
-	double cos_i = -vec_dot(incident, normal);
-	assert(cos_i > 0.0);
+Vec refract(Vec incident, Vec normal, float eta, bool* total_int_refl) {
+	float cos_i = -vec_dot(incident, normal);
+	assert(cos_i > 0.0f);
 
-	double k = 1 - eta * eta * (1 - cos_i * cos_i);
-	*total_int_refl = k < 0;
+	float k = 1.0f - eta * eta * (1.0f - cos_i * cos_i);
+	*total_int_refl = k < 0.0f;
 	if (*total_int_refl) { // total internal reflection
 		return reflect(incident, normal);
 	} else {
-		Vec refl_dir = vec_add(vec_scale(incident, eta), vec_scale(normal, eta * cos_i - sqrt(k)));
+		Vec refl_dir = vec_add(vec_scale(incident, eta), vec_scale(normal, eta * cos_i - sqrtf(k)));
 		return vec_normalize(refl_dir);
 	}
 }
 
-// random double between 0.0 (inclusive) and 1.0 (exclusive)
-double random_double(pcg32_random_t* rng) {
-	return (double)pcg32_random_r(rng) / 4294967296.0;
+// random float between 0.0 (inclusive) and 1.0 (exclusive)
+float random_float(pcg32_random_t* rng) {
+	return (float)pcg32_random_r(rng) / 4294967296.0f;
 }
 
 // create orthonormal basis (local coordinate system) from a vector
 // 'n' is the normal vector, which will become the 'w' axis.
 void create_orthonormal_basis(Vec n, Vec* u, Vec* v, Vec* w) {
 	*w = n;
-	Vec a = (fabs(w->x) > 0.9) ? (Vec){0, 1, 0} : (Vec){1, 0, 0};
+	Vec a = (fabsf(w->x) > 0.9f) ? (Vec){0, 1, 0} : (Vec){1, 0, 0};
 	*v = vec_normalize(vec_cross(*w, a));
 	*u = vec_cross(*w, *v);
 }
@@ -436,14 +437,14 @@ void create_orthonormal_basis(Vec n, Vec* u, Vec* v, Vec* w) {
 // random direction on hemisphere with uniform distribution
 Vec sample_uniform_hemisphere(Vec normal, pcg32_random_t* rng) {
 	// Generate a random point on a unit sphere
-	double r1 = random_double(rng); // for z
-	double r2 = random_double(rng); // for phi
+	float r1 = random_float(rng); // for z
+	float r2 = random_float(rng); // for phi
 
-	double z = 1.0 - 2.0 * r1;
-	double r = sqrt(fmax(0.0, 1.0 - z * z));
-	double phi = 2.0 * M_PI * r2;
+	float z = 1.0f - 2.0f * r1;
+	float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+	float phi = 2.0f * (float)M_PI * r2;
 
-	Vec sample_local = {r * cos(phi), r * sin(phi), z};
+	Vec sample_local = {r * cosf(phi), r * sinf(phi), z};
 	Vec u, v, w; // local coordinate system
 	create_orthonormal_basis(normal, &u, &v, &w);
 	// local -> world
@@ -451,22 +452,22 @@ Vec sample_uniform_hemisphere(Vec normal, pcg32_random_t* rng) {
 							   vec_scale(w, sample_local.z));
 
 	// ensure the sample is in the correct hemisphere
-	if (vec_dot(sample_world, normal) < 0.0) { return vec_scale(sample_world, -1.0); }
+	if (vec_dot(sample_world, normal) < 0.0f) { return vec_scale(sample_world, -1.0f); }
 	return sample_world;
 }
 
 // random direction on hemisphere proportional to cosine-weighted solid angle
 Vec sample_cosine_hemisphere(Vec normal, pcg32_random_t* rng) {
-	double r1 = random_double(rng);
-	double r2 = random_double(rng);
+	float r1 = random_float(rng);
+	float r2 = random_float(rng);
 
 	// Uniformly sample a disk
-	double r = sqrt(r1);
-	double phi = 2.0 * M_PI * r2;
+	float r = sqrtf(r1);
+	float phi = 2.0f * (float)M_PI * r2;
 
 	// Project disk to hemisphere (z = sqrt(1 - r^2))
 	// In local space, z is the cosine of the angle with the normal
-	Vec sample_local = {r * cos(phi), r * sin(phi), sqrt(fmax(0.0, 1.0 - r1))};
+	Vec sample_local = {r * cosf(phi), r * sinf(phi), sqrtf(fmaxf(0.0f, 1.0f - r1))};
 	Vec u, v, w; // local coordinate system
 	create_orthonormal_basis(normal, &u, &v, &w);
 	// local -> world
@@ -478,8 +479,8 @@ Vec sample_cosine_hemisphere(Vec normal, pcg32_random_t* rng) {
 
 float clamp_survival_probability(float probability) {
 	// Clamp probability to ensure we don't divide by zero or kill too aggressively
-	if (probability < 0.1) return 0.1;
-	if (probability > 0.95) return 0.95;
+	if (probability < 0.1f) return 0.1f;
+	if (probability > 0.95f) return 0.95f;
 	return probability;
 }
 
@@ -498,7 +499,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
 
 		Vec radiosity = hit_prim->color;
-		Vec radiance = vec_scale(radiosity, 1.0 / M_PI);
+		Vec radiance = vec_scale(radiosity, 1.0f / (float)M_PI);
 		return radiance;
 	}
 	case DIFFUSE: {
@@ -506,14 +507,14 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 		Vec normal = hit.n;
 
-		double survival_prob = 1.0; // Default to 100% survival
+		float survival_prob = 1.0f; // Default to 100% survival
 #ifdef ENABLE_RUSSIAN_ROULETTE
 		if (depth >= RR_START_DEPTH) {
 			// Probability is based on how 'bright' the surface is.
 			// Darker surfaces are more likely to terminate.
 			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
 			// Terminate based on survival probability
-			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
+			if (random_float(rng) > survival_prob) { return (Vec){0, 0, 0}; }
 		}
 #endif
 
@@ -525,7 +526,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 		// russian roulette bias correction: scale the albedo by the inverse probability to
 		// compensate for killed rays.
-		Vec effective_albedo = vec_scale(hit_prim->color, 1.0 / survival_prob);
+		Vec effective_albedo = vec_scale(hit_prim->color, 1.0f / survival_prob);
 
 		// The PDF is (cos_theta / PI).
 		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
@@ -533,15 +534,15 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		return vec_hadamard_prod(effective_albedo, incoming_radiance);
 	}
 	case MIRROR: {
-		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
+		Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
 
-		double survival_prob = 1.0;
+		float survival_prob = 1.0f;
 #ifdef ENABLE_RUSSIAN_ROULETTE
 		if (depth >= RR_START_DEPTH) {
 			// Mirrors are usually bright, but if it's a dark mirror, we might kill it
 			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
 			// Terminate based on survival probability
-			if (random_double(rng) > survival_prob) { return (Vec){0, 0, 0}; }
+			if (random_float(rng) > survival_prob) { return (Vec){0, 0, 0}; }
 		}
 #endif
 
@@ -551,17 +552,17 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec incoming = radiance_from_ray(refl_ray, depth + 1, rng);
 		// russian roulette bias correction
-		Vec effective_reflectance = vec_scale(hit_prim->color, 1.0 / survival_prob);
+		Vec effective_reflectance = vec_scale(hit_prim->color, 1.0f / survival_prob);
 		return vec_hadamard_prod(incoming, effective_reflectance);
 	}
 	case REFRACTIVE: {
-		double ior = hit_prim->color.x;
-		double eta = hit.inside ? ior : 1.0 / ior;
+		float ior = hit_prim->color.x;
+		float eta = hit.inside ? ior : 1.0f / ior;
 		// Calculate how much light reflects using the Fresnel term.
-		double reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
-		Vec normal = hit.inside ? vec_scale(hit.n, -1.0) : hit.n; // if inside, flip normal
+		float reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
+		Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
 
-		if (reflectance > random_double(rng)) { // do either reflection or refraction
+		if (reflectance > random_float(rng)) { // do either reflection or refraction
 			// reflection
 			Ray refl_ray = {hit.p, reflect(r.dir, normal)};
 			refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
@@ -595,15 +596,17 @@ void write_image(bool update_ldr, bool update_hdr) {
 			// step unnecessary. But since we are doing a discrete sum, our total weight
 			// will not be exactly 1.0, so we manually keep track of it.
 			double weight = summed_weights_buffer[radiance_index];
-			Vec radiance = (weight > 0) ? vec_scale(summed_weighted_radiance_buffer[radiance_index],
-													1.0 / weight)
-										: (Vec){0, 0, 0};
+			Vec radiance = (weight > 0.0) ? vec_scale((Vec){(float)summed_weighted_radiance_buffer[radiance_index].x,
+															(float)summed_weighted_radiance_buffer[radiance_index].y,
+															(float)summed_weighted_radiance_buffer[radiance_index].z},
+													  1.0f / (float)weight)
+										  : (Vec){0, 0, 0};
 
 			if (update_hdr) {
 				int image_index = radiance_index * 3; // HDR has 3 components (RGB)
-				image_buffer_hdr[image_index + 0] = (float)radiance.x;
-				image_buffer_hdr[image_index + 1] = (float)radiance.y;
-				image_buffer_hdr[image_index + 2] = (float)radiance.z;
+				image_buffer_hdr[image_index + 0] = radiance.x;
+				image_buffer_hdr[image_index + 1] = radiance.y;
+				image_buffer_hdr[image_index + 2] = radiance.z;
 			}
 
 			if (update_ldr) {
@@ -615,7 +618,7 @@ void write_image(bool update_ldr, bool update_hdr) {
 				image_buffer_ldr[image_index + 0] = quantize(ldr_color.x);
 				image_buffer_ldr[image_index + 1] = quantize(ldr_color.y);
 				image_buffer_ldr[image_index + 2] = quantize(ldr_color.z);
-				image_buffer_ldr[image_index + 3] = quantize(1.0);
+				image_buffer_ldr[image_index + 3] = quantize(1.0f);
 			}
 		}
 	}
@@ -648,16 +651,16 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 	filter_type = (FilterType)p_filter_type;
 	initialize_buffers();
 
-	Vec focus_point = {p_focus_x, p_focus_y, p_focus_z};
+	Vec focus_point = {(float)p_focus_x, (float)p_focus_y, (float)p_focus_z};
 	// Calculate Camera Position using spherical coordinates around the focus point
-	double cam_x = focus_point.x + p_cam_dist * sin(p_cam_angle_y) * cos(p_cam_angle_x);
-	double cam_y = focus_point.y + p_cam_dist * sin(p_cam_angle_x);
-	double cam_z = focus_point.z + p_cam_dist * cos(p_cam_angle_y) * cos(p_cam_angle_x);
+	float cam_x = (float)(p_focus_x + p_cam_dist * sin(p_cam_angle_y) * cos(p_cam_angle_x));
+	float cam_y = (float)(p_focus_y + p_cam_dist * sin(p_cam_angle_x));
+	float cam_z = (float)(p_focus_z + p_cam_dist * cos(p_cam_angle_y) * cos(p_cam_angle_x));
 	camera_origin = (Vec){cam_x, cam_y, cam_z};
 
 	// Create the cameras coordinate system (basis vectors) 5.1.6
 	forward = vec_normalize(vec_sub(focus_point, camera_origin));
-	Vec world_up = {0, 1, 0};
+	Vec world_up = {0, 1.0f, 0};
 	right = vec_normalize(vec_cross(forward, world_up));
 	up = vec_normalize(vec_cross(right, forward));
 
@@ -667,11 +670,11 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 EMSCRIPTEN_KEEPALIVE
 void render_refine(unsigned int n_samples) {
 
-	const double aspect_ratio = (double)width / height;
-	const double fov_y = 30 * 3.141 / 180.0;
-	const double fov_scale = tan(fov_y / 2.0); // 5.1.4
+	const float aspect_ratio = (float)width / height;
+	const float fov_y = 30.0f * 3.141f / 180.0f;
+	const float fov_scale = tanf(fov_y / 2.0f); // 5.1.4
 
-	double filter_radius;
+	float filter_radius;
 	if (filter_type == FILTER_BOX) {
 		filter_radius = BOX_RADIUS;
 	} else if (filter_type == FILTER_GAUSSIAN) {
@@ -715,18 +718,18 @@ void render_refine(unsigned int n_samples) {
 
 				// Sample splatting strategy:
 				// Pick a specific point on the continuous film plane within this pixel.
-				// We jitter by [-0.5, 0.5] to cover the pixel area evenly.
+				// We jitter by[-0.5, 0.5] to cover the pixel area evenly.
 				// TODO: Use a better more uniform distribution
-				double jitter_x = random_double(&rng_state) - 0.5;
-				double jitter_y = random_double(&rng_state) - 0.5;
+				float jitter_x = random_float(&rng_state) - 0.5f;
+				float jitter_y = random_float(&rng_state) - 0.5f;
 
-				double film_x = x + 0.5 + jitter_x;
-				double film_y = y + 0.5 + jitter_y;
+				float film_x = x + 0.5f + jitter_x;
+				float film_y = y + 0.5f + jitter_y;
 
 				// 5.2.2
 				// Map coordinates to the view plane (-1;1)
-				double world_x = (2.0 * film_x / width - 1.0);
-				double world_y = 1.0 - 2.0 * film_y / height;
+				float world_x = (2.0f * film_x / width - 1.0f);
+				float world_y = 1.0f - 2.0f * film_y / height;
 
 				// Calculate the direction for the ray for this sample
 				Vec right_comp = vec_scale(right, world_x * fov_scale * aspect_ratio);
@@ -739,14 +742,14 @@ void render_refine(unsigned int n_samples) {
 				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
 				// Determine the integer range of pixels where the pixel center (x + 0.5) falls
 				// within the filter radius of the sample point (film_x, film_y).
-				int min_nx = (int)ceil(film_x - 0.5 - filter_radius);
-				int max_nx = (int)floor(film_x - 0.5 + filter_radius) + 1;
-				int min_ny = (int)ceil(film_y - 0.5 - filter_radius);
-				int max_ny = (int)floor(film_y - 0.5 + filter_radius) + 1;
+				int min_nx = (int)ceilf(film_x - 0.5f - filter_radius);
+				int max_nx = (int)floorf(film_x - 0.5f + filter_radius) + 1;
+				int min_ny = (int)ceilf(film_y - 0.5f - filter_radius);
+				int max_ny = (int)floorf(film_y - 0.5f + filter_radius) + 1;
 
 				// with box filtering only the original pixel should be covered (at least with
 				// radius 0.5 or lower)
-				if (filter_type == FILTER_BOX && BOX_RADIUS <= 0.5) {
+				if (filter_type == FILTER_BOX && BOX_RADIUS <= 0.5f) {
 					assert(min_nx == x && max_nx == x + 1 && min_ny == y && max_ny == y + 1);
 				}
 
@@ -758,10 +761,10 @@ void render_refine(unsigned int n_samples) {
 						if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
 							// Calculate weight based on distance from sample to neighbor pixel
 							// center
-							double dist_x = film_x - (nx + 0.5);
-							double dist_y = film_y - (ny + 0.5);
+							float dist_x = film_x - (nx + 0.5f);
+							float dist_y = film_y - (ny + 0.5f);
 
-							double weight;
+							float weight;
 							if (filter_type == FILTER_BOX) {
 								weight = box_1d(dist_x) * box_1d(dist_y);
 							} else if (filter_type == FILTER_GAUSSIAN) {
@@ -780,18 +783,19 @@ void render_refine(unsigned int n_samples) {
 							// Atomics are required here because multiple threads may splat
 							// to the same neighbor pixel simultaneously.
 							#pragma omp atomic
-							summed_weighted_radiance_buffer[index].x += weighted_rad.x;
+							summed_weighted_radiance_buffer[index].x += (double)weighted_rad.x;
 							#pragma omp atomic
-							summed_weighted_radiance_buffer[index].y += weighted_rad.y;
+							summed_weighted_radiance_buffer[index].y += (double)weighted_rad.y;
 							#pragma omp atomic
-							summed_weighted_radiance_buffer[index].z += weighted_rad.z;
+							summed_weighted_radiance_buffer[index].z += (double)weighted_rad.z;
 
 							#pragma omp atomic
-							summed_weights_buffer[index] += weight;
+							summed_weights_buffer[index] += (double)weight;
 							#else
-							summed_weighted_radiance_buffer[index] =
-								vec_add(summed_weighted_radiance_buffer[index], weighted_rad);
-							summed_weights_buffer[index] += weight;
+							summed_weighted_radiance_buffer[index].x += (double)weighted_rad.x;
+							summed_weighted_radiance_buffer[index].y += (double)weighted_rad.y;
+							summed_weighted_radiance_buffer[index].z += (double)weighted_rad.z;
+							summed_weights_buffer[index] += (double)weight;
 							#endif
 							// clang-format on
 						}
