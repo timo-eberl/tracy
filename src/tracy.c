@@ -422,7 +422,9 @@ Vec refract(Vec incident, Vec normal, float eta, bool* total_int_refl) {
 
 // random float between 0.0 (inclusive) and 1.0 (exclusive)
 float random_float(pcg32_random_t* rng) {
-	return (float)pcg32_random_r(rng) / 4294967296.0f;
+	// Shift out the bottom 8 bits to get a perfect 24-bit integer
+	// Multiply by 2^-24 (which is exactly 1.0f / 16777216.0f)
+	return (pcg32_random_r(rng) >> 8) * 0x1.0p-24f;
 }
 
 // create orthonormal basis (local coordinate system) from a vector
@@ -723,8 +725,8 @@ void render_refine(unsigned int n_samples) {
 				float jitter_x = random_float(&rng_state) - 0.5f;
 				float jitter_y = random_float(&rng_state) - 0.5f;
 
-				float film_x = x + 0.5f + jitter_x;
-				float film_y = y + 0.5f + jitter_y;
+				float film_x = x + (0.5f + jitter_x);
+				float film_y = y + (0.5f + jitter_y);
 
 				// 5.2.2
 				// Map coordinates to the view plane (-1;1)
