@@ -403,22 +403,6 @@ double fresnel(Vec incident, Vec normal, bool is_inside, double ior) {
 	return R0 + (1 - R0) * pow(1 - cos_i, 5);
 }
 
-bool is_in_shadow(Vec surf_pos, Vec surf_normal, Vec light_pos) {
-	Vec light_direction = vec_normalize(vec_sub(light_pos, surf_pos));
-	Ray shadow_ray = {surf_pos, light_direction};
-	shadow_ray.origin = vec_add(shadow_ray.origin, vec_scale(surf_normal, SELF_OCCLUSION_DELTA));
-	HitInfo shadow_ray_hit;
-	bool is_in_shadow = intersect_scene(&shadow_ray, &shadow_ray_hit, &(Primitive*){NULL});
-	if (is_in_shadow) { // check if occluder is further away than light source
-		double hit_dist_sq = shadow_ray_hit.t * shadow_ray_hit.t;
-		double light_dist_sq = vec_length_squared(vec_sub(light_pos, shadow_ray.origin));
-		if (hit_dist_sq > light_dist_sq) { // risk of self occlusion?
-			is_in_shadow = false;
-		}
-	}
-	return is_in_shadow;
-}
-
 // Calculates the refraction direction using Snell's Law from 11.2.9
 // Also handles Total Internal Reflection.
 Vec refract(Vec incident, Vec normal, double eta, bool* total_int_refl) {
