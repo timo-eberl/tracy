@@ -718,7 +718,7 @@ void render_refine(unsigned int n_samples) {
 
 				// Sample splatting strategy:
 				// Pick a specific point on the continuous film plane within this pixel.
-				// We jitter by[-0.5, 0.5] to cover the pixel area evenly.
+				// We jitter by[-0.5, 0.5) to cover the pixel area evenly.
 				// TODO: Use a better more uniform distribution
 				float jitter_x = random_float(&rng_state) - 0.5f;
 				float jitter_y = random_float(&rng_state) - 0.5f;
@@ -742,10 +742,10 @@ void render_refine(unsigned int n_samples) {
 				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
 				// Determine the integer range of pixels where the pixel center (x + 0.5) falls
 				// within the filter radius of the sample point (film_x, film_y).
-				int min_nx = (int)ceilf(film_x - 0.5f - filter_radius);
-				int max_nx = (int)floorf(film_x - 0.5f + filter_radius) + 1;
-				int min_ny = (int)ceilf(film_y - 0.5f - filter_radius);
-				int max_ny = (int)floorf(film_y - 0.5f + filter_radius) + 1;
+				int min_nx = x + (int)floorf(jitter_x - filter_radius) + 1;
+				int max_nx = x + (int)floorf(jitter_x + filter_radius) + 1;
+				int min_ny = y + (int)floorf(jitter_y - filter_radius) + 1;
+				int max_ny = y + (int)floorf(jitter_y + filter_radius) + 1;
 
 				// with box filtering only the original pixel should be covered (at least with
 				// radius 0.5 or lower)
@@ -761,8 +761,8 @@ void render_refine(unsigned int n_samples) {
 						if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
 							// Calculate weight based on distance from sample to neighbor pixel
 							// center
-							float dist_x = film_x - (nx + 0.5f);
-							float dist_y = film_y - (ny + 0.5f);
+							float dist_x = (x - nx) + jitter_x;
+							float dist_y = (y - ny) + jitter_y;
 
 							float weight;
 							if (filter_type == FILTER_BOX) {
