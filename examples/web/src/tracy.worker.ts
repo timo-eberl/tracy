@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // tell TypeScript this file is in a worker context -> avoids compile error
 
-import { CameraProperties, RenderSettings } from './tracy';
+import { RenderSettings, RenderStatus } from './tracy';
 import ModuleFactory, { MainModule } from './tracy_c';
 
 // We create a shared memory that we use to initialize our wasm module with
@@ -14,9 +14,7 @@ function degToRad(degree: number) { return degree / 360 * 2 * Math.PI; }
 
 // Listen for messages from the main thread
 self.onmessage = async (event) => {
-	const { command, s } = event.data as {
-		command: 'renderFast' | 'renderFull', s: RenderSettings,
-	};
+	const s = event.data as RenderSettings;
 
 	// Await initialization of WebAssembly Module
 	const Module = await modulePromise;
@@ -27,38 +25,27 @@ self.onmessage = async (event) => {
 		s.camera.focusPoint.x, s.camera.focusPoint.y, s.camera.focusPoint.z
 	);
 
-	if (command === 'renderFast') {
-		Module._render_refine(s.samplesPerPixel);
+	let samplesPerRun = 1;
+	let samplesRemaining = s.samplesPerPixel;
+	let status: RenderStatus = {
+		samplesCompleted: 0,
+		finished: false,
+	};
+
+	while (samplesRemaining > 0) {
+		// either a full run, or whatever is left
+		const samplesForThisRun = Math.min(samplesRemaining, samplesPerRun);
+		Module._render_refine(samplesForThisRun);
 		const bufferPtr = Module._update_image_ldr();
+		samplesRemaining -= samplesForThisRun;
+
+		status.samplesCompleted += samplesForThisRun;
+		status.finished = (samplesRemaining === 0);
+
 		self.postMessage({
-			sharedMemory, bufferPtr, width: s.width, height: s.height, finished: true,
-			samplesCompleted: s.samplesPerPixel
+			sharedMemory, bufferPtr, width: s.width, height: s.height, status
 		});
-	}
-	else if (command === 'renderFull') {
-		let samplesPerRun = 1;
-		let samplesRemaining = s.samplesPerPixel;
-		let samplesCompleted = 0;
 
-		while (samplesRemaining > 0) {
-			// either a full run, or whatever is left
-			const samplesForThisRun = Math.min(samplesRemaining, samplesPerRun);
-			Module._render_refine(samplesForThisRun);
-			const bufferPtr = Module._update_image_ldr();
-			samplesRemaining -= samplesForThisRun;
-			samplesCompleted += samplesForThisRun;
-
-			const isFinished = (samplesRemaining === 0);
-			self.postMessage({
-				sharedMemory, bufferPtr, width: s.width, height: s.height, finished: isFinished,
-				samplesCompleted
-			});
-
-			samplesPerRun++;
-		}
-	}
-	else {
-		console.error("Worker: Unknown command:", command);
-		return;
+		samplesPerRun++;
 	}
 };

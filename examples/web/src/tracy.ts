@@ -1,9 +1,8 @@
 // public API of our module
 export interface TracyModule {
-	renderFast: (settings: RenderSettings) => Promise<void>;
-	renderFull: (settings: RenderSettings) => Promise<void>;
+	render: (settings: RenderSettings) => Promise<void>;
 	cancel: () => void;
-	onFrame?: (samplesCompleted: number) => void;
+	onFrame?: (status: RenderStatus) => void;
 }
 
 export interface RenderSettings {
@@ -14,6 +13,11 @@ export interface RenderSettings {
 	filterType: number,
 	camera: CameraProperties,
 	samplesPerPixel: number,
+}
+
+export interface RenderStatus {
+	samplesCompleted: number,
+	finished: boolean,
 }
 
 export interface CameraProperties {
@@ -36,8 +40,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 
 	// Create the API object first so the worker can access api.onFrame
 	const api: TracyModule = {
-		renderFast: (s) => callWorker('renderFast', s),
-		renderFull: (s) => callWorker('renderFull', s),
+		render: (s) => callWorker(s),
 		cancel: cancel
 	};
 
@@ -47,20 +50,20 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 		// This requires a bundler (like Vite, Webpack, Parcel) to work correctly.
 		worker = new Worker(new URL('./tracy.worker.ts', import.meta.url), { type: 'module' });
 
-		// Listen for messages (the final rendered image) from the worker
+		// Listen for messages (a rendered image) from the worker
 		worker.onmessage = (event) => {
-			const { sharedMemory, bufferPtr, width, height, finished, samplesCompleted } = event.data as {
+			const { sharedMemory, bufferPtr, width, height, status } = event.data as {
 				sharedMemory: WebAssembly.Memory; bufferPtr: number; width: number; height: number;
-				finished: boolean; samplesCompleted: number;
+				status: RenderStatus;
 			};
 			// Create a view into the WebAssembly memory
 			// sharedMemory.buffer is "all of memory", bufferPtr is an offset on it
 			const rawArray = new Uint8ClampedArray(sharedMemory.buffer, bufferPtr, width * height * 4);
 			updateImage(context, rawArray, width, height);
 
-			if (api.onFrame) api.onFrame(samplesCompleted);
+			if (api.onFrame) api.onFrame(status);
 
-			if (finished && resolveCurrentRender) {
+			if (status.finished && resolveCurrentRender) {
 				resolveCurrentRender();
 				resolveCurrentRender = null;
 			}
@@ -79,9 +82,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 		}
 	}
 
-	function callWorker(
-		command: 'renderFast' | 'renderFull', s: RenderSettings
-	) {
+	function callWorker(s: RenderSettings) {
 		if (resolveCurrentRender) {
 			return Promise.reject(new Error("A render is already in progress."));
 		}
@@ -89,7 +90,7 @@ export function create(context: CanvasRenderingContext2D): TracyModule {
 			resolveCurrentRender = resolve;
 		});
 
-		worker.postMessage({ command, s });
+		worker.postMessage(s);
 		return renderPromise;
 	}
 

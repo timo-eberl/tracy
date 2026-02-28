@@ -29,11 +29,14 @@ function main() {
 	setupCameraControls();
 	tracy = Tracy.create(context);
 
-	tracy.onFrame = (samplesCompleted) => { 
-		isWaitingForFirstSample = false; 
-		uiStatus.innerText = `Samples: ${samplesCompleted}`;
+	tracy.onFrame = (status) => {
+		isWaitingForFirstSample = false;
+		uiStatus.innerText =
+			`${status.finished ? "Done." : "Rendering..."}
+			Samples: ${status.samplesCompleted}
+		`;
 	};
-	
+
 	// Start the infinite loop that watches for camera changes
 	requestAnimationFrame(renderLoop);
 }
@@ -43,7 +46,7 @@ function clamp(v: number, min: number, max: number) { return Math.min(Math.max(v
 function setupCameraControls() {
 	canvas.onmousedown = (event) => { if (event.button === 0) isMouseDown = true; };
 	document.onmouseup = (event) => { if (event.button === 0) isMouseDown = false; };
-	
+
 	document.onmousemove = (event) => {
 		if (isMouseDown) {
 			camera.rotation.x = clamp(
@@ -54,7 +57,7 @@ function setupCameraControls() {
 			cameraChanged = true; // Signal that the render needs to restart
 		}
 	};
-	
+
 	canvas.onwheel = (event) => {
 		let delta = -event.deltaY / 120.0;
 		delta = 1.0 - (delta * 0.08);
@@ -82,7 +85,7 @@ async function drawFull() {
 
 	// Read the live UI values right before sending them to the Web Worker
 	// If tracy.cancel() is called elsewhere, this await instantly resolves cleanly
-	await tracy.renderFull({
+	await tracy.render({
 		scene: parseInt(uiScene.value, 10),
 		maxDepth: parseInt(uiDepth.value, 10),
 		width: renderWidth,
@@ -108,7 +111,7 @@ function renderLoop() {
 		tracy.cancel(); // Instantly kill the ongoing render worker
 		drawFull();     // Fire-and-forget a new progressive render
 	}
-	
+
 	requestAnimationFrame(renderLoop);
 }
 
