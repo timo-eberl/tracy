@@ -23,7 +23,7 @@ const emflags = [
 	'-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency', // required for SimpleOMP
 	'-fopenmp', '-pthread',
 	'--emit-tsd', 'tracy_c.d.ts',
-	'-Wall', '-Wextra',							// enable all warnings
+	'-Wall', // enable warnings
 ];
 // Release Flags
 const emRelease = [
