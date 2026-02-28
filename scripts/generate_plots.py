@@ -116,8 +116,6 @@ def generate_convergence_plots(log_dir, output_dir):
                 rmses,
                 label=variant.upper(),
                 color=get_color(i),
-                marker="o",
-                markersize=4,
                 linewidth=2,
             )
 
