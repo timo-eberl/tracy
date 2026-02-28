@@ -75,6 +75,15 @@ jobs:
           cache-from: type=gha # use docker layer caching
           cache-to: type=gha,mode=max
 
+      - name: Run Unit Tests
+        # We intentionally do not use the caching here
+        run: |
+          docker run \
+            --rm \
+            -v $(pwd):/app \
+            -w /app rmse-bench \
+            zig build test
+
       - name: Run Benchmarks
         run: |
           # clean render output directory
