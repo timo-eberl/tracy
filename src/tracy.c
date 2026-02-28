@@ -32,7 +32,7 @@
 // (clamped) data will be written.
 #define TONE_MAP true
 
-#define GLOBAL_SEED 8155015243198362000ULL // Global seed for RNG
+#define GLOBAL_SEED 7155015243198362000ULL // Global seed for RNG
 
 // offset used for rays. may need to be adjusted depending on scene scale
 #define SELF_OCCLUSION_DELTA 0.00001f
