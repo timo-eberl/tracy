@@ -42,21 +42,33 @@ typedef struct { float x, y, z; } Vec;
 typedef struct { double x, y, z; } DVec;
 typedef struct { Vec origin; Vec dir; } Ray;
 
-// color is treated differently depending on the material type
-// DIFFUSE: perfect lambertian diffuse, color=albedo
-// EMISSIVE: only emission, color=radiosity (W/m^2)
-// MIRROR: perfect reflection, color=rho, rho describes the ratio of reflected radiance
-// REFRACTIVE: reflection and refraction, color.x=ior
-typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
-// Geometry Data Structures
+typedef enum { SPHERE, TRIANGLE } ShapeType;
 typedef struct { Vec center; float radius; } Sphere;
-// one_sided is useful for thin geometry, like paper
+// one_sided triangles are only hit from their front side (CCW ordering)
 typedef struct { Vec v0, v1, v2; Vec edge1, edge2; bool one_sided; } Triangle;
-typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
+typedef struct {
+	union { Sphere sphere; Triangle triangle; } data;
+	ShapeType type;
+} Shape;
+
+typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
+typedef struct { Vec albedo; } DiffuseMaterial;
+typedef struct { Vec radiosity; /* in W/m^2 */ } EmissiveMaterial;
+typedef struct { Vec rho; /* describes the ratio of reflected radiance */ } MirrorMaterial;
+typedef struct { float ior; /* index of refraction */ } RefractiveMaterial;
+typedef struct {
+	union {
+		DiffuseMaterial diffuse; EmissiveMaterial emissive; MirrorMaterial mirror;
+		RefractiveMaterial refractive;
+	} data;
+	MaterialType type;
+	bool thin_wall; // thin geometry, backfaces are treated like frontfaces.
+} Material;
+
 // The generic Scene Object
 typedef struct {
-	union { Sphere sphere; Triangle triangle; } shape;
-	Vec color; MaterialType material; ShapeType type; bool thin_wall;
+	Shape shape;
+	Material material;
 } Primitive;
 typedef struct { Primitive* primitives; int size; } Scene;
 
@@ -83,54 +95,67 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // room dimensions: (3,2.4,4)
 
 // clang-format off
+#define MAT_RED    (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.25, 0.25}}
+#define MAT_BLUE   (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.25, 0.25, 0.75}}
+#define MAT_WHITE  (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.75, 0.75}}
+#define MAT_MIRROR (Material){.type = MIRROR, .data.mirror.rho = {1,1,1}}
+#define MAT_GLASS  (Material){.type = REFRACTIVE, .data.refractive.ior = 1.5}
+#define MAT_LIGHT  (Material){.type = EMISSIVE, .data.emissive.radiosity = {5*21.5, 5*21.5, 5*21.5}}
+#define MAT_SHIELD (Material){.type = DIFFUSE, .data.diffuse.albedo={0.1,0.1,0.1}, .thin_wall=true}
+
 Primitive scene_cornell[] = {
-	// Left Wall (x = -1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}, .one_sided=true}},
-	// Right Wall (x = 1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .shape.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .shape.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, .one_sided=true}},
-	// Back Wall (z = -2.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}, .one_sided=true}},
-	// Bottom (y = 0.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}, .one_sided=true}},
-	// Top (y = 2.4)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}, .one_sided=true}},
+	// Left Wall
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 0,   2.0},{-1.5, 0,  -2.0},{-1.5, 2.4,-2.0},.one_sided=true}, .material=MAT_RED},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 0,   2.0},{-1.5, 2.4,-2.0},{-1.5, 2.4, 2.0},.one_sided=true}, .material=MAT_RED},
+	// Right Wall
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 1.5, 0,   2.0},{ 1.5, 2.4,-2.0},{ 1.5, 0,  -2.0},.one_sided=true}, .material=MAT_BLUE},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 1.5, 0,   2.0},{ 1.5, 2.4, 2.0},{ 1.5, 2.4,-2.0},.one_sided=true}, .material=MAT_BLUE},
+	// Back Wall
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 0,  -2.0},{ 1.5, 0,  -2.0},{ 1.5, 2.4,-2.0},.one_sided=true}, .material=MAT_WHITE},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 0,  -2.0},{ 1.5, 2.4,-2.0},{-1.5, 2.4,-2.0},.one_sided=true}, .material=MAT_WHITE},
+	// Bottom
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 0,   2.0},{ 1.5, 0,   2.0},{ 1.5, 0,  -2.0},.one_sided=true}, .material=MAT_WHITE},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 0,   2.0},{ 1.5, 0,  -2.0},{-1.5, 0,  -2.0},.one_sided=true}, .material=MAT_WHITE},
+	// Top
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 2.4, 2.0},{ 1.5, 2.4,-2.0},{ 1.5, 2.4, 2.0},.one_sided=true}, .material=MAT_WHITE},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.5, 2.4, 2.0},{-1.5, 2.4,-2.0},{ 1.5, 2.4,-2.0},.one_sided=true}, .material=MAT_WHITE},
 	// Mirror Sphere
-	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .shape.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={-0.7, 0.5,-0.6}, .radius=0.5}, .material=MAT_MIRROR},
 	// Glass Sphere
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.7, 0.5, 0.6}, .radius=0.5}, .material=MAT_GLASS},
 	// Area Light (1x1m Rect)
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, .one_sided=true}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.399, 0.5},{ 0.5, 2.399,-0.5},{ 0.5, 2.399, 0.5},.one_sided=true}, .material=MAT_LIGHT},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.399, 0.5},{-0.5, 2.399,-0.5},{ 0.5, 2.399,-0.5},.one_sided=true}, .material=MAT_LIGHT},
 	// Light Shield - 4 Sides Angled 45 Degree
 	// Side 1: Front
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4, 0.5},{ 0.7, 2.2, 0.7},{ 0.5, 2.4, 0.5}}, .material=MAT_SHIELD},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4, 0.5},{-0.7, 2.2, 0.7},{ 0.7, 2.2, 0.7}}, .material=MAT_SHIELD},
 	// Side 2: Right
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4, 0.5},{ 0.7, 2.2,-0.7},{ 0.5, 2.4,-0.5}}, .material=MAT_SHIELD},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4, 0.5},{ 0.7, 2.2, 0.7},{ 0.7, 2.2,-0.7}}, .material=MAT_SHIELD},
 	// Side 3: Back
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4,-0.5},{-0.7, 2.2,-0.7},{-0.5, 2.4,-0.5}}, .material=MAT_SHIELD},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4,-0.5},{ 0.7, 2.2,-0.7},{-0.7, 2.2,-0.7}}, .material=MAT_SHIELD},
 	// Side 4: Left
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4,-0.5},{-0.7, 2.2, 0.7},{-0.5, 2.4, 0.5}}, .material=MAT_SHIELD},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4,-0.5},{-0.7, 2.2,-0.7},{-0.7, 2.2, 0.7}}, .material=MAT_SHIELD},
 };
+
+
+#define MAT_GROUND       (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.75, 0.75}, .thin_wall = true}
+#define MAT_LIGHT_GREEN  (Material){.type = EMISSIVE, .data.emissive.radiosity = {1*21.5,5*21.5,1*21.5}}
+#define MAT_LIGHT_PURPLE (Material){.type = EMISSIVE, .data.emissive.radiosity = {1*21.5,1*21.5,5*21.5}}
 
 Primitive scene_caustics[] = {
 	// Floor
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-2, 0, -2},{ 0, 0, 2},{ 2, 0, -2}}, .material=MAT_GROUND},
 	// Glass
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = {-0.3, 0.3, 0.0}, .radius = 0.2}},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.0, 1.3, 0.0}, .radius=0.75}, .material=MAT_MIRROR},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.3, 0.3, 0.0}, .radius=0.20}, .material=MAT_MIRROR},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={-0.3, 0.3, 0.0}, .radius=0.20}, .material=MAT_MIRROR},
 	// Light
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}, .one_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}, .one_sided=true}},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 5.0, 0.5},{ 0.5, 5.0,-0.5},{ 0.5, 5.0, 0.5},.one_sided=true}, .material=MAT_LIGHT_GREEN},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 5.0, 0.5},{-0.5, 5.0,-0.5},{ 0.5, 5.0,-0.5},.one_sided=true}, .material=MAT_LIGHT_PURPLE},
 };
 // clang-format on
 
@@ -282,12 +307,13 @@ bool intersect_scene(const Ray* r, HitInfo* closest_hit, Primitive** hit_primiti
 		HitInfo current_hit;
 		bool hit = false;
 
-		switch (current_scene.primitives[i].type) {
-		case SHAPE_SPHERE:
-			hit = intersect_sphere(r, &current_scene.primitives[i].shape.sphere, &current_hit);
+		switch (current_scene.primitives[i].shape.type) {
+		case SPHERE:
+			hit = intersect_sphere(r, &current_scene.primitives[i].shape.data.sphere, &current_hit);
 			break;
-		case SHAPE_TRIANGLE:
-			hit = intersect_triangle(r, &current_scene.primitives[i].shape.triangle, &current_hit);
+		case TRIANGLE:
+			hit = intersect_triangle(r, &current_scene.primitives[i].shape.data.triangle,
+									 &current_hit);
 			break;
 		}
 
@@ -497,16 +523,16 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	// Handle thin walls (think of paper or leaves)
 	// If we hit the backface of a thin-walled object, treat it as a frontface
-	if (hit_prim->thin_wall && hit.inside) {
+	if (hit_prim->material.thin_wall && hit.inside) {
 		hit.n = vec_scale(hit.n, -1.0f);
 		hit.inside = false;
 	}
 
-	switch (hit_prim->material) {
+	switch (hit_prim->material.type) {
 	case EMISSIVE: {
 		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
 
-		Vec radiosity = hit_prim->color;
+		Vec radiosity = hit_prim->material.data.emissive.radiosity;
 		Vec radiance = vec_scale(radiosity, 1.0f / (float)M_PI);
 		return radiance;
 	}
@@ -534,12 +560,12 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 		// russian roulette bias correction: scale the albedo by the inverse probability to
 		// compensate for killed rays.
-		Vec effective_albedo = vec_scale(hit_prim->color, 1.0f / survival_prob);
+		Vec albedo = vec_scale(hit_prim->material.data.diffuse.albedo, 1.0f / survival_prob);
 
 		// The PDF is (cos_theta / PI).
 		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
 		// Result: (Li * (Color / PI) * cos_theta) / (cos_theta / PI) == Li * Color
-		return vec_hadamard_prod(effective_albedo, incoming_radiance);
+		return vec_hadamard_prod(albedo, incoming_radiance);
 	}
 	case MIRROR: {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
@@ -560,11 +586,11 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec incoming = radiance_from_ray(refl_ray, depth + 1, rng);
 		// russian roulette bias correction
-		Vec effective_reflectance = vec_scale(hit_prim->color, 1.0f / survival_prob);
-		return vec_hadamard_prod(incoming, effective_reflectance);
+		Vec rho = vec_scale(hit_prim->material.data.mirror.rho, 1.0f / survival_prob);
+		return vec_hadamard_prod(incoming, rho);
 	}
 	case REFRACTIVE: {
-		float ior = hit_prim->color.x;
+		float ior = hit_prim->material.data.refractive.ior;
 		float eta = hit.inside ? ior : 1.0f / ior;
 		// Calculate how much light reflects using the Fresnel term.
 		float reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
@@ -578,8 +604,9 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 			return reflection_radiance;
 		} else {
 			// refraction
-			if (hit_prim->thin_wall) {
-				// Ray passing through a thin wall bends twice, cancelling the angle out -> ray passes straight through
+			if (hit_prim->material.thin_wall) {
+				// Ray passing through a thin wall bends twice, cancelling the angle out -> ray
+				// passes straight through
 				Ray refr_ray = {hit.p, r.dir};
 				refr_ray.origin = vec_add(refr_ray.origin, vec_scale(r.dir, SELF_OCCLUSION_DELTA));
 				return radiance_from_ray(refr_ray, depth + 1, rng);
@@ -663,8 +690,8 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 																		   : (Scene){0};
 	// Precompute triangle edges
 	for (int i = 0; i < current_scene.size; ++i) {
-		if (current_scene.primitives[i].type == SHAPE_TRIANGLE) {
-			precompute_triangle(&current_scene.primitives[i].shape.triangle);
+		if (current_scene.primitives[i].shape.type == TRIANGLE) {
+			precompute_triangle(&current_scene.primitives[i].shape.data.triangle);
 		}
 	}
 
