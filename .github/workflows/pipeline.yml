@@ -80,7 +80,7 @@ jobs:
           # clean render output directory
           rm -f tests/img/exr/zig_render/*
           
-          docker run -e GITHUB-SHA -e bench_version -e REGISTRY -e IMAGE_NAME \
+          docker run -e GITHUB_SHA -e bench_version -e REGISTRY -e IMAGE_NAME \
             --rm \
             -v $(pwd):/app \
             -v ~/.cache/zig:/root/.cache/zig \
