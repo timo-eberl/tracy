@@ -56,7 +56,7 @@ typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
 // The generic Scene Object
 typedef struct {
 	union { Sphere sphere; Triangle triangle; } shape;
-	Vec color; MaterialType material; ShapeType type;
+	Vec color; MaterialType material; ShapeType type; bool thin_wall;
 } Primitive;
 typedef struct { Primitive* primitives; int size; } Scene;
 
@@ -108,22 +108,22 @@ Primitive scene_cornell[] = {
 	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, .one_sided=true}},
 	// Light Shield - 4 Sides Angled 45 Degree
 	// Side 1: Front
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}}},
 	// Side 2: Right
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}}},
 	// Side 3: Back
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}}},
 	// Side 4: Left
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}}},
 };
 
 Primitive scene_caustics[] = {
 	// Floor
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .thin_wall=true, .shape.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}}},
 	// Glass
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
@@ -495,6 +495,13 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 	if (!did_hit) { return (Vec){0, 0, 0}; }
 
+	// Handle thin walls (think of paper or leaves)
+	// If we hit the backface of a thin-walled object, treat it as a frontface
+	if (hit_prim->thin_wall && hit.inside) {
+		hit.n = vec_scale(hit.n, -1.0f);
+		hit.inside = false;
+	}
+
 	switch (hit_prim->material) {
 	case EMISSIVE: {
 		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
@@ -571,6 +578,13 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 			return reflection_radiance;
 		} else {
 			// refraction
+			if (hit_prim->thin_wall) {
+				// Ray passing through a thin wall bends twice, cancelling the angle out -> ray passes straight through
+				Ray refr_ray = {hit.p, r.dir};
+				refr_ray.origin = vec_add(refr_ray.origin, vec_scale(r.dir, SELF_OCCLUSION_DELTA));
+				return radiance_from_ray(refr_ray, depth + 1, rng);
+			}
+
 			bool internal_refl;
 			Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
 			if (internal_refl) { // total internal reflection -> exit early
