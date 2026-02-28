@@ -25,10 +25,9 @@ tracy
 # local build writes to this image
 render_c.tga
 render_zig.tga
-
+render_zig.exr
 
 compile_commands.json
-
 
 # python
 .venv/
