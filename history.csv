@@ -47,3 +47,7 @@ date,version,scene,variant,rmse_score,rmse_time,iterations,commit
 2026-02-27 23:41,0.1.0-build.215,cornell,std,0.3679,30.23712899999999,60,local-de
 2026-02-27 23:41,0.1.0-build.215,caustics,rr,0.6534,7.035153000000002,200,local-de
 2026-02-27 23:41,0.1.0-build.215,cornell,rr,0.3895,27.275682,60,local-de
+2026-02-28 00:22,0.1.0-build.216,caustics,std,0.6344,7.135205999999998,200,local-de
+2026-02-28 00:22,0.1.0-build.216,cornell,std,0.3679,30.032121,60,local-de
+2026-02-28 00:22,0.1.0-build.216,caustics,rr,0.6534,7.052219000000003,200,local-de
+2026-02-28 00:22,0.1.0-build.216,cornell,rr,0.3895,26.744533999999998,60,local-de
