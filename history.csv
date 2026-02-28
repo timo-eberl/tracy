@@ -1,12 +1,3 @@
-date,version,scene,variant,rmse_score,rmse_time,iterations,commit
-2026-02-25 19:23,0.1.0-build.199,cornell,std,0.6391,20.059431,30,local-de
-2026-02-25 19:23,0.1.0-build.199,caustics,rr,1.42,1.8432509999999995,40,local-de
-2026-02-25 19:27,0.1.0-build.200,cornell,std,0.5003,42.597226,60,local-de
-2026-02-25 19:27,0.1.0-build.200,caustics,rr,1.2091,2.637605999999999,60,local-de
-2026-02-25 19:41,0.1.0-build.201,cornell,std,0.5003,42.69779200000001,60,local-de
-2026-02-25 19:41,0.1.0-build.201,caustics,rr,1.2091,2.643754999999999,60,local-de
-2026-02-25 20:21,0.1.0-build.202,cornell,std,0.5003,42.678905000000015,60,local-de
-2026-02-25 20:21,0.1.0-build.202,caustics,rr,0.6501,8.817779999999999,200,local-de
 2026-02-25 20:33,0.1.0-build.204,cornell,std,0.3662,42.66046000000001,60,local-de
 2026-02-25 20:33,0.1.0-build.204,caustics,rr,0.6501,8.791708,200,local-de
 2026-02-25 20:47,0.1.0-build.205,cornell,std,0.3662,42.61642899999998,60,local-de
@@ -51,7 +42,3 @@ date,version,scene,variant,rmse_score,rmse_time,iterations,commit
 2026-02-28 00:22,0.1.0-build.216,cornell,std,0.3679,30.032121,60,local-de
 2026-02-28 00:22,0.1.0-build.216,caustics,rr,0.6534,7.052219000000003,200,local-de
 2026-02-28 00:22,0.1.0-build.216,cornell,rr,0.3895,26.744533999999998,60,local-de
-2026-02-28 12:43,0.1.0-build.217,caustics,std,2.454,5.006320999999999,200,local-de
-2026-02-28 12:43,0.1.0-build.217,cornell,std,0.3679,30.433985999999994,60,local-de
-2026-02-28 12:45,0.1.0-build.218,caustics,std,0.6344,7.244251000000001,200,local-de
-2026-02-28 12:45,0.1.0-build.218,cornell,std,0.3679,30.414214,60,local-de
