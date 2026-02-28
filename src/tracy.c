@@ -141,7 +141,6 @@ Primitive scene_cornell[] = {
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4,-0.5},{-0.7, 2.2,-0.7},{-0.7, 2.2, 0.7}}, .material=MAT_SHIELD},
 };
 
-
 #define MAT_GROUND       (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.75, 0.75}, .thin_wall = true}
 #define MAT_LIGHT_GREEN  (Material){.type = EMISSIVE, .data.emissive.radiosity = {1*21.5,5*21.5,1*21.5}}
 #define MAT_LIGHT_PURPLE (Material){.type = EMISSIVE, .data.emissive.radiosity = {1*21.5,1*21.5,5*21.5}}
