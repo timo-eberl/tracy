@@ -28,9 +28,11 @@
 
 #define RR_START_DEPTH 2 // Roussian Roulette starts after some samples
 
-// If true, reinhard tonemapping and srgb conversion will be used. Otherwise raw (clamped) data will
-// be written.
+// If true, reinhard tonemapping and srgb conversion will be used to convert to ldr. Otherwise raw
+// (clamped) data will be written.
 #define TONE_MAP true
+
+#define GLOBAL_SEED 8155015243198362000ULL // Global seed for RNG
 
 // offset used for rays. may need to be adjusted depending on scene scale
 #define SELF_OCCLUSION_DELTA 0.00001f
@@ -198,6 +200,7 @@ uint8_t* image_buffer_ldr = NULL;			  // stores tone mapped gamma corrected colo
 float* image_buffer_hdr = NULL;				  // stores linear averaged floats (rgb)
 DVec* summed_weighted_radiance_buffer = NULL; // stores summed raw radiance
 double* summed_weights_buffer = NULL;		  // stores the summed weights of the samples
+pcg32_random_t* rng_buffer = NULL;			  // stores RNG state per pixel
 int buffer_width = 0;
 int buffer_height = 0;
 
@@ -207,7 +210,6 @@ int max_depth;
 int width, height;
 Vec camera_origin;
 Vec forward, right, up;
-int sample_count;		// Global counter of total samples processed (used for seeding)
 FilterType filter_type; // Current selected filter
 
 void precompute_triangle(Triangle* tri) {
@@ -356,16 +358,20 @@ void initialize_buffers() {
 	// (Re)allocate buffer if dimensions change or not allocated yet
 	if (image_buffer_ldr == NULL || image_buffer_hdr == NULL ||
 		summed_weighted_radiance_buffer == NULL || summed_weights_buffer == NULL ||
-		width != buffer_width || height != buffer_height) {
+		rng_buffer == NULL || width != buffer_width || height != buffer_height) {
 
 		if (image_buffer_ldr != NULL) { free(image_buffer_ldr); }
 		if (image_buffer_hdr != NULL) { free(image_buffer_hdr); }
 		if (summed_weighted_radiance_buffer != NULL) { free(summed_weighted_radiance_buffer); }
 		if (summed_weights_buffer != NULL) { free(summed_weights_buffer); }
+		if (rng_buffer) free(rng_buffer);
+
 		summed_weighted_radiance_buffer = malloc(width * height * sizeof(DVec));
 		summed_weights_buffer = malloc(width * height * sizeof(double));
 		image_buffer_ldr = malloc(width * height * 4 * sizeof(uint8_t));
 		image_buffer_hdr = malloc(width * height * 3 * sizeof(float));
+		rng_buffer = malloc(width * height * sizeof(pcg32_random_t));
+
 		buffer_width = width;
 		buffer_height = height;
 	}
@@ -715,7 +721,16 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 	right = vec_normalize(vec_cross(forward, world_up));
 	up = vec_normalize(vec_cross(right, forward));
 
-	sample_count = 0;
+	// Initialize RNG state for every pixel once using a fixed global seed and independent PCG
+	// sequences (Stream IDs) per pixel.
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			int index = y * width + x;
+			// PCG Stream IDs must be strictly odd numbers
+			uint64_t unique_stream_id = (((uint64_t)index) << 1) | 1;
+			pcg32_srandom_r(&rng_buffer[index], GLOBAL_SEED, unique_stream_id);
+		}
+	}
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -744,11 +759,6 @@ void render_refine(unsigned int n_samples) {
 		// into thread-local tile buffers (with padding/ghost zones) and merge them once the tile is
 		// done.
 
-		// For multi-threading, we need a stable base sample count for this pass to ensure
-		// deterministic seeding independent of execution order.
-		// Note: We use sample_count as "total pixels rendered" to seed.
-		uint64_t base_seed = (uint64_t)sample_count;
-
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -761,18 +771,15 @@ void render_refine(unsigned int n_samples) {
 					__asm__ __volatile__("nop");
 				}
 
-				// Thread-local RNG state
-				pcg32_random_t rng_state;
-				// Seed uniquely per pixel and per sample pass
-				uint64_t seed = base_seed + (uint64_t)y * width + x;
-				pcg32_srandom_r(&rng_state, seed, 54u);
+				// Use the persistent RNG state for this pixel
+				pcg32_random_t* rng_state = &rng_buffer[y * width + x];
 
 				// Sample splatting strategy:
 				// Pick a specific point on the continuous film plane within this pixel.
 				// We jitter by[-0.5, 0.5) to cover the pixel area evenly.
 				// TODO: Use a better more uniform distribution
-				float jitter_x = random_float(&rng_state) - 0.5f;
-				float jitter_y = random_float(&rng_state) - 0.5f;
+				float jitter_x = random_float(rng_state) - 0.5f;
+				float jitter_y = random_float(rng_state) - 0.5f;
 
 				float film_x = x + (0.5f + jitter_x);
 				float film_y = y + (0.5f + jitter_y);
@@ -788,7 +795,7 @@ void render_refine(unsigned int n_samples) {
 				Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 				Ray r = {camera_origin, dir};
-				Vec radiance = radiance_from_ray(r, 0, &rng_state);
+				Vec radiance = radiance_from_ray(r, 0, rng_state);
 
 				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
 				// Determine the integer range of pixels where the pixel center (x + 0.5) falls
@@ -852,10 +859,7 @@ void render_refine(unsigned int n_samples) {
 						}
 					}
 				}
-				// We can't safely increment the global sample_count here in parallel
 			}
 		}
-		// Increment sample count by the number of pixels processed in this pass
-		sample_count += width * height;
 	}
 }
