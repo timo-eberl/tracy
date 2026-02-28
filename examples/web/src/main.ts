@@ -13,11 +13,12 @@ const uiStatus = document.getElementById("ui-status") as HTMLElement;
 
 const cameraDistanceBounds = { min: 0.01, max: 5000 };
 const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const camera: Tracy.CameraProperties = {
+const initialCamera: Tracy.CameraProperties = {
 	rotation: { x: 2.44, y: 0 },
 	distance: 5.5,
 	focusPoint: { x: 0, y: 1.25, z: 0 },
 };
+let camera: Tracy.CameraProperties = structuredClone(initialCamera);
 
 let tracy: Tracy.TracyModule;
 let isMouseDown = false;
@@ -63,6 +64,8 @@ function setupCameraControls() {
 
 	// Listen for UI parameter changes to trigger a new render
 	const triggerRender = () => { cameraChanged = true; };
+	const resetCamera = () => { camera = structuredClone(initialCamera); };
+	uiScene.addEventListener("change", resetCamera);
 	uiScene.addEventListener("change", triggerRender);
 	uiRes.addEventListener("change", triggerRender);
 	uiDepth.addEventListener("input", triggerRender);
