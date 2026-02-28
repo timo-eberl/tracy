@@ -309,6 +309,7 @@ pub fn build(b: *std.Build) void {
     const tests = b.addTest(.{ .root_module = test_mod });
     tests.linkSystemLibrary("m");
     const run_tests = b.addRunArtifact(tests);
+    run_tests.has_side_effects = true;
     b.step("test", "Run all tests").dependOn(&run_tests.step);
 
     // EXR Test
