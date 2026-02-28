@@ -16,8 +16,9 @@ export interface RenderSettings {
 }
 
 export interface RenderStatus {
-	samplesCompleted: number,
 	finished: boolean,
+	samplesCompleted: number,
+	timeTakenMs: number,
 }
 
 export interface CameraProperties {

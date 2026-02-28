@@ -28,9 +28,12 @@ self.onmessage = async (event) => {
 	let samplesPerRun = 1;
 	let samplesRemaining = s.samplesPerPixel;
 	let status: RenderStatus = {
-		samplesCompleted: 0,
 		finished: false,
+		samplesCompleted: 0,
+		timeTakenMs: 0,
 	};
+
+	const startTime = performance.now();
 
 	while (samplesRemaining > 0) {
 		// either a full run, or whatever is left
@@ -39,8 +42,9 @@ self.onmessage = async (event) => {
 		const bufferPtr = Module._update_image_ldr();
 		samplesRemaining -= samplesForThisRun;
 
-		status.samplesCompleted += samplesForThisRun;
 		status.finished = (samplesRemaining === 0);
+		status.samplesCompleted += samplesForThisRun;
+		status.timeTakenMs = performance.now() - startTime;
 
 		self.postMessage({
 			sharedMemory, bufferPtr, width: s.width, height: s.height, status

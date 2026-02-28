@@ -31,10 +31,11 @@ function main() {
 
 	tracy.onFrame = (status) => {
 		isWaitingForFirstSample = false;
-		uiStatus.innerText =
-			`${status.finished ? "Done." : "Rendering..."}
-			Samples: ${status.samplesCompleted}
-		`;
+		uiStatus.innerText = [
+			status.finished ? "✅ Render Completed" : "⏳ Rendering...",
+			`Samples: ${status.samplesCompleted.toLocaleString()}`,
+			`Time: ${(status.timeTakenMs / 1000).toFixed(2)}s`
+		].join('\n');
 	};
 
 	// Start the infinite loop that watches for camera changes
@@ -76,15 +77,13 @@ function setupCameraControls() {
 	uiSpp.addEventListener("input", triggerRender);
 }
 
-async function drawFull() {
-	canvas.classList.add('animated-border');
-
+async function draw() {
 	// Determine render resolution explicitly
 	const renderWidth = parseInt(uiRes.value, 10);
 	const renderHeight = Math.floor(renderWidth * 0.75); // Maintain 4:3 aspect ratio
 
 	// Read the live UI values right before sending them to the Web Worker
-	// If tracy.cancel() is called elsewhere, this await instantly resolves cleanly
+	// If tracy.cancel() is called elsewhere, this await instantly resolves
 	await tracy.render({
 		scene: parseInt(uiScene.value, 10),
 		maxDepth: parseInt(uiDepth.value, 10),
@@ -98,8 +97,6 @@ async function drawFull() {
 		},
 		samplesPerPixel: parseInt(uiSpp.value, 10)
 	});
-
-	canvas.classList.remove('animated-border');
 }
 
 function renderLoop() {
@@ -109,7 +106,7 @@ function renderLoop() {
 		isWaitingForFirstSample = true;
 
 		tracy.cancel(); // Instantly kill the ongoing render worker
-		drawFull();     // Fire-and-forget a new progressive render
+		draw();         // Fire-and-forget a new progressive render
 	}
 
 	requestAnimationFrame(renderLoop);
