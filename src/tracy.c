@@ -539,13 +539,14 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		if (hit.inside) return (Vec){0}; // If inside, return 0
 
 		Vec normal = hit.n;
+		Vec albedo = hit_prim->material.data.diffuse.albedo;
 
 		float survival_prob = 1.0f; // Default to 100% survival
 #ifdef ENABLE_RUSSIAN_ROULETTE
 		if (depth >= RR_START_DEPTH) {
 			// Probability is based on how 'bright' the surface is.
 			// Darker surfaces are more likely to terminate.
-			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
+			survival_prob = clamp_survival_probability(vec_max_component(albedo));
 			// Terminate based on survival probability
 			if (random_float(rng) > survival_prob) { return (Vec){0, 0, 0}; }
 		}
@@ -559,7 +560,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 
 		// russian roulette bias correction: scale the albedo by the inverse probability to
 		// compensate for killed rays.
-		Vec albedo = vec_scale(hit_prim->material.data.diffuse.albedo, 1.0f / survival_prob);
+		albedo = vec_scale(albedo, 1.0f / survival_prob);
 
 		// The PDF is (cos_theta / PI).
 		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
@@ -568,12 +569,13 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 	}
 	case MIRROR: {
 		Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
+		Vec rho = hit_prim->material.data.mirror.rho;
 
 		float survival_prob = 1.0f;
 #ifdef ENABLE_RUSSIAN_ROULETTE
 		if (depth >= RR_START_DEPTH) {
 			// Mirrors are usually bright, but if it's a dark mirror, we might kill it
-			survival_prob = clamp_survival_probability(vec_max_component(hit_prim->color));
+			survival_prob = clamp_survival_probability(vec_max_component(rho));
 			// Terminate based on survival probability
 			if (random_float(rng) > survival_prob) { return (Vec){0, 0, 0}; }
 		}
@@ -585,7 +587,7 @@ Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
 		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
 		Vec incoming = radiance_from_ray(refl_ray, depth + 1, rng);
 		// russian roulette bias correction
-		Vec rho = vec_scale(hit_prim->material.data.mirror.rho, 1.0f / survival_prob);
+		rho = vec_scale(rho, 1.0f / survival_prob);
 		return vec_hadamard_prod(incoming, rho);
 	}
 	case REFRACTIVE: {
