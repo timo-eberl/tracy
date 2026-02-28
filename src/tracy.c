@@ -56,7 +56,7 @@ typedef enum { SHAPE_SPHERE, SHAPE_TRIANGLE } ShapeType;
 // The generic Scene Object
 typedef struct {
 	ShapeType type; Vec color; MaterialType material;
-	union { Sphere sphere; Triangle triangle; } geo;
+	union { Sphere sphere; Triangle triangle; } shape;
 } Primitive;
 typedef struct { Primitive* primitives; int size; } Scene;
 
@@ -85,52 +85,52 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 // clang-format off
 Primitive scene_cornell[] = {
 	// Left Wall (x = -1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {-1.5, 0, -2.0}, {-1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.25, 0.25}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {-1.5, 2.4, -2.0}, {-1.5, 2.4, 2.0}, .two_sided=false}},
 	// Right Wall (x = 1.5)
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .geo.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .shape.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, -2.0}, {1.5, 0, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.25, 0.25, 0.75}, .material = DIFFUSE, .shape.triangle = {{1.5, 0, 2.0}, {1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
 	// Back Wall (z = -2.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, -2.0}, {1.5, 0, -2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, -2.0}, {1.5, 2.4, -2.0}, {-1.5, 2.4, -2.0}, .two_sided=false}},
 	// Bottom (y = 0.0)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {1.5, 0, 2.0}, {1.5, 0, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 0, 2.0}, {1.5, 0, -2.0}, {-1.5, 0, -2.0}, .two_sided=false}},
 	// Top (y = 2.4)
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 2.4, 2.0}, {1.5, 2.4, -2.0}, {1.5, 2.4, 2.0}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-1.5, 2.4, 2.0}, {-1.5, 2.4, -2.0}, {1.5, 2.4, -2.0}, .two_sided=false}},
 	// Mirror Sphere
-	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .geo.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
+	{.type = SHAPE_SPHERE,   .color = {1.00, 1.00, 1.00}, .material = MIRROR, .shape.sphere = {.center = {-0.7, 0.5, -0.6}, .radius = 0.5}},
 	// Glass Sphere
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = {0.7, 0.5, 0.6}, .radius = 0.5}},
 	// Area Light (1x1m Rect)
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 2.399, 0.5}, {0.5, 2.399, -0.5}, {0.5, 2.399, 0.5}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {5 * 21.5, 5 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 2.399, 0.5}, {-0.5, 2.399, -0.5}, {0.5, 2.399, -0.5}, .two_sided=false}},
 	// Light Shield - 4 Sides Angled 45 Degree
 	// Side 1: Front
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}, .two_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.5, 2.4, 0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, 0.5}, {-0.7, 2.2, 0.7}, {0.7, 2.2, 0.7}, .two_sided=true}},
 	// Side 2: Right
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}, .two_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, -0.7}, {0.5, 2.4, -0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, 0.5}, {0.7, 2.2, 0.7}, {0.7, 2.2, -0.7}, .two_sided=true}},
 	// Side 3: Back
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}, .two_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.5, 2.4, -0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{0.5, 2.4, -0.5}, {0.7, 2.2, -0.7}, {-0.7, 2.2, -0.7}, .two_sided=true}},
 	// Side 4: Left
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}, .two_sided=true}},
-	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .geo.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, 0.7}, {-0.5, 2.4, 0.5}, .two_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.1, 0.1, 0.1}, .material = DIFFUSE, .shape.triangle = {{-0.5, 2.4, -0.5}, {-0.7, 2.2, -0.7}, {-0.7, 2.2, 0.7}, .two_sided=true}},
 };
 
 Primitive scene_caustics[] = {
 	// Floor
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .geo.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}, .two_sided=false}},
 	// Glass
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
-	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .geo.sphere = {.center = {-0.3, 0.3, 0.0}, .radius = 0.2}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
+	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = {-0.3, 0.3, 0.0}, .radius = 0.2}},
 	// Light
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}, .two_sided=false}},
-	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .geo.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 5 * 21.5, 1 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 5.0, 0.5}, { 0.5, 5.0, -0.5}, {0.5, 5.0, 0.5}, .two_sided=false}},
+	{.type = SHAPE_TRIANGLE, .color = {1 * 21.5, 1 * 21.5, 5 * 21.5}, .material = EMISSIVE, .shape.triangle = {{-0.5, 5.0, 0.5}, {-0.5, 5.0, -0.5}, {0.5, 5.0, -0.5}, .two_sided=false}},
 };
 // clang-format on
 
@@ -225,15 +225,16 @@ bool intersect_sphere(const Ray* r, const Sphere* s, HitInfo* hit) {
 }
 
 // ray-triangle intersection using Möller–Trumbore algorithm
+// ray-triangle intersection using Möller–Trumbore algorithm
 bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
 	Vec h = vec_cross(r->dir, tri->edge2);
 	float a = vec_dot(tri->edge1, h);
 
-    // If we only care about front-faces, we can do an early out:
-    if (!tri->two_sided && a < EPSILON) return false;
+	// If we only care about front-faces, we can exit early
+	if (!tri->two_sided && a < EPSILON) return false;
 
 	// Check if ray is parallel to the triangle
-	// Note: We perform double-sided intersection here.
+	// We perform double-sided intersection here.
 	if (a > -EPSILON && a < EPSILON) { return false; }
 
 	float f = 1.0f / a;
@@ -259,18 +260,9 @@ bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
 
 		// Check orientation to set 'inside' flag correctly
 		// If normal and ray point in the same direction, we are exiting the object (inside)
-		if (vec_dot(r->dir, n) > 0.0f) {
-			if (tri->two_sided) {
-				hit->inside = false;
-				hit->n = vec_scale(n, -1.0f);
-			} else {
-				hit->inside = true;
-				hit->n = n;
-			}
-		} else {
-			hit->inside = false;
-			hit->n = n;
-		}
+		hit->inside = (vec_dot(r->dir, n) > 0.0f);
+		hit->n = n;
+
 		return true;
 	}
 
@@ -287,10 +279,10 @@ bool intersect_scene(const Ray* r, HitInfo* closest_hit, Primitive** hit_primiti
 
 		switch (current_scene.primitives[i].type) {
 		case SHAPE_SPHERE:
-			hit = intersect_sphere(r, &current_scene.primitives[i].geo.sphere, &current_hit);
+			hit = intersect_sphere(r, &current_scene.primitives[i].shape.sphere, &current_hit);
 			break;
 		case SHAPE_TRIANGLE:
-			hit = intersect_triangle(r, &current_scene.primitives[i].geo.triangle, &current_hit);
+			hit = intersect_triangle(r, &current_scene.primitives[i].shape.triangle, &current_hit);
 			break;
 		}
 
@@ -653,7 +645,7 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 	// Precompute triangle edges
 	for (int i = 0; i < current_scene.size; ++i) {
 		if (current_scene.primitives[i].type == SHAPE_TRIANGLE) {
-			Triangle* tri = &current_scene.primitives[i].geo.triangle;
+			Triangle* tri = &current_scene.primitives[i].shape.triangle;
 			tri->edge1 = vec_sub(tri->v1, tri->v0);
 			tri->edge2 = vec_sub(tri->v2, tri->v0);
 		}
