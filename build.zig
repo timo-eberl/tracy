@@ -241,39 +241,22 @@ pub fn build(b: *std.Build) void {
     tinyexr_lib.linkSystemLibrary("m");
     tinyexr_lib.linkLibC();
 
-    // RMSE Test
-    const rmse_exe = b.addExecutable(.{
-        .name = "render_benchmark",
+    // BENCHMARKING
+    const bench_mod = b.createModule(.{
         .root_source_file = b.path("tests/render_benchmark.zig"),
         .target = native_target,
         .optimize = optimize,
+        .link_libc = true,
     });
-    rmse_exe.addIncludePath(b.path("dependencies/tinyexr"));
-
-    rmse_exe.root_module.addImport("exr_utils", exr_module);
-    rmse_exe.linkLibrary(tinyexr_lib);
-    b.installArtifact(rmse_exe);
-
-    const run_cmd = b.addRunArtifact(rmse_exe);
-    const run_step = b.step("rmse_run", "Generate RMSE scores");
-    run_step.dependOn(&run_cmd.step);
-
-    // BENCHMARKING
-    const render_bench_exe = b.addExecutable(.{
-        .name = "render-bench-zig",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tests/render_benchmark.zig"),
-            .target = native_target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    // so that the program knows about the multithreaded flag
     const options = b.addOptions();
     options.addOption(bool, "multithreaded", use_openmp);
     options.addOption(bool, "russianroulette", use_russian_roulette);
-    render_bench_exe.root_module.addOptions("config", options);
+    const config_module = options.createModule();
+    //render_bench_exe.root_module.addOptions("config", options);
+    bench_mod.addImport("config", config_module);
 
+    const render_bench_exe = b.addExecutable(.{ .name = "render-bench-zig", .root_module = bench_mod });
+    // so that the program knows about the multithreaded flag
     render_bench_exe.want_lto = use_lto;
 
     configure_openmp.apply(render_bench_exe, use_openmp, use_russian_roulette, b);
@@ -311,17 +294,4 @@ pub fn build(b: *std.Build) void {
     const run_tests = b.addRunArtifact(tests);
     run_tests.has_side_effects = true;
     b.step("test", "Run all tests").dependOn(&run_tests.step);
-
-    // EXR Test
-    const bench_mod = b.createModule(.{ .root_source_file = b.path("tests/read_exr_test.zig"), .target = native_target, .optimize = optimize, .link_libc = true });
-    bench_mod.addIncludePath(b.path("include"));
-    bench_mod.addIncludePath(b.path("src"));
-    bench_mod.addIncludePath(pcg_include);
-    bench_mod.addIncludePath(b.path("dependencies/tinyexr"));
-    for (pcg_sources) |src| bench_mod.addCSourceFile(.{ .file = b.path(src) });
-    const bench = b.addExecutable(.{ .name = "benchmark", .root_module = bench_mod });
-    bench.linkLibrary(tinyexr_lib);
-    const run_bench = b.addRunArtifact(bench);
-
-    b.step("bench", "Run Benchmarks").dependOn(&run_bench.step);
 }
