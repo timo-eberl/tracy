@@ -150,9 +150,9 @@ Primitive scene_caustics[] = {
 	// Floor
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-2, 0, -2},{ 0, 0, 2},{ 2, 0, -2}}, .material=MAT_GROUND},
 	// Glass
-	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.0, 1.3, 0.0}, .radius=0.75}, .material=MAT_MIRROR},
-	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.3, 0.3, 0.0}, .radius=0.20}, .material=MAT_MIRROR},
-	{.shape.type=SPHERE, .shape.data.sphere={.center={-0.3, 0.3, 0.0}, .radius=0.20}, .material=MAT_MIRROR},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.0, 1.3, 0.0}, .radius=0.75}, .material=MAT_GLASS},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.3, 0.3, 0.0}, .radius=0.20}, .material=MAT_GLASS},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={-0.3, 0.3, 0.0}, .radius=0.20}, .material=MAT_GLASS},
 	// Light
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 5.0, 0.5},{ 0.5, 5.0,-0.5},{ 0.5, 5.0, 0.5},.one_sided=true}, .material=MAT_LIGHT_GREEN},
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 5.0, 0.5},{-0.5, 5.0,-0.5},{ 0.5, 5.0,-0.5},.one_sided=true}, .material=MAT_LIGHT_PURPLE},
