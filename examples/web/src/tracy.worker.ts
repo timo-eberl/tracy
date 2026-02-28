@@ -6,7 +6,7 @@ import ModuleFactory, { MainModule } from './tracy_c';
 
 // We create a shared memory that we use to initialize our wasm module with
 // This will be the memory that wasm uses for everything (radiance buffer, call stack, everything)
-const sharedMemory = new WebAssembly.Memory({ initial: 256, maximum: 256, shared: true });
+const sharedMemory = new WebAssembly.Memory({ initial: 256, maximum: 8192, shared: true });
 // This promise ensures the Wasm module is initialized only once.
 const modulePromise: Promise<MainModule> = ModuleFactory({ wasmMemory: sharedMemory });
 

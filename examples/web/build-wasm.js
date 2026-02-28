@@ -17,6 +17,8 @@ const emflags = [
 	'-I../../dependencies/simpleomp',
 	'-sMODULARIZE=1',
 	'-sEXPORT_ES6=1',
+	'-sASSERTIONS=1',
+	'-sALLOW_MEMORY_GROWTH=1', // the maximum is defined in javascript (WebAssembly.Memory)
 	'-sSHARED_MEMORY=1', '-sIMPORTED_MEMORY=1', // required so shared memory can be used
 	'-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency', // required for SimpleOMP
 	'-fopenmp', '-pthread',
