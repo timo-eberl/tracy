@@ -123,7 +123,7 @@ Primitive scene_cornell[] = {
 
 Primitive scene_caustics[] = {
 	// Floor
-	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}, .one_sided=true}},
+	{.type = SHAPE_TRIANGLE, .color = {0.75, 0.75, 0.75}, .material = DIFFUSE, .shape.triangle = {{-2, 0, -2}, {0, 0, 2}, { 2, 0, -2}}},
 	// Glass
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.0, 1.3, 0.0}, .radius = 0.75}},
 	{.type = SHAPE_SPHERE,   .color = {1.50, 0.00, 0.00}, .material = REFRACTIVE,  .shape.sphere = {.center = { 0.3, 0.3, 0.0}, .radius = 0.2}},
