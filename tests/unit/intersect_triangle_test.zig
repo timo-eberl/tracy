@@ -16,7 +16,7 @@ fn createTriangle(x0: f32, y0: f32, z0: f32, x1: f32, y1: f32, z1: f32, x2: f32,
         .v0 = .{ .x = x0, .y = y0, .z = z0 },
         .v1 = .{ .x = x1, .y = y1, .z = z1 },
         .v2 = .{ .x = x2, .y = y2, .z = z2 },
-        .two_sided = false,
+        .one_sided = true,
     };
 
     // Call your new C function to compute edge1 and edge2
@@ -158,7 +158,7 @@ test "triangle: back hit (two sided)" {
     // Construct with winding (BL -> BR -> TC) which yields Geometric Normal (0,0,1).
     // This normal points in the same direction as the Ray (0,0,1), creating a back-face hit.
     var tri = createTriangle(-1, -1, 5, 1, -1, 5, 0, 1, 5);
-    tri.two_sided = true;
+    tri.one_sided = false;
 
     const r = c.Ray{
         .origin = .{ .x = 0, .y = 0, .z = 0 },
@@ -192,9 +192,9 @@ test "triangle: back hit (one sided)" {
     // Triangle at Z=5.
     // Construct with winding (BL -> BR -> TC) which yields Geometric Normal (0,0,1).
     // This normal points in the same direction as the Ray (0,0,1).
-    // Since two_sided is false, backface culling applies and the ray should miss.
+    // Since one_sided is true, backface culling applies and the ray should miss.
     var tri = createTriangle(-1, -1, 5, 1, -1, 5, 0, 1, 5);
-    tri.two_sided = false;
+    tri.one_sided = true;
 
     const r = c.Ray{
         .origin = .{ .x = 0, .y = 0, .z = 0 },
