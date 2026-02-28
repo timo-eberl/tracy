@@ -10,7 +10,7 @@ const c = @cImport({
 const epsilon = 0.00001;
 
 // Helper to create a dummy sphere to reduce boilerplate in tests
-fn createSphere(x: f64, y: f64, z: f64, r: f64) c.Sphere {
+fn createSphere(x: f32, y: f32, z: f32, r: f32) c.Sphere {
     return c.Sphere{
         .center = .{ .x = x, .y = y, .z = z },
         .radius = r,
@@ -33,13 +33,13 @@ test "intersection: direct hit (head-on)" {
     try testing.expect(did_hit == true);
 
     // Expected distance: Center (10) - Radius (2) = 8
-    try testing.expectApproxEqAbs(@as(f64, 8.0), hit.t, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, 8.0), hit.t, epsilon);
 
     // Expected Normal: Pointing back towards origin (0, 0, -1)
     // The hit point is (0, 0, 8), center is (0, 0, 10) -> normal vector is (0, 0, -1)
-    try testing.expectApproxEqAbs(@as(f64, 0.0), hit.n.x, epsilon);
-    try testing.expectApproxEqAbs(@as(f64, 0.0), hit.n.y, epsilon);
-    try testing.expectApproxEqAbs(@as(f64, -1.0), hit.n.z, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, 0.0), hit.n.x, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, 0.0), hit.n.y, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, -1.0), hit.n.z, epsilon);
 
     // Ray started outside
     try testing.expect(hit.inside == false);
@@ -77,7 +77,7 @@ test "intersection: inside sphere (refraction case)" {
     try testing.expect(did_hit == true);
 
     // Distance should be exactly radius (5.0)
-    try testing.expectApproxEqAbs(@as(f64, 5.0), hit.t, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, 5.0), hit.t, epsilon);
 
     // The 'inside' flag must be true.
     // This allows the renderer to flip the normal and invert IOR later.
@@ -86,7 +86,7 @@ test "intersection: inside sphere (refraction case)" {
     // Note: The geometric normal calculated by intersect_sphere points OUTWARDS from center.
     // Hit point (5,0,0), Center (0,0,0) -> Normal (1,0,0)
     // The shading logic in `radiance_from_ray` is responsible for flipping it if `inside` is true.
-    try testing.expectApproxEqAbs(@as(f64, 1.0), hit.n.x, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, 1.0), hit.n.x, epsilon);
 }
 
 test "intersection: object behind camera" {
@@ -129,7 +129,7 @@ test "intersection: offset hit (off-center)" {
     // (-0.5)^2 + z^2 = 1^2  =>  0.25 + z^2 = 1  => z^2 = 0.75
     // z = sqrt(0.75) ≈ 0.866025
     // Hit distance t = center_z - z_offset = 5.0 - 0.866025 = 4.133975
-    try testing.expectApproxEqAbs(@as(f64, 4.13397), hit.t, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, 4.13397), hit.t, epsilon);
 
     // Normal calculation check:
     // Hit point p = (0, 0, 4.133975)
@@ -137,7 +137,7 @@ test "intersection: offset hit (off-center)" {
     // p - c = (-0.5, 0, -0.866025)
     // Length is 1 (radius).
     // Normal x should be -0.5
-    try testing.expectApproxEqAbs(@as(f64, -0.5), hit.n.x, epsilon);
+    try testing.expectApproxEqAbs(@as(f32, -0.5), hit.n.x, epsilon);
 }
 
 test "intersection: grazing hit (tangent)" {
@@ -158,5 +158,5 @@ test "intersection: grazing hit (tangent)" {
 
     try testing.expect(did_hit == true);
     // Should be very close to z=5
-    try testing.expectApproxEqAbs(@as(f64, 5.0), hit.t, 0.1);
+    try testing.expectApproxEqAbs(@as(f32, 5.0), hit.t, 0.1);
 }

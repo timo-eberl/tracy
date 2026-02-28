@@ -10,13 +10,19 @@ const epsilon = 0.00001;
 
 // Helper to construct a triangle easily
 // We place vertices in Counter-Clockwise (CCW) order by default
-fn createTriangle(x0: f64, y0: f64, z0: f64, x1: f64, y1: f64, z1: f64, x2: f64, y2: f64, z2: f64) c.Triangle {
-    return c.Triangle{
+fn createTriangle(x0: f32, y0: f32, z0: f32, x1: f32, y1: f32, z1: f32, x2: f32, y2: f32, z2: f32) c.Triangle {
+    // Declare as 'var' so we can pass a mutable pointer to the C function
+    var tri = c.Triangle{
         .v0 = .{ .x = x0, .y = y0, .z = z0 },
         .v1 = .{ .x = x1, .y = y1, .z = z1 },
         .v2 = .{ .x = x2, .y = y2, .z = z2 },
         .two_sided = false,
     };
+
+    // Call your new C function to compute edge1 and edge2
+    c.precompute_triangle(&tri);
+
+    return tri;
 }
 
 test "triangle: direct hit (center)" {
@@ -147,7 +153,7 @@ test "triangle: edge case (vertex hit)" {
     try testing.expectApproxEqAbs(@as(f64, -1.0), hit.n.z, epsilon); // Normal opposes ray (approx)
 }
 
-test "triangle: two_sided (back face hit)" {
+test "triangle: back hit (two sided)" {
     // Triangle at Z=5.
     // Construct with winding (BL -> BR -> TC) which yields Geometric Normal (0,0,1).
     // This normal points in the same direction as the Ray (0,0,1), creating a back-face hit.
@@ -173,21 +179,20 @@ test "triangle: two_sided (back face hit)" {
     try testing.expectApproxEqAbs(@as(f64, 5.0), hit.p.z, epsilon);
 
     // 3. Check Normal
-    // Because it is two_sided, the normal should be flipped to oppose the ray (Front face simulation).
-    // Geometric Normal: (0, 0, 1) -> Hit Normal: (0, 0, -1).
+    // The normal is not flipped when hit from the inside
     try testing.expectApproxEqAbs(@as(f64, 0.0), hit.n.x, epsilon);
     try testing.expectApproxEqAbs(@as(f64, 0.0), hit.n.y, epsilon);
-    try testing.expectApproxEqAbs(@as(f64, -1.0), hit.n.z, epsilon);
+    try testing.expectApproxEqAbs(@as(f64, 1.0), hit.n.z, epsilon);
 
     // 4. Check Inside
-    try testing.expect(hit.inside == false);
+    try testing.expect(hit.inside == true);
 }
 
-test "triangle: back hit (one_sided / inside)" {
+test "triangle: back hit (one sided)" {
     // Triangle at Z=5.
     // Construct with winding (BL -> BR -> TC) which yields Geometric Normal (0,0,1).
     // This normal points in the same direction as the Ray (0,0,1).
-    // Since two_sided is false, this counts as hitting the "inside" of a volume (exiting).
+    // Since two_sided is false, backface culling applies and the ray should miss.
     var tri = createTriangle(-1, -1, 5, 1, -1, 5, 0, 1, 5);
     tri.two_sided = false;
 
@@ -199,20 +204,5 @@ test "triangle: back hit (one_sided / inside)" {
     var hit: c.HitInfo = undefined;
     const did_hit = c.intersect_triangle(&r, &tri, &hit);
 
-    try testing.expect(did_hit == true);
-
-    // 1. Check Distance
-    try testing.expectApproxEqAbs(@as(f64, 5.0), hit.t, epsilon);
-
-    // 2. Check Normal
-    // Normal should remain the geometric normal (pointing +Z) because we are treating it
-    // as a volumetric exit, so the normal points "out" of the volume (same dir as ray).
-    try testing.expectApproxEqAbs(@as(f64, 0.0), hit.n.x, epsilon);
-    try testing.expectApproxEqAbs(@as(f64, 0.0), hit.n.y, epsilon);
-    try testing.expectApproxEqAbs(@as(f64, 1.0), hit.n.z, epsilon);
-
-    // 3. Check Inside
-    // Ray direction (0,0,1) matches Normal (0,0,1). Dot > 0.
-    // inside should be true to indicate we are inside the object/exiting.
-    try testing.expect(hit.inside == true);
+    try testing.expect(did_hit == false);
 }

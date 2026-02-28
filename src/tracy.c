@@ -186,6 +186,11 @@ Vec forward, right, up;
 int sample_count;		// Global counter of total samples processed (used for seeding)
 FilterType filter_type; // Current selected filter
 
+void precompute_triangle(Triangle* tri) {
+	tri->edge1 = vec_sub(tri->v1, tri->v0);
+	tri->edge2 = vec_sub(tri->v2, tri->v0);
+}
+
 // 10.3.16
 Vec reflect(Vec incident, Vec normal) {
 	return vec_sub(incident, vec_scale(normal, 2.0f * vec_dot(normal, incident)));
@@ -645,9 +650,7 @@ void render_init(int p_scene_id, int p_max_depth, int p_width, int p_height, int
 	// Precompute triangle edges
 	for (int i = 0; i < current_scene.size; ++i) {
 		if (current_scene.primitives[i].type == SHAPE_TRIANGLE) {
-			Triangle* tri = &current_scene.primitives[i].shape.triangle;
-			tri->edge1 = vec_sub(tri->v1, tri->v0);
-			tri->edge2 = vec_sub(tri->v2, tri->v0);
+			precompute_triangle(&current_scene.primitives[i].shape.triangle);
 		}
 	}
 
