@@ -23,19 +23,27 @@ let camera: Tracy.CameraProperties = structuredClone(initialCamera);
 let tracy: Tracy.TracyModule;
 let isMouseDown = false;
 let cameraChanged = true; // Set to true so it renders immediately on load
-let isWaitingForFirstSample = false;
+
+// Our state machine variables
+let renderMode: 'none' | 'preview' | 'final' = 'none';
+let settleTimer: number | null = null;
 
 function main() {
 	setupCameraControls();
+	
+	// Only ONE worker pool, meaning zero OpenMP thread contention!
 	tracy = Tracy.create(context);
 
 	tracy.onFrame = (status) => {
-		isWaitingForFirstSample = false;
-		uiStatus.innerText = [
-			status.finished ? "✅ Render Completed" : "⏳ Rendering...",
-			`Samples: ${status.samplesCompleted.toLocaleString()}`,
-			`Time: ${(status.timeTakenMs / 1000).toFixed(2)}s`
-		].join('\n');
+		if (renderMode === 'preview') {
+			uiStatus.innerText = "⚡ Previewing...";
+		} else {
+			uiStatus.innerText =[
+				status.finished ? "✅ Render Completed" : "⏳ Rendering...",
+				`Samples: ${status.samplesCompleted.toLocaleString()}`,
+				`Time: ${(status.timeTakenMs / 1000).toFixed(2)}s`
+			].join('\n');
+		}
 	};
 
 	// Start the infinite loop that watches for camera changes
@@ -77,13 +85,57 @@ function setupCameraControls() {
 	uiSpp.addEventListener("input", triggerRender);
 }
 
-async function draw() {
+async function doPreview() {
+	renderMode = 'preview';
+	cameraChanged = false;
+
 	// Determine render resolution explicitly
 	const renderWidth = parseInt(uiRes.value, 10);
 	const renderHeight = Math.floor(renderWidth * 0.75); // Maintain 4:3 aspect ratio
 
+	// Lock the canvas display size to the target resolution so it doesn't shrink, 
+	// and force the browser to upscale it crisply (nearest-neighbor)
+	canvas.style.width = `${renderWidth}px`;
+	canvas.style.height = `${renderHeight}px`;
+
+	const previewWidth = Math.max(1, Math.floor(renderWidth / 2));
+	const previewHeight = Math.floor(previewWidth * 0.75);
+
 	// Read the live UI values right before sending them to the Web Worker
-	// If tracy.cancel() is called elsewhere, this await instantly resolves
+	await tracy.render({
+		scene: parseInt(uiScene.value, 10),
+		maxDepth: parseInt(uiDepth.value, 10),
+		width: previewWidth,
+		height: previewHeight,
+		filterType: parseInt(uiFilter.value, 10),
+		camera: {
+			rotation: camera.rotation,
+			distance: camera.distance,
+			focusPoint: camera.focusPoint
+		},
+		samplesPerPixel: 1 // Single sample for fast preview
+	});
+
+	// Only release the mode if a cancel() hasn't already intervened
+	if (renderMode === 'preview') {
+		renderMode = 'none';
+	}
+}
+
+async function startFinalRender() {
+	settleTimer = null;
+	// Extra safety check in case the user moved the mouse exactly as the timer fired
+	if (cameraChanged) return; 
+
+	renderMode = 'final';
+
+	const renderWidth = parseInt(uiRes.value, 10);
+	const renderHeight = Math.floor(renderWidth * 0.75);
+
+	// Ensure the screen size stays locked to the final resolution
+	canvas.style.width = `${renderWidth}px`;
+	canvas.style.height = `${renderHeight}px`;
+
 	await tracy.render({
 		scene: parseInt(uiScene.value, 10),
 		maxDepth: parseInt(uiDepth.value, 10),
@@ -97,16 +149,38 @@ async function draw() {
 		},
 		samplesPerPixel: parseInt(uiSpp.value, 10)
 	});
+
+	if (renderMode === 'final') {
+		renderMode = 'none';
+	}
 }
 
 function renderLoop() {
-	// Only restart if we aren't currently waiting for the first draw
-	if (cameraChanged && !isWaitingForFirstSample) {
-		cameraChanged = false;
-		isWaitingForFirstSample = true;
+	if (cameraChanged) {
+		// The user moved the camera. Cancel any pending settle timer.
+		if (settleTimer !== null) {
+			clearTimeout(settleTimer);
+			settleTimer = null;
+		}
 
-		tracy.cancel(); // Instantly kill the ongoing render worker
-		draw();         // Fire-and-forget a new progressive render
+		// Only terminate the worker if we are interrupting a heavy final render
+		if (renderMode === 'final') {
+			tracy.cancel();
+			renderMode = 'none'; 
+		}
+
+		// If nothing is rendering (or the final render was just cancelled), start preview.
+		// NOTE: If we are currently in 'preview' mode, we do NOT cancel it! 
+		// Previews are so fast we just let them finish gracefully and stack the next one.
+		if (renderMode === 'none') {
+			doPreview().then(() => {
+				// Once the preview completes, if the user hasn't moved the mouse 
+				// in the exact fraction of a second it took to render, start the timer
+				if (!cameraChanged) {
+					settleTimer = window.setTimeout(startFinalRender, 150);
+				}
+			});
+		}
 	}
 
 	requestAnimationFrame(renderLoop);
