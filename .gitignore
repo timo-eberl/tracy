@@ -11,6 +11,9 @@ tracy_c.d.ts
 node_modules/
 .npm
 
+# vite
+.vite/
+
 # zig
 .zig-cache/
 zig-out/
