@@ -120,9 +120,9 @@ npm run vite:build
 > Concepts from the lecture "Moderne Techniken der Bildberechnung". Numbers in brackets indicate the chapter.
 
 - [x] Pinhole camera (5)
-- [ ] Ray geometry intersection (6.2)
+- [x] Ray geometry intersection (6.2)
   - [x] Sphere (6.2.4)
-  - [ ] Triangle (6.2.3)
+  - [x] Triangle (6.2.3)
 - [x] Tone mapping (4)
   - [x] Gamma correction with sRGB response curve (4.1.9)
   - [x] Global HDR to LDR tonemapping (4.2) using Reinhard
@@ -144,9 +144,8 @@ npm run vite:build
 - [ ] Thin lenses (7.3)
 - [ ] Optimizations
   - [ ] Spatial data structures (12.3)
-  - [ ] Importance Sampling (14.2)
-  - [ ] Multithreading
+  - [x] Importance Sampling (14.2)
+  - [x] Multi-Threading
   - [ ] Tiled rendering (Spatial coherency)
   - [ ] Multiple samples per pass (Temporal coherency)
-  - [ ] Double Buffering (for incremental rendering)
 - [x] Incremental rendering (live update image)
