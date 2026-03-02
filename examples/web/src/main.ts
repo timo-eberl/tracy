@@ -1,4 +1,5 @@
 import * as Tracy from "../src/tracy";
+import { camera, resetCamera, setupCameraControls } from "./cameraControls";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -11,17 +12,7 @@ const uiFilter = document.getElementById("ui-filter") as HTMLSelectElement;
 const uiSpp = document.getElementById("ui-spp") as HTMLInputElement;
 const uiStatus = document.getElementById("ui-status") as HTMLElement;
 
-const cameraDistanceBounds = { min: 0.01, max: 5000 };
-const cameraRotationXBounds = { min: -89.9, max: 89.9 };
-const initialCamera: Tracy.CameraProperties = {
-	rotation: { x: 2.44, y: 0 },
-	distance: 5.5,
-	focusPoint: { x: 0, y: 1.25, z: 0 },
-};
-let camera: Tracy.CameraProperties = structuredClone(initialCamera);
-
 let tracy: Tracy.TracyModule;
-let isMouseDown = false;
 let cameraChanged = true; // Set to true so it renders immediately on load
 
 // Our state machine variables
@@ -29,8 +20,9 @@ let renderMode: 'none' | 'preview' | 'final' = 'none';
 let settleTimer: number | null = null;
 
 function main() {
-	setupCameraControls();
-	
+	setupCameraControls(canvas, () => { cameraChanged = true; });
+	setupUIControls();
+
 	// Only ONE worker pool, meaning zero OpenMP thread contention!
 	tracy = Tracy.create(context);
 
@@ -38,7 +30,7 @@ function main() {
 		if (renderMode === 'preview') {
 			uiStatus.innerText = "⚡ Previewing...";
 		} else {
-			uiStatus.innerText =[
+			uiStatus.innerText = [
 				status.finished ? "✅ Render Completed" : "⏳ Rendering...",
 				`Samples: ${status.samplesCompleted.toLocaleString()}`,
 				`Time: ${(status.timeTakenMs / 1000).toFixed(2)}s`
@@ -50,33 +42,9 @@ function main() {
 	requestAnimationFrame(renderLoop);
 }
 
-function clamp(v: number, min: number, max: number) { return Math.min(Math.max(v, min), max); }
-
-function setupCameraControls() {
-	canvas.onmousedown = (event) => { if (event.button === 0) isMouseDown = true; };
-	document.onmouseup = (event) => { if (event.button === 0) isMouseDown = false; };
-
-	document.onmousemove = (event) => {
-		if (isMouseDown) {
-			camera.rotation.x = clamp(
-				camera.rotation.x + event.movementY * 0.2,
-				cameraRotationXBounds.min, cameraRotationXBounds.max
-			);
-			camera.rotation.y -= event.movementX * 0.2;
-			cameraChanged = true; // Signal that the render needs to restart
-		}
-	};
-
-	canvas.onwheel = (event) => {
-		let delta = -event.deltaY / 120.0;
-		delta = 1.0 - (delta * 0.08);
-		camera.distance = clamp(camera.distance * delta, cameraDistanceBounds.min, cameraDistanceBounds.max);
-		cameraChanged = true; // Signal that the render needs to restart
-	};
-
+function setupUIControls() {
 	// Listen for UI parameter changes to trigger a new render
 	const triggerRender = () => { cameraChanged = true; };
-	const resetCamera = () => { camera = structuredClone(initialCamera); };
 	uiScene.addEventListener("change", resetCamera);
 	uiScene.addEventListener("change", triggerRender);
 	uiRes.addEventListener("change", triggerRender);
@@ -125,7 +93,7 @@ async function doPreview() {
 async function startFinalRender() {
 	settleTimer = null;
 	// Extra safety check in case the user moved the mouse exactly as the timer fired
-	if (cameraChanged) return; 
+	if (cameraChanged) return;
 
 	renderMode = 'final';
 
@@ -166,7 +134,7 @@ function renderLoop() {
 		// Only terminate the worker if we are interrupting a heavy final render
 		if (renderMode === 'final') {
 			tracy.cancel();
-			renderMode = 'none'; 
+			renderMode = 'none';
 		}
 
 		// If nothing is rendering (or the final render was just cancelled), start preview.
