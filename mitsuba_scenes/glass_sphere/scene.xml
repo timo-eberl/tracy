@@ -1,0 +1,53 @@
+<scene version="3.0.0">
+    <integrator type="path">
+        <integer name="max_depth" value="2"/>
+    </integrator>
+
+    <sensor type="perspective">
+        <string name="fov_axis" value="y"/>
+        <float name="fov" value="30"/>
+
+        <float name="near_clip" value="0.1"/>
+        <float name="far_clip" value="100.0"/>
+
+        <transform name="to_world">
+            <lookat origin="0, 1.4841, 5.4950" 
+                    target="0, 1.25, 0" 
+                    up    ="0, 1, 0"/>
+        </transform>
+
+        <film type="hdrfilm">
+            <integer name="width" value="46"/>
+            <integer name="height" value="120"/>
+            <rfilter type="box"/>
+        </film>
+
+        <sampler type="independent">
+            <integer name="sample_count" value="2000000"/>
+        </sampler>
+    </sensor>
+
+    <bsdf type="dielectric" id="mat_glass">
+        <float name="int_ior" value="1.5"/>
+        <float name="ext_ior" value="1.0"/>
+        <rgb name="specular_transmittance" value="1.0, 1.0, 1.0"/>
+    </bsdf>
+
+    <!-- Glass Sphere -->
+    <shape type="sphere">
+        <transform name="to_world">
+            <scale value="1.4"/>
+            <translate x="0.0" y="1.25" z="0"/>
+        </transform>
+        <ref id="mat_glass"/>
+    </shape>
+
+    <!-- Light 21.5 -> Radiance ~6.8437 -->
+    <shape type="obj">
+        <string name="filename" value="light.obj"/>
+        <emitter type="area">
+            <rgb name="radiance" value="6.8437, 6.8437, 6.8437"/>
+        </emitter>
+    </shape>
+
+</scene>

@@ -158,11 +158,19 @@ Primitive scene_caustics[] = {
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 5.0, 0.5},{ 0.5, 5.0,-0.5},{ 0.5, 5.0, 0.5},.one_sided=true}, .material=MAT_LIGHT_GREEN},
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 5.0, 0.5},{-0.5, 5.0,-0.5},{ 0.5, 5.0,-0.5},.one_sided=true}, .material=MAT_LIGHT_PURPLE},
 };
+
+#define MAT_LIGHT_2 (Material){.type = EMISSIVE, .data.emissive.radiosity = {21.5, 21.5, 21.5}}
+
+Primitive scene_glass_sphere[] = {
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.0, 1.25, 0.0}, .radius=1.4}, .material=MAT_GLASS},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.0, 3.4, 1.0},{ 0.0, 3.4,-1.0},{ 1.0, 3.4, 1.0},.one_sided=true}, .material=MAT_LIGHT_2},
+};
 // clang-format on
 
 Scene all_scenes[] = {
 	{scene_cornell, sizeof(scene_cornell) / sizeof(Primitive)},
 	{scene_caustics, sizeof(scene_caustics) / sizeof(Primitive)},
+	{scene_glass_sphere, sizeof(scene_glass_sphere) / sizeof(Primitive)},
 };
 
 #ifndef M_PI

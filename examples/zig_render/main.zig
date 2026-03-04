@@ -28,7 +28,7 @@ pub fn main() !void {
 
     var i: usize = 0;
     while (i < 10) : (i += 1) {
-        tracy.render_refine(5);
+        tracy.render_refine(50);
 
         // Get the Linear Float HDR buffer (RGB)
         const buffer_ptr = tracy.update_image_hdr();

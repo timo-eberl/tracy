@@ -11,6 +11,7 @@ const c = @cImport({
 // unit tests only test isolated math/geometry and never actually access these scenes at runtime.
 export var scene_cornell: [0]c.Primitive = undefined;
 export var scene_caustics: [0]c.Primitive = undefined;
+export var scene_glass_sphere: [0]c.Primitive = undefined;
 
 comptime {
     _ = @import("unit/vec_test.zig");

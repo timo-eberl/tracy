@@ -28,6 +28,21 @@ scenes:
     focus_x: 0.0
     focus_y: 1.05
     focus_z: 0.0
+
+  - tag: "glass_sphere"
+    name: "Glass Sphere"
+    description: "A single glass sphere lit by an area light"
+    scene_id: 2
+    max_depth: 2
+    width: 46
+    height: 120
+    filter_type: 0
+    cam_angle_x: 0.04258603374866164
+    cam_angle_y: 0.0
+    cam_dist: 5.5
+    focus_x: 0.0
+    focus_y: 1.25
+    focus_z: 0.0
 jobs:
   - scene: "example1"
     variant: "std"
@@ -48,3 +63,8 @@ jobs:
     variant: "rr"
     tag: "caustics"
     iterations: 200
+
+  - scene: "example5"
+    variant: "rr"
+    tag: "glass_sphere"
+    iterations: 1000
