@@ -109,14 +109,19 @@ jobs:
           output_dir: "tests/img/exr/reference/"
           filename: "reference_caustics"
 
-      - name: Generate Reference Preview - Cornell 
+      - name: Generate Reference Preview - Cornell
         uses: ./.github/actions/exr-to-png-conversion
         with:
           input_dir: "mitsuba_scenes/cornell/"
           output_dir: "tests/img/exr/reference/"
           filename: "reference_cornell"
 
-
+      - name: Generate Reference Preview - Glass Sphere 
+        uses: ./.github/actions/exr-to-png-conversion
+        with:
+          input_dir: "mitsuba_scenes/glass-sphere/"
+          output_dir: "tests/img/exr/reference/"
+          filename: "reference_glass-sphere"
 
       - name: Generate Diff Images
         run: |
