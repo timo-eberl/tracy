@@ -119,9 +119,9 @@ jobs:
       - name: Generate Reference Preview - Glass Sphere 
         uses: ./.github/actions/exr-to-png-conversion
         with:
-          input_dir: "mitsuba_scenes/glass-sphere/"
+          input_dir: "mitsuba_scenes/glasssphere/"
           output_dir: "tests/img/exr/reference/"
-          filename: "reference_glass-sphere"
+          filename: "reference_glasssphere"
 
       - name: Generate Diff Images
         run: |
