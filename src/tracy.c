@@ -547,9 +547,8 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 			float survival_prob = 1.0f; // Default to 100% survival
 #ifdef ENABLE_RUSSIAN_ROULETTE
 			if (depth >= RR_START_DEPTH) {
-				// Probability is based on how 'bright' the surface is.
-				// Darker surfaces are more likely to terminate.
-				survival_prob = clamp_survival_probability(luminance(albedo));
+				// kill rays that carry few light
+				survival_prob = clamp_survival_probability(luminance(throughput));
 				// Terminate based on survival probability
 				if (random_float(rng) > survival_prob) { return (Vec){0}; }
 			}
@@ -575,8 +574,7 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 			float survival_prob = 1.0f;
 #ifdef ENABLE_RUSSIAN_ROULETTE
 			if (depth >= RR_START_DEPTH) {
-				// Mirrors are usually bright, but if it's a dark mirror, we might kill it
-				survival_prob = clamp_survival_probability(luminance(rho));
+				survival_prob = clamp_survival_probability(luminance(throughput));
 				// Terminate based on survival probability
 				if (random_float(rng) > survival_prob) { return (Vec){0}; }
 			}
