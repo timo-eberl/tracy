@@ -512,7 +512,7 @@ Vec sample_cosine_hemisphere(Vec normal, pcg32_random_t* rng) {
 float clamp_survival_probability(float probability) {
 	// Clamp probability to ensure we don't divide by zero or kill too aggressively
 	if (probability < 0.1f) return 0.1f;
-	if (probability > 0.95f) return 0.95f;
+	if (probability > 1.0f) return 1.0f;
 	return probability;
 }
 
