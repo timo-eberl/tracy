@@ -2,9 +2,11 @@
 
 Path Tracer written in C. An interactive web version is deployed [here](https://tracy.timoeberl.de/).
 
-It started as a learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung" ("modern rendering techniques").
+It started as a personal learning project with the purpose to apply and understand the topics from the lecture "Moderne Techniken der Bildberechnung" ("modern rendering techniques").
 
-It is actively being developed with a focus on automated testing and profiling in the context of the lecture "System Engineering and Management".
+It was further developed by [Tilmanzzz](https://github.com/Tilmanzzz) and me, with a focus on automated testing and profiling as part of the lecture "System Engineering and Management".
+
+It’s now a hobby project that I may work on occasionally.
 
 ## Benchmark Dashboard
 
@@ -50,12 +52,13 @@ You can optionally specify those parameters:
 
 This project uses Zig as a test runner to perform white-box unit testing on the C implementation. The unit tests are located in `tests/unit`.
 
+> [!WARNING]
+> It's highly recommended to delete the `.zig-cache` before running any tests as zig sometimes reports both false positives and false negatives.
+
 ```bash
 # Run all unit tests
+rm -r .zig-cache/
 zig build test
-
-# Run tests and print a summary of passed/failed tests
-zig build test --summary all
 ```
 
 ## Performance Testing
