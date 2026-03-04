@@ -191,9 +191,6 @@ Vec vec_cross(Vec a, Vec b) {
 		a.x * b.y - a.y * b.x,
 	};
 }
-float vec_max_component(Vec v) {
-	return fmaxf(v.x, fmaxf(v.y, v.z));
-}
 
 // The image buffer will be allocated on demand.
 uint8_t* image_buffer_ldr = NULL;			  // stores tone mapped gamma corrected colors (rgba)
@@ -552,7 +549,7 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 			if (depth >= RR_START_DEPTH) {
 				// Probability is based on how 'bright' the surface is.
 				// Darker surfaces are more likely to terminate.
-				survival_prob = clamp_survival_probability(vec_max_component(albedo));
+				survival_prob = clamp_survival_probability(luminance(albedo));
 				// Terminate based on survival probability
 				if (random_float(rng) > survival_prob) { return (Vec){0}; }
 			}
@@ -579,7 +576,7 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 #ifdef ENABLE_RUSSIAN_ROULETTE
 			if (depth >= RR_START_DEPTH) {
 				// Mirrors are usually bright, but if it's a dark mirror, we might kill it
-				survival_prob = clamp_survival_probability(vec_max_component(rho));
+				survival_prob = clamp_survival_probability(luminance(rho));
 				// Terminate based on survival probability
 				if (random_float(rng) > survival_prob) { return (Vec){0}; }
 			}
