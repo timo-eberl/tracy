@@ -3,12 +3,11 @@
 ## Summary Results
 | Scene | Variant | RelMSE Score | Render Time | Iterations | Date |
 |---|---|---|---|---|---|
-| caustics | **rr** | 0.58730 | 6.55s | 200 | 2026-03-04 17:03 |
-| caustics | **std** | 0.61090 | 6.55s | 200 | 2026-03-04 17:03 |
-| cornell | **std** | 0.36090 | 29.82s | 60 | 2026-03-04 17:03 |
-| cornell | **rr** | 0.40520 | 28.20s | 60 | 2026-03-04 17:03 |
-| glass-sphere | **rr** | 0.06020 | 1.78s | 1000 | 2026-03-04 17:03 |
-| glass_sphere | **sphere** | 0.06020 | 1.77s | 1000 | 2026-03-04 16:44 |
+| caustics | **rr** | 0.58730 | 6.58s | 200 | 2026-03-04 17:15 |
+| caustics | **std** | 0.61090 | 6.54s | 200 | 2026-03-04 17:15 |
+| cornell | **std** | 0.36090 | 29.77s | 60 | 2026-03-04 17:15 |
+| cornell | **rr** | 0.40520 | 28.18s | 60 | 2026-03-04 17:15 |
+| glass-sphere | **rr** | 0.06020 | 1.87s | 1000 | 2026-03-04 17:15 |
 
 
 ## RelMSE Trend
@@ -54,19 +53,7 @@
 ![ glass-sphere convergence ](plots/convergence_glass-sphere.png)
 
 ---
-### Scene: glass_sphere
-
-| Type | sphere | Reference |
-| :---: | :---: | :---: |
-| **Render** | ![ sphere ](renderings/latest-render_glass_sphere_sphere.png) | ![ Reference](renderings/reference_glass_sphere.png) |
-| **Diff** | ![ diff sphere ](renderings/latest-diff_render_glass_sphere_sphere.png) | |
-
-### Convergence: glass_sphere
-
-![ glass_sphere convergence ](plots/convergence_glass_sphere.png)
-
----
 
 
 ---
-*last updated: 2026-03-04 17:03 (commit: 38988b5b)*
+*last updated: 2026-03-04 17:15 (commit: 270d70ed)*
