@@ -548,7 +548,7 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 #ifdef ENABLE_RUSSIAN_ROULETTE
 			if (depth >= RR_START_DEPTH) {
 				// kill rays that carry few light
-				survival_prob = clamp_survival_probability(luminance(throughput));
+				survival_prob = clamp_survival_probability(luminance(throughput) * 5.0f);
 				// Terminate based on survival probability
 				if (random_float(rng) > survival_prob) { return (Vec){0}; }
 			}
@@ -574,7 +574,7 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 			float survival_prob = 1.0f;
 #ifdef ENABLE_RUSSIAN_ROULETTE
 			if (depth >= RR_START_DEPTH) {
-				survival_prob = clamp_survival_probability(luminance(throughput));
+				survival_prob = clamp_survival_probability(luminance(throughput) * 5.0f);
 				// Terminate based on survival probability
 				if (random_float(rng) > survival_prob) { return (Vec){0}; }
 			}
