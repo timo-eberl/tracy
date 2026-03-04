@@ -3,7 +3,7 @@ import * as Tracy from "../src/tracy";
 export const cameraDistanceBounds = { min: 0.01, max: 5000 };
 export const cameraRotationXBounds = { min: -89.9, max: 89.9 };
 export const initialCamera: Tracy.CameraProperties = {
-	rotation: { x: 2.44, y: 0 },
+	rotation: { x: 0, y: 0 },
 	distance: 5.5,
 	focusPoint: { x: 0, y: 1.25, z: 0 },
 };

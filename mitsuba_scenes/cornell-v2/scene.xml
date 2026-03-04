@@ -1,6 +1,6 @@
 <scene version="3.0.0">
     <integrator type="path">
-        <integer name="max_depth" value="5"/>
+        <integer name="max_depth" value="10"/>
     </integrator>
 
     <sensor type="perspective">
@@ -11,22 +11,22 @@
         <float name="far_clip" value="100.0"/>
 
         <transform name="to_world">
-            <lookat origin="0, 1.4841, 5.4950" 
+            <lookat origin="0, 1.25, 5.5" 
                     target="0, 1.25, 0" 
                     up    ="0, 1, 0"/>
         </transform>
 
         <film type="hdrfilm">
-            <integer name="width" value="640"/>
-            <integer name="height" value="480"/>
+            <integer name="width" value="480"/>
+            <integer name="height" value="360"/>
             <rfilter type="box"/>
         </film>
 
         <sampler type="independent">
-            <integer name="sample_count" value="16384"/>
+            <integer name="sample_count" value="100000"/>
         </sampler>
     </sensor>
-    
+
     <bsdf type="diffuse" id="mat_gray">
         <rgb name="reflectance" value="0.75, 0.75, 0.75"/>
     </bsdf>
@@ -48,15 +48,6 @@
         <float name="ext_ior" value="1.0"/>
         <rgb name="specular_transmittance" value="1.0, 1.0, 1.0"/>
     </bsdf>
-
-    <bsdf type="diffuse" id="mat_shield">
-        <rgb name="reflectance" value="0.1, 0.1, 0.1"/>
-    </bsdf>
-
-    <!-- 
-      STANDARD CORNELL BOX WALLS 
-      Room Size: 3m Wide (x), 2.4m High (y), 4m Deep (z)
-    -->
 
     <!-- Left Wall (Red): x = -1.5 -->
     <shape type="rectangle">
@@ -140,16 +131,7 @@
         </transform>
         
         <emitter type="area">
-            <rgb name="radiance" value="34.2183, 34.2183, 34.2183"/>
+            <rgb name="radiance" value="13.68732, 13.68732, 13.68732"/>
         </emitter>
-    </shape>
-    
-    <shape type="obj">
-        <string name="filename" value="lightshield.obj"/>
-        <bsdf type="twosided">
-            <ref id="mat_shield"/>
-        </bsdf>
-        <!-- Use face normals to keep the shield edges sharp -->
-        <boolean name="face_normals" value="true"/>
     </shape>
 </scene>

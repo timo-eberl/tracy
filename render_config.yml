@@ -1,14 +1,14 @@
 scenes:
-  - tag: "cornell"
+  - tag: "cornell-v2"
     name: "Sphere Cornell Box"
     description: "Contains all material types and tests many light phenomenoms"
     scene_id: 0
-    max_depth: 5
-    width: 640
-    height: 480
+    max_depth: 10
+    width: 480
+    height: 360
     filter_type: 0
-    cam_angle_x: 0.04258603374866164
-    cam_angle_y: 0.0
+    cam_angle_x: 0
+    cam_angle_y: 0
     cam_dist: 5.5
     focus_x: 0.0
     focus_y: 1.25
@@ -46,13 +46,13 @@ scenes:
 jobs:
   - scene: "example1"
     variant: "std"
-    tag: "cornell"
-    iterations: 60
+    tag: "cornell-v2"
+    iterations: 150
 
   - scene: "example2"
     variant: "rr"
-    tag: "cornell"
-    iterations: 60
+    tag: "cornell-v2"
+    iterations: 150
 
   - scene: "example3"
     variant: "std"

@@ -112,9 +112,9 @@ jobs:
       - name: Generate Reference Preview - Cornell
         uses: ./.github/actions/exr-to-png-conversion
         with:
-          input_dir: "mitsuba_scenes/cornell/"
+          input_dir: "mitsuba_scenes/cornell-v2/"
           output_dir: "tests/img/exr/reference/"
-          filename: "reference_cornell"
+          filename: "reference_cornell-v2"
 
       - name: Generate Reference Preview - Glass Sphere 
         uses: ./.github/actions/exr-to-png-conversion

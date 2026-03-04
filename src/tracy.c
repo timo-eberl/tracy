@@ -102,7 +102,7 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 #define MAT_WHITE  (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.75, 0.75}}
 #define MAT_MIRROR (Material){.type = MIRROR, .data.mirror.rho = {1,1,1}}
 #define MAT_GLASS  (Material){.type = REFRACTIVE, .data.refractive.ior = 1.5}
-#define MAT_LIGHT  (Material){.type = EMISSIVE, .data.emissive.radiosity = {5*21.5, 5*21.5, 5*21.5}}
+#define MAT_LIGHT  (Material){.type = EMISSIVE, .data.emissive.radiosity = {2*21.5, 2*21.5, 2*21.5}}
 #define MAT_SHIELD (Material){.type = DIFFUSE, .data.diffuse.albedo={0.1,0.1,0.1}, .thin_wall=true}
 
 Primitive scene_cornell[] = {
@@ -128,19 +128,6 @@ Primitive scene_cornell[] = {
 	// Area Light (1x1m Rect)
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.399, 0.5},{ 0.5, 2.399,-0.5},{ 0.5, 2.399, 0.5},.one_sided=true}, .material=MAT_LIGHT},
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.399, 0.5},{-0.5, 2.399,-0.5},{ 0.5, 2.399,-0.5},.one_sided=true}, .material=MAT_LIGHT},
-	// Light Shield - 4 Sides Angled 45 Degree
-	// Side 1: Front
-	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4, 0.5},{ 0.7, 2.2, 0.7},{ 0.5, 2.4, 0.5}}, .material=MAT_SHIELD},
-	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4, 0.5},{-0.7, 2.2, 0.7},{ 0.7, 2.2, 0.7}}, .material=MAT_SHIELD},
-	// Side 2: Right
-	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4, 0.5},{ 0.7, 2.2,-0.7},{ 0.5, 2.4,-0.5}}, .material=MAT_SHIELD},
-	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4, 0.5},{ 0.7, 2.2, 0.7},{ 0.7, 2.2,-0.7}}, .material=MAT_SHIELD},
-	// Side 3: Back
-	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4,-0.5},{-0.7, 2.2,-0.7},{-0.5, 2.4,-0.5}}, .material=MAT_SHIELD},
-	{.shape.type=TRIANGLE, .shape.data.triangle={{ 0.5, 2.4,-0.5},{ 0.7, 2.2,-0.7},{-0.7, 2.2,-0.7}}, .material=MAT_SHIELD},
-	// Side 4: Left
-	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4,-0.5},{-0.7, 2.2, 0.7},{-0.5, 2.4, 0.5}}, .material=MAT_SHIELD},
-	{.shape.type=TRIANGLE, .shape.data.triangle={{-0.5, 2.4,-0.5},{-0.7, 2.2,-0.7},{-0.7, 2.2, 0.7}}, .material=MAT_SHIELD},
 };
 
 #define MAT_GROUND       (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.75, 0.75}, .thin_wall = true}
