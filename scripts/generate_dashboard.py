@@ -1,3 +1,4 @@
+# scripts/generate_dashboard.py
 import sys
 import csv
 import os
@@ -18,12 +19,27 @@ latest_entries = {}
 latest_date = "n/a"
 
 if os.path.exists(csv_path):
+    rows =[]
     with open(csv_path, "r") as f:
         reader = csv.DictReader(f)
-        for row in reader:
-            latest_date = row.get("date", "n/a")
+        rows = list(reader)
+        
+    if rows:
+        latest_version = rows[-1]["version"]
+        active_pairs = set()
+        
+        # find which scenes were actually part of the latest run
+        for row in rows:
+            if row["version"] == latest_version:
+                active_pairs.add((row["scene"], row["variant"]))
+
+        for row in rows:
             s, v = row["scene"], row["variant"]
-            latest_entries[(s, v)] = row
+            # only keep it if it is part of the currently used scenes
+            if (s, v) in active_pairs:
+                latest_entries[(s, v)] = row
+                if row["version"] == latest_version:
+                    latest_date = row.get("date", "n/a")
 
 # group by scene
 scenes = defaultdict(list)
