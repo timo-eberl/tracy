@@ -57,7 +57,7 @@ typedef enum { DIFFUSE, EMISSIVE, MIRROR, REFRACTIVE } MaterialType;
 typedef struct { Vec albedo; } DiffuseMaterial;
 typedef struct { Vec radiosity; /* in W/m^2 */ } EmissiveMaterial;
 typedef struct { Vec rho; /* describes the ratio of reflected radiance */ } MirrorMaterial;
-typedef struct { float ior; /* index of refraction */ } RefractiveMaterial;
+typedef struct { float interior_ior; float exterior_ior; } RefractiveMaterial;
 typedef struct {
 	union {
 		DiffuseMaterial diffuse; EmissiveMaterial emissive; MirrorMaterial mirror;
@@ -101,7 +101,7 @@ typedef enum { FILTER_BOX = 0, FILTER_GAUSSIAN = 1, FILTER_MITCHELL = 2 } Filter
 #define MAT_BLUE   (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.25, 0.25, 0.75}}
 #define MAT_WHITE  (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.75, 0.75, 0.75}}
 #define MAT_MIRROR (Material){.type = MIRROR, .data.mirror.rho = {1,1,1}}
-#define MAT_GLASS  (Material){.type = REFRACTIVE, .data.refractive.ior = 1.5}
+#define MAT_GLASS  (Material){.type = REFRACTIVE, .data.refractive = {.interior_ior=1.5, .exterior_ior=1.0}}
 #define MAT_LIGHT  (Material){.type = EMISSIVE, .data.emissive.radiosity = {2*21.5, 2*21.5, 2*21.5}}
 #define MAT_SHIELD (Material){.type = DIFFUSE, .data.diffuse.albedo={0.1,0.1,0.1}, .thin_wall=true}
 
@@ -247,7 +247,6 @@ bool intersect_sphere(const Ray* r, const Sphere* s, HitInfo* hit) {
 	}
 }
 
-// ray-triangle intersection using Möller–Trumbore algorithm
 // ray-triangle intersection using Möller–Trumbore algorithm
 bool intersect_triangle(const Ray* r, const Triangle* tri, HitInfo* hit) {
 	Vec h = vec_cross(r->dir, tri->edge2);
@@ -409,37 +408,47 @@ float gaussian_weight_2d(float offset_x, float offset_y, float sigma) {
 	return norm_const * expf(-r_squared / two_sigma_squared);
 }
 
-// Calculates the Fresnel reflectance amount using Schlick's approximation.
+// Calculates the exact Fresnel reflectance amount using the dielectric Fresnel equations.
 // Determines how much light reflects vs. refracts.
-float fresnel(Vec incident, Vec normal, bool is_inside, float ior) {
-	float R0 = ((1.0f - ior) / (1.0f + ior)) * ((1.0f - ior) / (1.0f + ior));
-	float cos_i = -vec_dot(incident, normal);
-	// If we're inside the medium, use the correct IOR for the calculation
-	if (is_inside) {
-		cos_i = -cos_i; // This can happen if ray is inside the sphere
-		// We must use the transmitted angle for Schlick when going from Denser -> Rarer
-		float sin2_t = ior * ior * (1.0f - cos_i * cos_i);
-		if (sin2_t > 1.0f) return 1.0f; // Total Internal Reflection
-		cos_i = sqrtf(1.0f - sin2_t);
-	}
+// `normal` must be flipped to point against the incident ray.
+// `ior_from` is the medium the ray is currently in, `ior_to` is the medium it is entering.
+float fresnel(Vec incident, Vec normal, float ior_from, float ior_to) {
+	// Normal opposes incident, so dot product is negative.
+	// -dot makes it positive. Clamp to 0.0f to avoid tiny precision errors.
+	float cos_i = fmaxf(0.0f, -vec_dot(incident, normal));
+	float eta = ior_from / ior_to;
+	// Snell's Law
+	float sin2_theta_t = eta * eta * (1.0f - cos_i * cos_i);
+	// total internal reflection
+	if (sin2_theta_t >= 1.0f) { return 1.0f; }
 
-	return R0 + (1.0f - R0) * powf(1.0f - cos_i, 5.0f);
+	// Cosine of the transmitted angle
+	float cos_theta_t = sqrtf(fmaxf(0.0f, 1.0f - sin2_theta_t));
+	// Parallel (p) and perpendicular (s) polarization reflection components
+	float rs =
+		(ior_from * cos_i - ior_to * cos_theta_t) / (ior_from * cos_i + ior_to * cos_theta_t);
+	float rp =
+		(ior_from * cos_theta_t - ior_to * cos_i) / (ior_from * cos_theta_t + ior_to * cos_i);
+	// Unpolarized light assumes an equal mix of both polarizations
+	return (rs * rs + rp * rp) / 2.0f;
 }
 
 // Calculates the refraction direction using Snell's Law from 11.2.9
-// Also handles Total Internal Reflection.
-Vec refract(Vec incident, Vec normal, float eta, bool* total_int_refl) {
-	float cos_i = -vec_dot(incident, normal);
-	assert(cos_i > 0.0f);
+// `normal` must be flipped to point AGAINST the incident ray.
+Vec refract(Vec incident, Vec normal, float ior_from, float ior_to) {
+	float eta = ior_from / ior_to;
+	float cos_i = fmaxf(0.0f, -vec_dot(incident, normal));
 
 	float k = 1.0f - eta * eta * (1.0f - cos_i * cos_i);
-	*total_int_refl = k < 0.0f;
-	if (*total_int_refl) { // total internal reflection
-		return reflect(incident, normal);
-	} else {
-		Vec refl_dir = vec_add(vec_scale(incident, eta), vec_scale(normal, eta * cos_i - sqrtf(k)));
-		return vec_normalize(refl_dir);
-	}
+
+	assert(k >= 0.0f && "indicates total internal reflection happens, in which case the refract "
+						"function should not have been called");
+	// Floating-point safety fallback: If we slipped past the Fresnel TIR check due to float
+	// precision, do reflection to prevent NaNs.
+	if (k < 0.0f) { return reflect(incident, normal); }
+
+	Vec refr_dir = vec_add(vec_scale(incident, eta), vec_scale(normal, eta * cos_i - sqrtf(k)));
+	return vec_normalize(refr_dir);
 }
 
 // random float between 0.0 (inclusive) and 1.0 (exclusive)
@@ -586,29 +595,30 @@ Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
 			break;
 		}
 		case REFRACTIVE: {
-			float ior = hit_prim->material.data.refractive.ior;
-			float eta = hit.inside ? ior : 1.0f / ior;
-			// Calculate how much light reflects using the Fresnel term.
-			float reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
-			Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
+			RefractiveMaterial mat = hit_prim->material.data.refractive;
+			// Setup IORs based on whether we are entering or exiting the geometry
+			float ior_from = hit.inside ? mat.interior_ior : mat.exterior_ior;
+			float ior_to = hit.inside ? mat.exterior_ior : mat.interior_ior;
+			// Ensure normal always points against the incoming ray
+			Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n;
 
-			if (reflectance > random_float(rng)) { // do either reflection or refraction
+			// Calculate how much light reflects using the Fresnel term.
+			float reflectance = fresnel(r.dir, normal, ior_from, ior_to);
+
+			if (reflectance > random_float(rng)) {
 				// reflection
 				r.origin = vec_add(hit.p, vec_scale(normal, SELF_OCCLUSION_DELTA));
 				r.dir = reflect(r.dir, normal);
 			} else {
 				// refraction
 				if (hit_prim->material.thin_wall) {
-					// Ray passing through a thin wall bends twice, cancelling the angle out -> ray
-					// passes straight through
+					// Ray passing through thin geometry bends twice, cancelling the angle out, so
+					// we don't change the direciton
 					r.origin = vec_add(hit.p, vec_scale(r.dir, SELF_OCCLUSION_DELTA));
 				} else {
-					bool internal_refl;
-					Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
-					// total internal reflection -> exit early
-					if (internal_refl) { return (Vec){0}; }
+					// Push ray into the new medium
 					r.origin = vec_add(hit.p, vec_scale(normal, -SELF_OCCLUSION_DELTA));
-					r.dir = refr_dir;
+					r.dir = refract(r.dir, normal, ior_from, ior_to);
 				}
 			}
 			break;
