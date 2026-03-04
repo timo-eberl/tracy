@@ -23,7 +23,16 @@
         </film>
 
         <sampler type="independent">
-            <integer name="sample_count" value="100000"/>
+            <!-- 
+            NOTE: Mitsuba accumulates pixel sums in 32-bit floats, losing
+            decimal precision as the sum grows. To prevent the float step-size
+            from becoming too large and truncating new samples, keep the total
+            sum under 1,048,576 (2^20).
+
+            Formula: Max Samples ≈ 1,048,576 / Radiance
+            Example: 1,048,576 / 13.68 ≈ 76,650 samples max
+            -->
+            <integer name="sample_count" value="76000"/>
         </sampler>
     </sensor>
 
