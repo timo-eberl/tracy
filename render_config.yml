@@ -29,7 +29,7 @@ scenes:
     focus_y: 1.05
     focus_z: 0.0
 
-  - tag: "glasssphere"
+  - tag: "glass-sphere"
     name: "Glass Sphere"
     description: "A single glass sphere lit by an area light"
     scene_id: 2
@@ -66,5 +66,5 @@ jobs:
 
   - scene: "example5"
     variant: "rr"
-    tag: "glasssphere"
+    tag: "glass-sphere"
     iterations: 1000
