@@ -181,7 +181,7 @@ float vec_length_squared(Vec v) { return vec_dot(v, v); }
 // clang-format on
 Vec vec_normalize(Vec v) {
 	float l = vec_length(v);
-	if (l == 0.0f) return (Vec){0, 0, 0};
+	if (l == 0.0f) return (Vec){0};
 	return vec_scale(v, 1.0f / l);
 }
 Vec vec_cross(Vec a, Vec b) {
@@ -343,7 +343,7 @@ float luminance(Vec rgb) {
 // simple reinhard tone mapping operator based on luminance
 Vec reinhard_luminance(Vec rgb_hdr) {
 	float l_hdr = luminance(rgb_hdr);
-	if (l_hdr <= 0.0f) return (Vec){0, 0, 0}; // Handle black so we don't divide by 0
+	if (l_hdr <= 0.0f) return (Vec){0}; // Handle black so we don't divide by 0
 	float l_ldr = l_hdr / (1.0f + l_hdr);
 	Vec v = vec_scale(rgb_hdr, l_ldr / l_hdr);
 	return (Vec){fminf(v.x, 1.0f), fminf(v.y, 1.0f), fminf(v.z, 1.0f)};
@@ -516,122 +516,117 @@ float clamp_survival_probability(float probability) {
 	return probability;
 }
 
-Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng); // forward declaration for recursion
-Vec radiance_from_ray(Ray r, int depth, pcg32_random_t* rng) {
-	if (depth + 1 > max_depth) { return (Vec){0, 0, 0}; }
+Vec radiance_from_ray(Ray r, pcg32_random_t* rng) {
+	Vec throughput = {1.0f, 1.0f, 1.0f};
 
-	HitInfo hit;
-	Primitive* hit_prim = NULL;
-	bool did_hit = intersect_scene(&r, &hit, &hit_prim);
+	for (int depth = 0; depth < max_depth; ++depth) {
+		HitInfo hit;
+		Primitive* hit_prim = NULL;
+		bool did_hit = intersect_scene(&r, &hit, &hit_prim);
 
-	if (!did_hit) { return (Vec){0, 0, 0}; }
+		if (!did_hit) { return (Vec){0}; }
 
-	// Handle thin walls (think of paper or leaves)
-	// If we hit the backface of a thin-walled object, treat it as a frontface
-	if (hit_prim->material.thin_wall && hit.inside) {
-		hit.n = vec_scale(hit.n, -1.0f);
-		hit.inside = false;
-	}
-
-	switch (hit_prim->material.type) {
-	case EMISSIVE: {
-		if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
-
-		Vec radiosity = hit_prim->material.data.emissive.radiosity;
-		Vec radiance = vec_scale(radiosity, 1.0f / (float)M_PI);
-		return radiance;
-	}
-	case DIFFUSE: {
-		if (hit.inside) return (Vec){0}; // If inside, return 0
-
-		Vec normal = hit.n;
-		Vec albedo = hit_prim->material.data.diffuse.albedo;
-
-		float survival_prob = 1.0f; // Default to 100% survival
-#ifdef ENABLE_RUSSIAN_ROULETTE
-		if (depth >= RR_START_DEPTH) {
-			// Probability is based on how 'bright' the surface is.
-			// Darker surfaces are more likely to terminate.
-			survival_prob = clamp_survival_probability(vec_max_component(albedo));
-			// Terminate based on survival probability
-			if (random_float(rng) > survival_prob) { return (Vec){0, 0, 0}; }
+		// Handle thin walls (think of paper or leaves)
+		// If we hit the backface of a thin-walled object, treat it as a frontface
+		if (hit_prim->material.thin_wall && hit.inside) {
+			hit.n = vec_scale(hit.n, -1.0f);
+			hit.inside = false;
 		}
+
+		switch (hit_prim->material.type) {
+		case EMISSIVE: {
+			if (hit.inside) return (Vec){0}; // Only emit light in front facing direction
+
+			Vec radiosity = hit_prim->material.data.emissive.radiosity;
+			Vec radiance = vec_scale(radiosity, 1.0f / (float)M_PI);
+			return vec_hadamard_prod(throughput, radiance);
+		}
+		case DIFFUSE: {
+			if (hit.inside) return (Vec){0}; // If inside, return 0
+
+			Vec normal = hit.n;
+			Vec albedo = hit_prim->material.data.diffuse.albedo;
+
+			float survival_prob = 1.0f; // Default to 100% survival
+#ifdef ENABLE_RUSSIAN_ROULETTE
+			if (depth >= RR_START_DEPTH) {
+				// Probability is based on how 'bright' the surface is.
+				// Darker surfaces are more likely to terminate.
+				survival_prob = clamp_survival_probability(vec_max_component(albedo));
+				// Terminate based on survival probability
+				if (random_float(rng) > survival_prob) { return (Vec){0}; }
+			}
 #endif
 
-		Vec next_direction = sample_cosine_hemisphere(normal, rng);
+			r.origin = vec_add(hit.p, vec_scale(normal, SELF_OCCLUSION_DELTA));
+			r.dir = sample_cosine_hemisphere(normal, rng);
 
-		Ray refl_ray = {hit.p, next_direction};
-		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec incoming_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
+			// russian roulette bias correction: scale the albedo by the inverse probability to
+			// compensate for killed rays.
+			albedo = vec_scale(albedo, 1.0f / survival_prob);
 
-		// russian roulette bias correction: scale the albedo by the inverse probability to
-		// compensate for killed rays.
-		albedo = vec_scale(albedo, 1.0f / survival_prob);
-
-		// The PDF is (cos_theta / PI).
-		// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
-		// Result: (Li * (Color / PI) * cos_theta) / (cos_theta / PI) == Li * Color
-		return vec_hadamard_prod(albedo, incoming_radiance);
-	}
-	case MIRROR: {
-		Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
-		Vec rho = hit_prim->material.data.mirror.rho;
-
-		float survival_prob = 1.0f;
-#ifdef ENABLE_RUSSIAN_ROULETTE
-		if (depth >= RR_START_DEPTH) {
-			// Mirrors are usually bright, but if it's a dark mirror, we might kill it
-			survival_prob = clamp_survival_probability(vec_max_component(rho));
-			// Terminate based on survival probability
-			if (random_float(rng) > survival_prob) { return (Vec){0, 0, 0}; }
+			// The PDF is (cos_theta / PI).
+			// The estimator is: (Li * BRDF * cos_theta) / PDF. BRDF is (Color / PI).
+			// Result: (Li * (Color / PI) * cos_theta) / (cos_theta / PI) == Li * Color
+			throughput = vec_hadamard_prod(throughput, albedo);
+			break;
 		}
+		case MIRROR: {
+			Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
+			Vec rho = hit_prim->material.data.mirror.rho;
+
+			float survival_prob = 1.0f;
+#ifdef ENABLE_RUSSIAN_ROULETTE
+			if (depth >= RR_START_DEPTH) {
+				// Mirrors are usually bright, but if it's a dark mirror, we might kill it
+				survival_prob = clamp_survival_probability(vec_max_component(rho));
+				// Terminate based on survival probability
+				if (random_float(rng) > survival_prob) { return (Vec){0}; }
+			}
 #endif
 
-		// we don't implement a perfect mirror as a brdf
-		// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
-		Ray refl_ray = {hit.p, reflect(r.dir, normal)};
-		refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-		Vec incoming = radiance_from_ray(refl_ray, depth + 1, rng);
-		// russian roulette bias correction
-		rho = vec_scale(rho, 1.0f / survival_prob);
-		return vec_hadamard_prod(incoming, rho);
-	}
-	case REFRACTIVE: {
-		float ior = hit_prim->material.data.refractive.ior;
-		float eta = hit.inside ? ior : 1.0f / ior;
-		// Calculate how much light reflects using the Fresnel term.
-		float reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
-		Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
+			// we don't implement a perfect mirror as a brdf
+			// instead we describe perfect reflection as L_r = L_i * rho, where rho is just a ratio
+			r.origin = vec_add(hit.p, vec_scale(normal, SELF_OCCLUSION_DELTA));
+			r.dir = reflect(r.dir, normal);
 
-		if (reflectance > random_float(rng)) { // do either reflection or refraction
-			// reflection
-			Ray refl_ray = {hit.p, reflect(r.dir, normal)};
-			refl_ray.origin = vec_add(refl_ray.origin, vec_scale(normal, SELF_OCCLUSION_DELTA));
-			Vec reflection_radiance = radiance_from_ray(refl_ray, depth + 1, rng);
-			return reflection_radiance;
-		} else {
-			// refraction
-			if (hit_prim->material.thin_wall) {
-				// Ray passing through a thin wall bends twice, cancelling the angle out -> ray
-				// passes straight through
-				Ray refr_ray = {hit.p, r.dir};
-				refr_ray.origin = vec_add(refr_ray.origin, vec_scale(r.dir, SELF_OCCLUSION_DELTA));
-				return radiance_from_ray(refr_ray, depth + 1, rng);
-			}
+			// russian roulette bias correction
+			rho = vec_scale(rho, 1.0f / survival_prob);
+			throughput = vec_hadamard_prod(throughput, rho);
+			break;
+		}
+		case REFRACTIVE: {
+			float ior = hit_prim->material.data.refractive.ior;
+			float eta = hit.inside ? ior : 1.0f / ior;
+			// Calculate how much light reflects using the Fresnel term.
+			float reflectance = fresnel(r.dir, hit.n, hit.inside, ior);
+			Vec normal = hit.inside ? vec_scale(hit.n, -1.0f) : hit.n; // if inside, flip normal
 
-			bool internal_refl;
-			Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
-			if (internal_refl) { // total internal reflection -> exit early
-				return (Vec){0, 0, 0};
+			if (reflectance > random_float(rng)) { // do either reflection or refraction
+				// reflection
+				r.origin = vec_add(hit.p, vec_scale(normal, SELF_OCCLUSION_DELTA));
+				r.dir = reflect(r.dir, normal);
+			} else {
+				// refraction
+				if (hit_prim->material.thin_wall) {
+					// Ray passing through a thin wall bends twice, cancelling the angle out -> ray
+					// passes straight through
+					r.origin = vec_add(hit.p, vec_scale(r.dir, SELF_OCCLUSION_DELTA));
+				} else {
+					bool internal_refl;
+					Vec refr_dir = refract(r.dir, normal, eta, &internal_refl);
+					// total internal reflection -> exit early
+					if (internal_refl) { return (Vec){0}; }
+					r.origin = vec_add(hit.p, vec_scale(normal, -SELF_OCCLUSION_DELTA));
+					r.dir = refr_dir;
+				}
 			}
-			Ray refr_ray = {hit.p, refr_dir};
-			refr_ray.origin = vec_add(refr_ray.origin, vec_scale(normal, -SELF_OCCLUSION_DELTA));
-			Vec refraction_radiance = radiance_from_ray(refr_ray, depth + 1, rng);
-			return refraction_radiance;
+			break;
+		}
+		default: assert(false); // material type not implemented
 		}
 	}
-	default: assert(false); // material type not implemented
-	}
+	return (Vec){0};
 }
 
 void write_image(bool update_ldr, bool update_hdr) {
@@ -651,7 +646,7 @@ void write_image(bool update_ldr, bool update_hdr) {
 									  (float)summed_weighted_radiance_buffer[radiance_index].y,
 									  (float)summed_weighted_radiance_buffer[radiance_index].z},
 								1.0f / (float)weight)
-					: (Vec){0, 0, 0};
+					: (Vec){0};
 
 			if (update_hdr) {
 				int image_index = radiance_index * 3; // HDR has 3 components (RGB)
@@ -795,7 +790,7 @@ void render_refine(unsigned int n_samples) {
 				Vec dir = vec_normalize(vec_add(forward, vec_add(right_comp, up_comp)));
 
 				Ray r = {camera_origin, dir};
-				Vec radiance = radiance_from_ray(r, 0, rng_state);
+				Vec radiance = radiance_from_ray(r, rng_state);
 
 				// Distribute (Splat) the radiance to all neighboring pixels within filter range.
 				// Determine the integer range of pixels where the pixel center (x + 0.5) falls
