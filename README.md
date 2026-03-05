@@ -3,11 +3,11 @@
 ## Summary Results
 | Scene | Variant | RelMSE Score | Render Time | Iterations | Date |
 |---|---|---|---|---|---|
-| caustics | **rr** | 0.61870 | 6.47s | 200 | 2026-03-04 23:12 |
-| caustics | **std** | 0.64270 | 6.47s | 200 | 2026-03-04 23:12 |
-| cornell-v2 | **rr** | 0.16730 | 36.03s | 150 | 2026-03-04 23:12 |
-| cornell-v2 | **std** | 0.16310 | 45.53s | 150 | 2026-03-04 23:12 |
-| glass-sphere | **rr** | 0.02770 | 1.72s | 1000 | 2026-03-04 23:12 |
+| caustics-v2 | **rr** | 0.64120 | 18.97s | 400 | 2026-03-05 00:33 |
+| caustics-v2 | **std** | 0.63970 | 19.10s | 400 | 2026-03-05 00:33 |
+| cornell-v2 | **rr** | 0.16730 | 34.14s | 75 | 2026-03-05 00:33 |
+| cornell-v2 | **std** | 0.16310 | 43.50s | 75 | 2026-03-05 00:33 |
+| glass-sphere | **rr** | 0.02770 | 1.55s | 500 | 2026-03-05 00:33 |
 
 
 ## RelMSE Trend
@@ -17,16 +17,16 @@
 ![Runtime Trend](plots/history_time_trend.png)
 
 ## Render Gallery & Convergence
-### Scene: caustics
+### Scene: caustics-v2
 
 | Type | rr | std | Reference |
 | :---: | :---: | :---: | :---: |
-| **Render** | ![ rr ](renderings/latest-render_caustics_rr.png) | ![ std ](renderings/latest-render_caustics_std.png) | ![ Reference](renderings/reference_caustics.png) |
-| **Diff** | ![ diff rr ](renderings/latest-diff_render_caustics_rr.png) | ![ diff std ](renderings/latest-diff_render_caustics_std.png) | |
+| **Render** | ![ rr ](renderings/latest-render_caustics-v2_rr.png) | ![ std ](renderings/latest-render_caustics-v2_std.png) | ![ Reference](renderings/reference_caustics-v2.png) |
+| **Diff** | ![ diff rr ](renderings/latest-diff_render_caustics-v2_rr.png) | ![ diff std ](renderings/latest-diff_render_caustics-v2_std.png) | |
 
-### Convergence: caustics
+### Convergence: caustics-v2
 
-![ caustics convergence ](plots/convergence_caustics.png)
+![ caustics-v2 convergence ](plots/convergence_caustics-v2.png)
 
 ---
 ### Scene: cornell-v2
@@ -56,4 +56,4 @@
 
 
 ---
-*last updated: 2026-03-04 23:12 (commit: e633ade0)*
+*last updated: 2026-03-05 00:33 (commit: 6e090cb1)*
