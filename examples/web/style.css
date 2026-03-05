@@ -12,6 +12,7 @@
 	--font-size-input: 0.9rem;
 	--font-size-mono: 0.8rem;
 	--font-size-instruction: 1.0rem;
+	--success-color: #28a745;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
 		--input-bg: #2d2d2d;
 		--input-border: #444444;
 		--accent-color: #3b9deb;
+		--success-color: #2ea043;
 	}
 }
 
@@ -83,6 +85,29 @@ body {
 	border: 1px solid var(--border-color);
 	border-radius: 4px;
 	color: var(--text-color);
+}
+
+@keyframes status-rotate {
+	100% { background-position: 14px 0; }
+}
+
+.status-rendering {
+	/* The transparent border makes room for the gradient border underneath */
+	border: 2px solid transparent !important;
+	
+	/* Draw a solid color inside, and a diagonal dashed pattern underneath the border */
+	background: 
+		linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+		repeating-linear-gradient(-45deg, var(--accent-color) 0, var(--accent-color) 5px, transparent 5px, transparent 10px) border-box;
+	
+	/* Size the pattern so it tiles perfectly and animate it */
+	background-size: 14px 14px;
+	animation: status-rotate 0.5s linear infinite;
+}
+
+.status-finished {
+	border: 2px solid var(--success-color) !important;
+	background: var(--input-bg); /* Resets back to normal background */
 }
 
 .control-group input, 
