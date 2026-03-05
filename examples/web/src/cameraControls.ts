@@ -2,16 +2,16 @@ import * as Tracy from "../src/tracy";
 
 export const cameraDistanceBounds = { min: 0.01, max: 5000 };
 export const cameraRotationXBounds = { min: -1.569, max: 1.569 };
-export const initialCamera: Tracy.CameraProperties = {
+
+// will be overridden on startup
+export const camera: Tracy.CameraProperties = {
 	rotation: { x: 0, y: 0 },
-	distance: 5.5,
-	focusPoint: { x: 0, y: 1.25, z: 0 },
+	distance: 0,
+	focusPoint: { x: 0, y: 0, z: 0 },
 };
 
-export const camera: Tracy.CameraProperties = structuredClone(initialCamera);
-
-export function resetCamera() {
-	Object.assign(camera, structuredClone(initialCamera));
+export function setCamera(newCamera: Tracy.CameraProperties) {
+	Object.assign(camera, structuredClone(newCamera));
 }
 
 export function clamp(v: number, min: number, max: number) {

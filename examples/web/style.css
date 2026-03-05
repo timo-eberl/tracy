@@ -6,6 +6,12 @@
 	--input-bg: #f9f9f9;
 	--input-border: #cccccc;
 	--accent-color: #007acc;
+
+	--font-size-title: 1.2rem;
+	--font-size-label: 0.9rem;
+	--font-size-input: 0.9rem;
+	--font-size-mono: 0.8rem;
+	--font-size-instruction: 1.0rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,13 +47,13 @@ body {
 }
 
 .sidebar {
-	width: 280px;
+	width: 250px;
 	background-color: var(--sidebar-bg);
 	border-right: 1px solid var(--border-color);
-	padding: 20px;
+	padding: 15px;
 	display: flex;
 	flex-direction: column;
-	gap: 15px;
+	gap: 10px;
 	box-shadow: 2px 0 5px rgba(0,0,0,0.05);
 	z-index: 10;
 	overflow-y: auto; /* scrollable sidebar for many elements */
@@ -55,28 +61,39 @@ body {
 
 .sidebar h1 {
 	margin: 0 0 10px 0;
-	font-size: 1.5rem;
+	font-size: var(--font-size-title);
 }
 
 .control-group {
 	display: flex;
 	flex-direction: column;
-	gap: 5px;
+	gap: 3px;
 }
 
 .control-group label {
-	font-size: 1.1rem;
-	font-weight: 600;
+	font-size: var(--font-size-label);
+	font-weight: 500;
 }
 
 #ui-status, #ui-camera {
-	font-size: 1.0rem;
+	font-size: var(--font-size-mono);
 	font-family: monospace;
-	padding: 8px;
+	padding: 6px;
 	background-color: var(--input-bg);
 	border: 1px solid var(--border-color);
 	border-radius: 4px;
 	color: var(--text-color);
+}
+
+.control-group input, 
+.control-group select {
+	padding: 4px 6px;
+	border: 1px solid var(--input-border);
+	background-color: var(--input-bg);
+	color: var(--text-color);
+	border-radius: 4px;
+	font-size: var(--font-size-input);
+	outline: none;
 }
 
 .separator {
@@ -84,17 +101,6 @@ body {
 	border-top: 1px solid var(--border-color);
 	margin: 0;
 	width: 100%;
-}
-
-.control-group input, 
-.control-group select {
-	padding: 8px;
-	border: 1px solid var(--input-border);
-	background-color: var(--input-bg);
-	color: var(--text-color);
-	border-radius: 4px;
-	font-size: 1.0rem;
-	outline: none;
 }
 
 .control-group input:focus, 
@@ -106,16 +112,16 @@ body {
 	margin-top: auto;
 	display: flex;
 	flex-direction: column;
-	gap: 15px;
+	gap: 10px;
 }
 
 .instructions {
-	padding: 15px;
+	padding: 10px;
 	background-color: var(--input-bg);
 	border: 1px solid var(--border-color);
 	border-radius: 6px;
-	font-size: 1.1rem;
-	line-height: 1.4;
+	font-size: var(--font-size-instruction);
+	line-height: 1.3;
 }
 
 .instructions ul {

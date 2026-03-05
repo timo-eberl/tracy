@@ -1,5 +1,12 @@
 import * as Tracy from "../src/tracy";
-import { camera, resetCamera, setupCameraControls } from "./cameraControls";
+import { camera, setCamera, setupCameraControls } from "./cameraControls";
+
+// position in array matches scene id
+const sceneCameras: Tracy.CameraProperties[] =[
+	{ rotation: { x: 0, y: 0 }, distance: 5.5, focusPoint: { x: 0, y: 1.25, z: 0 } },
+	{ rotation: { x: 0, y: 0 }, distance: 1.8, focusPoint: { x: 0, y: 0.4, z: 0 } },
+	{ rotation: { x: 0.2, y: 0 }, distance: 6, focusPoint: { x: 0, y: 1.25, z: 0 } },
+];
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const context = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -27,6 +34,9 @@ function updateCameraUI() {
 }
 
 function main() {
+	const initialSceneIdx = parseInt(uiScene.value, 10);
+	setCamera(sceneCameras[initialSceneIdx]);
+
 	setupCameraControls(canvas, () => { cameraChanged = true; });
 	setupUIControls();
 	updateCameraUI();
@@ -53,8 +63,11 @@ function main() {
 function setupUIControls() {
 	// Listen for UI parameter changes to trigger a new render
 	const triggerRender = () => { cameraChanged = true; };
-	uiScene.addEventListener("change", resetCamera);
-	uiScene.addEventListener("change", triggerRender);
+	uiScene.addEventListener("change", () => {
+		const sceneIdx = parseInt(uiScene.value, 10);
+		setCamera(sceneCameras[sceneIdx]);
+		triggerRender();
+	});
 	uiRes.addEventListener("change", triggerRender);
 	uiDepth.addEventListener("input", triggerRender);
 	uiFilter.addEventListener("change", triggerRender);
