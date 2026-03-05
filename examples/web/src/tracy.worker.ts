@@ -10,8 +10,6 @@ const sharedMemory = new WebAssembly.Memory({ initial: 256, maximum: 8192, share
 // This promise ensures the Wasm module is initialized only once.
 const modulePromise: Promise<MainModule> = ModuleFactory({ wasmMemory: sharedMemory });
 
-function degToRad(degree: number) { return degree / 360 * 2 * Math.PI; }
-
 // Listen for messages from the main thread
 self.onmessage = async (event) => {
 	const s = event.data as RenderSettings;
@@ -21,7 +19,7 @@ self.onmessage = async (event) => {
 
 	Module._render_init(
 		s.scene, s.maxDepth, s.width, s.height, s.filterType,
-		degToRad(s.camera.rotation.x), degToRad(s.camera.rotation.y), s.camera.distance,
+		s.camera.rotation.x, s.camera.rotation.y, s.camera.distance,
 		s.camera.focusPoint.x, s.camera.focusPoint.y, s.camera.focusPoint.z
 	);
 

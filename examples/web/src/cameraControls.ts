@@ -1,7 +1,7 @@
 import * as Tracy from "../src/tracy";
 
 export const cameraDistanceBounds = { min: 0.01, max: 5000 };
-export const cameraRotationXBounds = { min: -89.9, max: 89.9 };
+export const cameraRotationXBounds = { min: -1.569, max: 1.569 };
 export const initialCamera: Tracy.CameraProperties = {
 	rotation: { x: 0, y: 0 },
 	distance: 5.5,
@@ -27,10 +27,10 @@ export function setupCameraControls(canvas: HTMLCanvasElement, onChange: () => v
 	document.onmousemove = (event) => {
 		if (isMouseDown) {
 			camera.rotation.x = clamp(
-				camera.rotation.x + event.movementY * 0.2,
+				camera.rotation.x + event.movementY * 0.0035,
 				cameraRotationXBounds.min, cameraRotationXBounds.max
 			);
-			camera.rotation.y -= event.movementX * 0.2;
+			camera.rotation.y -= event.movementX * 0.0035;
 			onChange(); // Signal that the render needs to restart
 		}
 	};
@@ -106,21 +106,21 @@ export function setupCameraControls(canvas: HTMLCanvasElement, onChange: () => v
 		// one touch point - only rotate
 		if (primaryTouch.identifier !== undefined && secondaryTouch.identifier === undefined) {
 			camera.rotation.x = clamp(
-				camera.rotation.x + primaryMovement.y * 0.2,
+				camera.rotation.x + primaryMovement.y * 0.0035,
 				cameraRotationXBounds.min, cameraRotationXBounds.max
 			);
-			camera.rotation.y -= primaryMovement.x * 0.2;
+			camera.rotation.y -= primaryMovement.x * 0.0035;
 			onChange();
 		}
 		// two touch points - rotate and zoom
 		else if (primaryTouch.identifier !== undefined && secondaryTouch.identifier !== undefined) {
 			// rotate
 			camera.rotation.x = clamp(
-				camera.rotation.x + primaryMovement.y * 0.1 + secondaryMovement.y * 0.1,
+				camera.rotation.x + primaryMovement.y * 0.00175 + secondaryMovement.y * 0.00175,
 				cameraRotationXBounds.min, cameraRotationXBounds.max
 			);
-			camera.rotation.y -= primaryMovement.x * 0.1;
-			camera.rotation.y -= secondaryMovement.x * 0.1;
+			camera.rotation.y -= primaryMovement.x * 0.00175;
+			camera.rotation.y -= secondaryMovement.x * 0.00175;
 
 			// 2d vector helper functions
 			function dot(a: { x: number, y: number }, b: { x: number, y: number }) { return a.x * b.x + a.y * b.y; };
