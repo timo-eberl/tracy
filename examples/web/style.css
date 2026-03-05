@@ -69,7 +69,7 @@ body {
 	font-weight: 600;
 }
 
-#ui-status {
+#ui-status, #ui-camera {
 	font-size: 1.0rem;
 	font-family: monospace;
 	padding: 8px;
@@ -77,6 +77,13 @@ body {
 	border: 1px solid var(--border-color);
 	border-radius: 4px;
 	color: var(--text-color);
+}
+
+.separator {
+	border: none;
+	border-top: 1px solid var(--border-color);
+	margin: 0;
+	width: 100%;
 }
 
 .control-group input, 

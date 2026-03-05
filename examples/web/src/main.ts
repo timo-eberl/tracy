@@ -11,6 +11,7 @@ const uiDepth = document.getElementById("ui-depth") as HTMLInputElement;
 const uiFilter = document.getElementById("ui-filter") as HTMLSelectElement;
 const uiSpp = document.getElementById("ui-spp") as HTMLInputElement;
 const uiStatus = document.getElementById("ui-status") as HTMLElement;
+const uiCamera = document.getElementById("ui-camera") as HTMLElement;
 
 let tracy: Tracy.TracyModule;
 let cameraChanged = true; // Set to true so it renders immediately on load
@@ -19,9 +20,16 @@ let cameraChanged = true; // Set to true so it renders immediately on load
 let renderMode: 'none' | 'preview' | 'final' = 'none';
 let settleTimer: number | null = null;
 
+function updateCameraUI() {
+	uiCamera.innerHTML = `Rot: ${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}<br>` +
+		`Dist: ${camera.distance.toFixed(2)}<br>` +
+		`Focus: ${camera.focusPoint.x.toFixed(2)}, ${camera.focusPoint.y.toFixed(2)}, ${camera.focusPoint.z.toFixed(2)}`;
+}
+
 function main() {
 	setupCameraControls(canvas, () => { cameraChanged = true; });
 	setupUIControls();
+	updateCameraUI();
 
 	// Only ONE worker pool, meaning zero OpenMP thread contention!
 	tracy = Tracy.create(context);
@@ -125,6 +133,8 @@ async function startFinalRender() {
 
 function renderLoop() {
 	if (cameraChanged) {
+		updateCameraUI();
+
 		// The user moved the camera. Cancel any pending settle timer.
 		if (settleTimer !== null) {
 			clearTimeout(settleTimer);
