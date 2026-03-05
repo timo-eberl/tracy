@@ -105,9 +105,9 @@ jobs:
       - name: Generate Reference Preview - Caustics
         uses: ./.github/actions/exr-to-png-conversion
         with:
-          input_dir: "mitsuba_scenes/caustics/"
+          input_dir: "mitsuba_scenes/caustics-v2/"
           output_dir: "tests/img/exr/reference/"
-          filename: "reference_caustics"
+          filename: "reference_caustics-v2"
 
       - name: Generate Reference Preview - Cornell
         uses: ./.github/actions/exr-to-png-conversion

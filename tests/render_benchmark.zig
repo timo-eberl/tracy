@@ -80,7 +80,7 @@ pub fn runRender(allocator: std.mem.Allocator, scene: []const u8, iterations: u3
     var timer = try std.time.Timer.start();
     while (i < iterations) : (i += 1) {
         timer.reset(); // Clock starts at 0 now
-        tracy.render_refine(5);
+        tracy.render_refine(10);
 
         // duration_ns is exactly the time spent in render_refine
         const duration_ns = timer.read();

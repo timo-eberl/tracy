@@ -14,19 +14,19 @@ scenes:
     focus_y: 1.25
     focus_z: 0.0
 
-  - tag: "caustics"
+  - tag: "caustics-v2"
     name: "Caustics"
     description: "Glass spheres, diffuse ground, and colored area lights"
     scene_id: 1
-    max_depth: 6
-    width: 280
-    height: 320
+    max_depth: 20
+    width: 220
+    height: 180
     filter_type: 0
-    cam_angle_x: 0.4
+    cam_angle_x: 0.0
     cam_angle_y: 0.0
-    cam_dist: 4.0
+    cam_dist: 1.8
     focus_x: 0.0
-    focus_y: 1.05
+    focus_y: 0.4
     focus_z: 0.0
 
   - tag: "glass-sphere"
@@ -47,24 +47,24 @@ jobs:
   - scene: "example1"
     variant: "std"
     tag: "cornell-v2"
-    iterations: 150
+    iterations: 75
 
   - scene: "example2"
     variant: "rr"
     tag: "cornell-v2"
-    iterations: 150
+    iterations: 75
 
   - scene: "example3"
     variant: "std"
-    tag: "caustics"
-    iterations: 200
+    tag: "caustics-v2"
+    iterations: 400
 
   - scene: "example4"
     variant: "rr"
-    tag: "caustics"
-    iterations: 200
+    tag: "caustics-v2"
+    iterations: 400
 
   - scene: "example5"
     variant: "rr"
     tag: "glass-sphere"
-    iterations: 1000
+    iterations: 500
