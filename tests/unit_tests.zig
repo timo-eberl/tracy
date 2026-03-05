@@ -12,6 +12,7 @@ const c = @cImport({
 export var scene_cornell: [0]c.Primitive = undefined;
 export var scene_caustics: [0]c.Primitive = undefined;
 export var scene_glass_sphere: [0]c.Primitive = undefined;
+export var scene_cyberpunk: [0]c.Primitive = undefined;
 
 comptime {
     _ = @import("unit/vec_test.zig");
