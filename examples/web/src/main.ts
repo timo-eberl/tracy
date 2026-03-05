@@ -4,8 +4,9 @@ import { camera, setCamera, setupCameraControls } from "./cameraControls";
 // position in array matches scene id
 const sceneCameras: Tracy.CameraProperties[] =[
 	{ rotation: { x: 0, y: 0 }, distance: 5.5, focusPoint: { x: 0, y: 1.25, z: 0 } },
-	{ rotation: { x: 0, y: 0 }, distance: 1.8, focusPoint: { x: 0, y: 0.4, z: 0 } },
+	{ rotation: { x: 0, y: 0 }, distance: 2.5, focusPoint: { x: 0, y: 0.4, z: 0 } },
 	{ rotation: { x: 0.2, y: 0 }, distance: 6, focusPoint: { x: 0, y: 1.25, z: 0 } },
+	{ rotation: { x: 0.2, y: 0.2 }, distance: 12, focusPoint: { x: 0, y: 1.3, z: 0 } },
 ];
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
@@ -47,12 +48,14 @@ function main() {
 	tracy.onFrame = (status) => {
 		if (renderMode === 'preview') {
 			uiStatus.innerText = "⚡ Previewing...";
+			uiStatus.className = 'status-rendering';
 		} else {
 			uiStatus.innerText = [
 				status.finished ? "✅ Render Completed" : "⏳ Rendering...",
 				`Samples: ${status.samplesCompleted.toLocaleString()}`,
 				`Time: ${(status.timeTakenMs / 1000).toFixed(2)}s`
 			].join('\n');
+			uiStatus.className = status.finished ? 'status-finished' : 'status-rendering';
 		}
 	};
 

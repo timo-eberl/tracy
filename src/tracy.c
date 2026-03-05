@@ -155,12 +155,46 @@ Primitive scene_glass_sphere[] = {
 	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.0, 1.25, 0.0}, .radius=1.4}, .material=MAT_GLASS},
 	{.shape.type=TRIANGLE, .shape.data.triangle={{-1.0, 3.4, 1.0},{ 0.0, 3.4,-1.0},{ 1.0, 3.4, 1.0},.one_sided=true}, .material=MAT_LIGHT_2},
 };
+
+#define MAT_NEON_CYAN    (Material){.type = EMISSIVE, .data.emissive.radiosity = {2.0, 30.0, 40.0}}
+#define MAT_NEON_MAGENTA (Material){.type = EMISSIVE, .data.emissive.radiosity = {40.0, 2.0, 30.0}}
+#define MAT_NEON_ORANGE  (Material){.type = EMISSIVE, .data.emissive.radiosity = {40.0, 15.0, 2.0}}
+#define MAT_DARK_ASPHALT (Material){.type = DIFFUSE, .data.diffuse.albedo = {0.05, 0.05, 0.06}}
+#define MAT_MIRROR_DARK  (Material){.type = MIRROR, .data.mirror.rho = {0.25, 0.25, 0.3}, .thin_wall = true}
+
+Primitive scene_cyberpunk[] = {
+	// "asphalt" floor
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-15.0, 0.0,  15.0},{ 15.0, 0.0,  15.0},{ 15.0, 0.0, -15.0},.one_sided=true}, .material=MAT_DARK_ASPHALT},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-15.0, 0.0,  15.0},{ 15.0, 0.0, -15.0},{-15.0, 0.0, -15.0},.one_sided=true}, .material=MAT_DARK_ASPHALT},
+	// "wet" floor
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-3.0, 0.001,  4.0},{ 1.0, 0.001,  4.0},{ 1.0, 0.001, -2.0},.one_sided=true}, .material=MAT_MIRROR_DARK},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-3.0, 0.001,  4.0},{ 1.0, 0.001, -2.0},{-3.0, 0.001, -2.0},.one_sided=true}, .material=MAT_MIRROR_DARK},
+	// cyan billboard
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-4.0, 0.5,  4.0},{-4.0, 0.5, -4.0},{-4.0, 4.5, -4.0}}, .material=MAT_NEON_CYAN},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-4.0, 0.5,  4.0},{-4.0, 4.5, -4.0},{-4.0, 4.5,  4.0}}, .material=MAT_NEON_CYAN},
+	// pink billboard
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 4.0, 0.5,  4.0},{ 4.0, 4.5, -4.0},{ 4.0, 0.5, -4.0}}, .material=MAT_NEON_MAGENTA},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{ 4.0, 0.5,  4.0},{ 4.0, 4.5,  4.0},{ 4.0, 4.5, -4.0}}, .material=MAT_NEON_MAGENTA},
+	// orange billboard
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-3.0, 3.5, -6.0},{ 3.0, 3.5, -6.0},{ 3.0, 4.5, -6.0}}, .material=MAT_NEON_ORANGE},
+	{.shape.type=TRIANGLE, .shape.data.triangle={{-3.0, 3.5, -6.0},{ 3.0, 4.5, -6.0},{-3.0, 4.5, -6.0}}, .material=MAT_NEON_ORANGE},
+	// large glass sphere with air bubbles
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.0, 1.3, 0.0}, .radius=1.3}, .material=MAT_GLASS},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.1, 1.9, -0.2}, .radius=0.09}, .material=MAT_AIR_IN_GLASS},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ -0.2, 1.4, -0.2}, .radius=0.12}, .material=MAT_AIR_IN_GLASS},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ -0.2, 1.5, -0.4}, .radius=0.08}, .material=MAT_AIR_IN_GLASS},
+	{.shape.type=SPHERE, .shape.data.sphere={.center={ 0.3, 1.0, 0.2}, .radius=0.1}, .material=MAT_AIR_IN_GLASS},
+	// mirror sphere
+	{.shape.type=SPHERE, .shape.data.sphere={.center={-1.8, 0.8, 2.0}, .radius=0.8}, .material=MAT_MIRROR_DARK},
+};
+
 // clang-format on
 
 Scene all_scenes[] = {
 	{scene_cornell, sizeof(scene_cornell) / sizeof(Primitive)},
 	{scene_caustics, sizeof(scene_caustics) / sizeof(Primitive)},
 	{scene_glass_sphere, sizeof(scene_glass_sphere) / sizeof(Primitive)},
+	{scene_cyberpunk, sizeof(scene_cyberpunk) / sizeof(Primitive)},
 };
 
 #ifndef M_PI
